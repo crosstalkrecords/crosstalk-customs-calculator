@@ -10,10 +10,10 @@ body{
 margin:0;
 padding:0;
 background:transparent;
-font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+font-family:inherit;
 }
 
-/* Labels match Crosstalk form */
+/* Labels */
 
 label{
 display:block;
@@ -23,7 +23,7 @@ margin-top:16px;
 margin-bottom:6px;
 }
 
-/* Inputs match Crosstalk form */
+/* Inputs */
 
 select,input{
 width:100%;
@@ -35,13 +35,13 @@ background:#fafafa;
 box-sizing:border-box;
 }
 
-/* Quantity field spacing */
+/* Quantity spacing */
 
 input[type="number"]{
 margin-bottom:4px;
 }
 
-/* Estimated price line */
+/* Price line */
 
 .price{
 margin-top:12px;
@@ -56,20 +56,16 @@ font-size:13px;
 
 <label>Record Size</label>
 <select id="size">
-
 <option value="">Select</option>
 <option>7 inch</option>
 <option>10 inch</option>
 <option>12 inch</option>
-
 </select>
 
 <label>Sides</label>
 <select id="sides">
-
 <option>Single-sided</option>
 <option>Double-sided</option>
-
 </select>
 
 <label>Quantity</label>
@@ -107,6 +103,9 @@ document.getElementById("price").textContent="$"+total;
 
 document.addEventListener("change",update);
 document.addEventListener("input",update);
+
+/* run once on load */
+update();
 
 </script>
 
