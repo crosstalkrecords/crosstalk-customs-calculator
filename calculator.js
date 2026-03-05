@@ -35,67 +35,48 @@ const summary = document.querySelector("[data-summary]");
 
 function updateCalculator(){
 
-const size = sizeField.value;
-const sides = sidesField.value;
+const pricing={
+'7 inch':{'Single-sided':75,'Double-sided':85},
+'10 inch':{'Single-sided':90,'Double-sided':100},
+'12 inch':{'Single-sided':110,'Double-sided':125}
+};
 
-let qty = parseInt(qtyField.value) || 1;
+const form=document.getElementById('crosstalk-form');
+if(!form)return;
 
-/* copyright rule */
+const size=form.querySelector('#sizeField')?.value;
+const sides=form.querySelector('#sidesField')?.value;
+const qtyField=form.querySelector('#qtyField');
+const copyrightField=form.querySelector('#copyrightStatus');
 
-if(copyrightField.value === "nonowner"){
-  qty = 1;
-  qtyField.value = 1;
+let qty=parseInt(qtyField.value)||1;
+
+if(copyrightField && copyrightField.value==='nonowner'){
+qty=1;
+qtyField.value=1;
 }
 
-/* max quantity rule */
-
-if(qty > 5){
-  qty = 5;
-  qtyField.value = 5;
+if(qty>5){
+qty=5;
+qtyField.value=5;
 }
 
-/* get price */
+const unit=(pricing[size] && pricing[size][sides]) || 0;
+const total=unit*qty;
 
-const unitPrice =
-  pricing[size] &&
-  pricing[size][sides]
-  ? pricing[size][sides]
-  : 0;
+document.getElementById('priceDisplay').textContent='$'+total;
+document.getElementById('calculatedPrice').value=total;
 
-const total = unitPrice * qty;
-
-/* update UI */
-
-if(priceDisplay){
-  priceDisplay.textContent = "$" + total;
-}
-
-if(hiddenPrice){
-  hiddenPrice.value = total;
-}
-
-/* update summary */
-
-if(summary){
-
+const summary=document.querySelector('[data-summary]');
+if(summary && size && sides){
 summary.innerHTML =
-
-`<strong>${size || "Select size"} • ${sides}</strong><br>
-Quantity: ${qty}<br>
-Unit price: $${unitPrice}<br>
-<strong>Total: $${total}</strong>`;
-
+'<strong>'+size+' • '+sides+'</strong><br>'+
+'Quantity: '+qty+'<br>'+
+'Unit price: $'+unit+'<br>'+
+'<strong>Total: $'+total+'</strong>';
 }
 
 }
 
-/* ================= EVENTS ================= */
-
-form.addEventListener("change", updateCalculator);
-form.addEventListener("input", updateCalculator);
-
-/* initial run */
-
-updateCalculator();
-
-});
+document.addEventListener("change",updateCalculator);
+document.addEventListener("input",updateCalculator);
