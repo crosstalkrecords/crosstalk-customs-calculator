@@ -1,10 +1,14 @@
-document.addEventListener("DOMContentLoaded", function () {
+function updateCalculator(){
 
 const form = document.getElementById("crosstalk-form");
 if(!form) return;
 
-form.addEventListener("change", calculate);
-form.addEventListener("input", calculate);
+const sizeField = form.querySelector("#sizeField");
+const sidesField = form.querySelector("#sidesField");
+const qtyField = form.querySelector("#qtyField");
+const copyrightField = form.querySelector("#copyrightStatus");
+
+if(!sizeField || !sidesField || !qtyField) return;
 
 function unitPrice(size,sides){
 
@@ -18,29 +22,25 @@ if(size==="12 inch" && sides==="Single-sided") return 110;
 if(size==="12 inch" && sides==="Double-sided") return 125;
 
 return 0;
-
 }
 
-function calculate(){
+let size = sizeField.value;
+let sides = sidesField.value;
+let qty = parseInt(qtyField.value) || 1;
 
-const size = document.getElementById("sizeField")?.value;
-const sides = document.getElementById("sidesField")?.value;
-let qty = parseInt(document.getElementById("qtyField")?.value) || 1;
-
-const copyright = document.getElementById("copyrightStatus");
-
-if(copyright && copyright.value==="nonowner"){
+if(copyrightField && copyrightField.value === "nonowner"){
 qty = 1;
-document.getElementById("qtyField").value = 1;
+qtyField.value = 1;
 }
 
-const total = unitPrice(size,sides) * qty;
+const price = unitPrice(size,sides);
+const total = price * qty;
 
-const display = document.getElementById("priceDisplay");
-if(display) display.textContent = "$" + total;
+const priceDisplay = document.getElementById("priceDisplay");
+if(priceDisplay) priceDisplay.textContent = "$" + total;
 
-const hidden = document.getElementById("calculatedPrice");
-if(hidden) hidden.value = total;
+const hiddenPrice = document.getElementById("calculatedPrice");
+if(hiddenPrice) hiddenPrice.value = total;
 
 const summary = document.querySelector("[data-summary]");
 if(summary){
@@ -52,11 +52,8 @@ summary.innerHTML =
 
 }
 
-calculate();
-document.addEventListener("DOMContentLoaded", function () {
-  updateCalculator();
-
-  document.addEventListener("change", updateCalculator);
-  document.addEventListener("input", updateCalculator);
+document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("change", updateCalculator);
+document.addEventListener("input", updateCalculator);
+updateCalculator();
 });
-
