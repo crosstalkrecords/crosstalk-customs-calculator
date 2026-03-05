@@ -106,6 +106,16 @@ document.addEventListener("input",update);
 
 /* run once on load */
 update();
+<script>
+
+function sendHeight(){
+const height=document.body.scrollHeight;
+window.parent.postMessage({type:"resizeCalculator",height:height},"*");
+}
+
+window.addEventListener("load",sendHeight);
+window.addEventListener("change",sendHeight);
+window.addEventListener("input",sendHeight);
 
 </script>
 
