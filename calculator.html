@@ -5,25 +5,45 @@
 <title>Crosstalk Customs Calculator</title>
 
 <style>
+
 body{
 margin:0;
 padding:0;
 background:transparent;
-font-family:inherit;
+font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 }
 
-/* labels inherit form styling */
+/* match Crosstalk form labels */
+
 label{
 display:block;
+font-size:12px;
+font-weight:700;
+margin-top:16px;
+margin-bottom:6px;
 }
 
-/* inputs inherit Crosstalk form styling */
+/* match Crosstalk form inputs */
+
 select,input{
 width:100%;
+padding:10px 12px;
+border-radius:8px;
+border:1px solid #ddd;
+font-size:14px;
+background:#fafafa;
 box-sizing:border-box;
+line-height:1.4;
 }
 
-/* spacing only */
+/* spacing for quantity field */
+
+input[type="number"]{
+margin-bottom:4px;
+}
+
+/* match form text styling */
+
 .price{
 margin-top:10px;
 font-weight:700;
@@ -31,11 +51,12 @@ font-size:13px;
 }
 
 .summary{
-margin-top:4px;
+margin-top:6px;
 font-size:12px;
-opacity:.65;
-line-height:1.4;
+opacity:.7;
+line-height:1.5;
 }
+
 </style>
 </head>
 
