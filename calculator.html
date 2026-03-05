@@ -13,7 +13,7 @@ background:transparent;
 font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 }
 
-/* match Crosstalk form labels */
+/* Labels match Crosstalk form */
 
 label{
 display:block;
@@ -23,7 +23,7 @@ margin-top:16px;
 margin-bottom:6px;
 }
 
-/* match Crosstalk form inputs */
+/* Inputs match Crosstalk form */
 
 select,input{
 width:100%;
@@ -33,28 +33,20 @@ border:1px solid #ddd;
 font-size:14px;
 background:#fafafa;
 box-sizing:border-box;
-line-height:1.4;
 }
 
-/* spacing for quantity field */
+/* Quantity field spacing */
 
 input[type="number"]{
 margin-bottom:4px;
 }
 
-/* match form text styling */
+/* Estimated price line */
 
 .price{
-margin-top:10px;
+margin-top:12px;
 font-weight:700;
 font-size:13px;
-}
-
-.summary{
-margin-top:6px;
-font-size:12px;
-opacity:.7;
-line-height:1.5;
 }
 
 </style>
@@ -64,16 +56,20 @@ line-height:1.5;
 
 <label>Record Size</label>
 <select id="size">
+
 <option value="">Select</option>
 <option>7 inch</option>
 <option>10 inch</option>
 <option>12 inch</option>
+
 </select>
 
 <label>Sides</label>
 <select id="sides">
+
 <option>Single-sided</option>
 <option>Double-sided</option>
+
 </select>
 
 <label>Quantity</label>
@@ -83,9 +79,8 @@ line-height:1.5;
 Estimated Cost: <span id="price">$0</span>
 </div>
 
-<div class="summary" id="summary"></div>
-
 <script>
+
 const pricing={
 '7 inch':{'Single-sided':75,'Double-sided':85},
 '10 inch':{'Single-sided':90,'Double-sided':100},
@@ -108,20 +103,11 @@ const total=unit*qty;
 
 document.getElementById("price").textContent="$"+total;
 
-if(size && sides){
-document.getElementById("summary").innerHTML=
-"<strong>"+size+" • "+sides+"</strong><br>"+
-"Quantity: "+qty+"<br>"+
-"Unit price: $"+unit+"<br>"+
-"<strong>Total: $"+total+"</strong>";
-}else{
-document.getElementById("summary").innerHTML="";
-}
-
 }
 
 document.addEventListener("change",update);
 document.addEventListener("input",update);
+
 </script>
 
 </body>
