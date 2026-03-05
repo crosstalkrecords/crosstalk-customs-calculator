@@ -1,57 +1,52 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
 <meta charset="UTF-8">
 <title>Crosstalk Customs Calculator</title>
 
 <style>
-
 body{
-  font-family:inherit;
-  margin:0;
-  padding:0;
-  background:transparent;
+margin:0;
+padding:0;
+background:transparent;
+font-family:inherit;
 }
 
 label{
-  display:block;
-  font-size:12px;
-  font-weight:700;
-  margin-top:12px;
+display:block;
+font-size:12px;
+font-weight:700;
+margin-top:12px;
 }
 
 select,input{
 width:100%;
-padding:10px;
-margin-top:6px;
+padding:10px 12px;
 border-radius:8px;
 border:1px solid #ddd;
 font-size:14px;
+background:#fafafa;
+box-sizing:border-box;
 }
 
 .price{
-margin-top:18px;
-font-weight:800;
-font-size:16px;
+margin-top:12px;
+font-weight:700;
+font-size:13px;
 }
 
 .summary{
-margin-top:12px;
-font-size:13px;
-line-height:1.6;
-color:#333;
+margin-top:6px;
+font-size:12px;
+opacity:.8;
+line-height:1.5;
 }
-
 </style>
-
 </head>
 
 <body>
 
 <label>Record Size</label>
-
 <select id="size">
 <option value="">Select</option>
 <option>7 inch</option>
@@ -60,14 +55,12 @@ color:#333;
 </select>
 
 <label>Sides</label>
-
 <select id="sides">
 <option>Single-sided</option>
 <option>Double-sided</option>
 </select>
 
 <label>Quantity</label>
-
 <input type="number" id="qty" value="1" min="1">
 
 <div class="price">
@@ -77,7 +70,6 @@ Estimated Cost: <span id="price">$0</span>
 <div class="summary" id="summary"></div>
 
 <script>
-
 const pricing={
 '7 inch':{'Single-sided':75,'Double-sided':85},
 '10 inch':{'Single-sided':90,'Double-sided':100},
@@ -88,7 +80,6 @@ function update(){
 
 const size=document.getElementById("size").value;
 const sides=document.getElementById("sides").value;
-
 let qty=parseInt(document.getElementById("qty").value)||1;
 
 if(qty>5){
@@ -102,32 +93,20 @@ const total=unit*qty;
 document.getElementById("price").textContent="$"+total;
 
 if(size && sides){
-
 document.getElementById("summary").innerHTML=
 "<strong>"+size+" • "+sides+"</strong><br>"+
 "Quantity: "+qty+"<br>"+
 "Unit price: $"+unit+"<br>"+
 "<strong>Total: $"+total+"</strong>";
-
+}else{
+document.getElementById("summary").innerHTML="";
 }
-
-/* SEND PRICE TO PARENT PAGE */
-
-window.parent.postMessage(
-{
-type:"crosstalkPrice",
-price:total
-},
-"*"
-);
 
 }
 
 document.addEventListener("change",update);
 document.addEventListener("input",update);
-
 </script>
 
 </body>
-
 </html>
