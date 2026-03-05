@@ -53,5 +53,10 @@ summary.innerHTML =
 }
 
 calculate();
+document.addEventListener("DOMContentLoaded", function () {
+  updateCalculator();
 
+  document.addEventListener("change", updateCalculator);
+  document.addEventListener("input", updateCalculator);
 });
+
