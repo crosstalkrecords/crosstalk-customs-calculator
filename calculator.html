@@ -2,9 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Crosstalk Customs Calculator</title>
+<title>Crosstalk Calculator</title>
 
 <style>
+
+/* remove page styling so parent form styles apply */
 
 body{
 margin:0;
@@ -13,38 +15,23 @@ background:transparent;
 font-family:inherit;
 }
 
-/* Labels */
+/* only spacing rules */
 
 label{
 display:block;
-font-size:12px;
-font-weight:700;
 margin-top:16px;
 margin-bottom:6px;
+font-weight:700;
+font-size:12px;
 }
-
-/* Inputs */
 
 select,input{
 width:100%;
-padding:10px 12px;
-border-radius:8px;
-border:1px solid #ddd;
-font-size:14px;
-background:#fafafa;
 box-sizing:border-box;
 }
 
-/* Quantity spacing */
-
-input[type="number"]{
-margin-bottom:4px;
-}
-
-/* Price line */
-
 .price{
-margin-top:12px;
+margin-top:10px;
 font-weight:700;
 font-size:13px;
 }
@@ -78,9 +65,9 @@ Estimated Cost: <span id="price">$0</span>
 <script>
 
 const pricing={
-'7 inch':{'Single-sided':75,'Double-sided':85},
-'10 inch':{'Single-sided':90,'Double-sided':100},
-'12 inch':{'Single-sided':110,'Double-sided':125}
+"7 inch":{"Single-sided":75,"Double-sided":85},
+"10 inch":{"Single-sided":90,"Double-sided":100},
+"12 inch":{"Single-sided":110,"Double-sided":125}
 };
 
 function update(){
@@ -94,7 +81,7 @@ qty=5;
 document.getElementById("qty").value=5;
 }
 
-const unit=(pricing[size] && pricing[size][sides])||0;
+const unit=pricing[size]?.[sides]||0;
 const total=unit*qty;
 
 document.getElementById("price").textContent="$"+total;
@@ -103,14 +90,15 @@ document.getElementById("price").textContent="$"+total;
 
 document.addEventListener("change",update);
 document.addEventListener("input",update);
+window.addEventListener("load",update);
 
-/* run once on load */
-update();
-<script>
+/* iframe auto resize */
 
 function sendHeight(){
-const height=document.body.scrollHeight;
-window.parent.postMessage({type:"resizeCalculator",height:height},"*");
+window.parent.postMessage({
+type:"resizeCalculator",
+height:document.body.scrollHeight
+},"*");
 }
 
 window.addEventListener("load",sendHeight);
