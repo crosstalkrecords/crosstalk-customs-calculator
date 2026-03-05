@@ -10,34 +10,47 @@ body{
 margin:0;
 padding:0;
 background:transparent;
-font-family:inherit;
+font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+color:#333;
 }
 
-/* labels */
+/* match Crosstalk form spacing */
 
 label{
 display:block;
+font-size:12px;
+font-weight:700;
 margin-top:16px;
 margin-bottom:6px;
-font-weight:700;
-font-size:12px;
 }
 
-/* inputs inherit styling from parent form */
+/* match form inputs */
 
-select,input{
+select,
+input{
 width:100%;
+padding:10px 12px;
+border-radius:8px;
+border:1px solid #ddd;
+font-size:14px;
+background:#fafafa;
 box-sizing:border-box;
 }
 
-/* price */
+/* number input alignment */
+
+input[type="number"]{
+margin-bottom:4px;
+}
+
+/* price line */
 
 .price{
 margin-top:10px;
 font-weight:700;
 font-size:13px;
+color:#333;
 }
-
 </style>
 </head>
 
