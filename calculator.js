@@ -1,59 +1,101 @@
-function updateCalculator(){
+document.addEventListener("DOMContentLoaded", () => {
 
 const form = document.getElementById("crosstalk-form");
-if(!form) return;
+if (!form) return;
+
+/* ================= PRICING TABLE ================= */
+
+const pricing = {
+  "7 inch": {
+    "Single-sided": 75,
+    "Double-sided": 85
+  },
+  "10 inch": {
+    "Single-sided": 90,
+    "Double-sided": 100
+  },
+  "12 inch": {
+    "Single-sided": 110,
+    "Double-sided": 125
+  }
+};
+
+/* ================= ELEMENTS ================= */
 
 const sizeField = form.querySelector("#sizeField");
 const sidesField = form.querySelector("#sidesField");
 const qtyField = form.querySelector("#qtyField");
 const copyrightField = form.querySelector("#copyrightStatus");
 
-if(!sizeField || !sidesField || !qtyField) return;
+const priceDisplay = document.getElementById("priceDisplay");
+const hiddenPrice = document.getElementById("calculatedPrice");
+const summary = document.querySelector("[data-summary]");
 
-function unitPrice(size,sides){
+/* ================= CALCULATOR ================= */
 
-if(size==="7 inch" && sides==="Single-sided") return 75;
-if(size==="7 inch" && sides==="Double-sided") return 85;
+function updateCalculator(){
 
-if(size==="10 inch" && sides==="Single-sided") return 90;
-if(size==="10 inch" && sides==="Double-sided") return 100;
+const size = sizeField.value;
+const sides = sidesField.value;
 
-if(size==="12 inch" && sides==="Single-sided") return 110;
-if(size==="12 inch" && sides==="Double-sided") return 125;
-
-return 0;
-}
-
-let size = sizeField.value;
-let sides = sidesField.value;
 let qty = parseInt(qtyField.value) || 1;
 
-if(copyrightField && copyrightField.value === "nonowner"){
-qty = 1;
-qtyField.value = 1;
+/* copyright rule */
+
+if(copyrightField.value === "nonowner"){
+  qty = 1;
+  qtyField.value = 1;
 }
 
-const price = unitPrice(size,sides);
-const total = price * qty;
+/* max quantity rule */
 
-const priceDisplay = document.getElementById("priceDisplay");
-if(priceDisplay) priceDisplay.textContent = "$" + total;
+if(qty > 5){
+  qty = 5;
+  qtyField.value = 5;
+}
 
-const hiddenPrice = document.getElementById("calculatedPrice");
-if(hiddenPrice) hiddenPrice.value = total;
+/* get price */
 
-const summary = document.querySelector("[data-summary]");
+const unitPrice =
+  pricing[size] &&
+  pricing[size][sides]
+  ? pricing[size][sides]
+  : 0;
+
+const total = unitPrice * qty;
+
+/* update UI */
+
+if(priceDisplay){
+  priceDisplay.textContent = "$" + total;
+}
+
+if(hiddenPrice){
+  hiddenPrice.value = total;
+}
+
+/* update summary */
+
 if(summary){
+
 summary.innerHTML =
-"<strong>"+size+" • "+sides+"</strong><br>" +
-"Quantity: "+qty+"<br>" +
-"<strong>Total: $"+total+"</strong>";
-}
+
+`<strong>${size || "Select size"} • ${sides}</strong><br>
+Quantity: ${qty}<br>
+Unit price: $${unitPrice}<br>
+<strong>Total: $${total}</strong>`;
 
 }
 
-document.addEventListener("DOMContentLoaded", function(){
-document.addEventListener("change", updateCalculator);
-document.addEventListener("input", updateCalculator);
+}
+
+/* ================= EVENTS ================= */
+
+form.addEventListener("change", updateCalculator);
+form.addEventListener("input", updateCalculator);
+
+/* initial run */
+
 updateCalculator();
+
 });
