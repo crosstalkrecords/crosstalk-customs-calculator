@@ -2,11 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Crosstalk Calculator</title>
+<title>Crosstalk Customs Calculator</title>
 
 <style>
-
-/* remove page styling so parent form styles apply */
 
 body{
 margin:0;
@@ -15,7 +13,7 @@ background:transparent;
 font-family:inherit;
 }
 
-/* only spacing rules */
+/* labels */
 
 label{
 display:block;
@@ -25,10 +23,14 @@ font-weight:700;
 font-size:12px;
 }
 
+/* inputs inherit styling from parent form */
+
 select,input{
 width:100%;
 box-sizing:border-box;
 }
+
+/* price */
 
 .price{
 margin-top:10px;
@@ -44,19 +46,19 @@ font-size:13px;
 <label>Record Size</label>
 <select id="size">
 <option value="">Select</option>
-<option>7 inch</option>
-<option>10 inch</option>
-<option>12 inch</option>
+<option value="7">7 inch</option>
+<option value="10">10 inch</option>
+<option value="12">12 inch</option>
 </select>
 
 <label>Sides</label>
 <select id="sides">
-<option>Single-sided</option>
-<option>Double-sided</option>
+<option value="1">Single-sided</option>
+<option value="2">Double-sided</option>
 </select>
 
 <label>Quantity</label>
-<input type="number" id="qty" value="1" min="1">
+<input type="number" id="qty" value="1" min="1" max="5">
 
 <div class="price">
 Estimated Cost: <span id="price">$0</span>
@@ -64,16 +66,19 @@ Estimated Cost: <span id="price">$0</span>
 
 <script>
 
+/* pricing table */
+
 const pricing={
-"7 inch":{"Single-sided":75,"Double-sided":85},
-"10 inch":{"Single-sided":90,"Double-sided":100},
-"12 inch":{"Single-sided":110,"Double-sided":125}
+7:{1:75,2:85},
+10:{1:90,2:100},
+12:{1:110,2:125}
 };
 
 function update(){
 
 const size=document.getElementById("size").value;
 const sides=document.getElementById("sides").value;
+
 let qty=parseInt(document.getElementById("qty").value)||1;
 
 if(qty>5){
@@ -81,35 +86,45 @@ qty=5;
 document.getElementById("qty").value=5;
 }
 
-const unit=pricing[size]?.[sides] || 0;
+if(qty<1){
+qty=1;
+document.getElementById("qty").value=1;
+}
+
+let unit=0;
+
+if(pricing[size] && pricing[size][sides]){
+unit=pricing[size][sides];
+}
+
 const total=unit*qty;
 
 document.getElementById("price").textContent="$"+total;
 
+sendHeight();
+
 }
 
-/* attach listeners directly to inputs */
+/* attach listeners */
 
 document.getElementById("size").addEventListener("change",update);
 document.getElementById("sides").addEventListener("change",update);
 document.getElementById("qty").addEventListener("input",update);
 
-/* run once on load */
-
 window.addEventListener("load",update);
 
-/* auto resize iframe */
+/* iframe auto resize */
 
 function sendHeight(){
+
+const height=document.body.scrollHeight;
+
 window.parent.postMessage({
 type:"resizeCalculator",
-height:document.body.scrollHeight
+height:height
 },"*");
-}
 
-window.addEventListener("load",sendHeight);
-window.addEventListener("change",sendHeight);
-window.addEventListener("input",sendHeight);
+}
 
 </script>
 
