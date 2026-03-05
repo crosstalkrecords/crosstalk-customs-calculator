@@ -2,10 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Crosstalk Customs Calculator</title>
+<title>Crosstalk Calculator Engine</title>
 
 <style>
-
 body{
 margin:0;
 padding:0;
@@ -14,130 +13,83 @@ font-family:inherit;
 font-size:14px;
 color:inherit;
 }
-
-/* match Crosstalk form label rhythm */
-
-label{
-display:block;
-font-size:12px;
-font-weight:700;
-margin-top:16px;
-margin-bottom:6px;
-}
-
-/* match Crosstalk form inputs */
-
-select,
-input{
-width:100%;
-padding:10px 12px;
-border-radius:8px;
-border:1px solid #ddd;
-font-size:14px;
-background:#fafafa;
-box-sizing:border-box;
-}
-
-/* tighten number input */
-
-input[type="number"]{
-margin-bottom:4px;
-}
-
-/* price line */
-
-.price{
-margin-top:10px;
-font-weight:700;
-font-size:13px;
-}
 </style>
+
 </head>
 
 <body>
 
-<label>Record Size</label>
-<select id="size">
-<option value="">Select</option>
-<option value="7">7 inch</option>
-<option value="10">10 inch</option>
-<option value="12">12 inch</option>
-</select>
-
-<label>Sides</label>
-<select id="sides">
-<option value="1">Single-sided</option>
-<option value="2">Double-sided</option>
-</select>
-
-<label>Quantity</label>
-<input type="number" id="qty" value="1" min="1" max="5">
-
-<div class="price">
-Estimated Cost: <span id="price">$0</span>
-</div>
-
 <script>
 
-/* pricing table */
+/* ------------------------------
+   PRICING TABLE
+------------------------------ */
 
-const pricing={
-7:{1:75,2:85},
-10:{1:90,2:100},
-12:{1:110,2:125}
+const pricing = {
+'7 inch': { 'Single-sided':75, 'Double-sided':85 },
+'10 inch': { 'Single-sided':90, 'Double-sided':100 },
+'12 inch': { 'Single-sided':110, 'Double-sided':125 }
 };
 
-function update(){
 
-const size=document.getElementById("size").value;
-const sides=document.getElementById("sides").value;
+/* ------------------------------
+   LISTEN FOR CONFIG FROM PAGE
+------------------------------ */
 
-let qty=parseInt(document.getElementById("qty").value)||1;
+window.addEventListener("message", function(event){
 
-if(qty>5){
-qty=5;
-document.getElementById("qty").value=5;
-}
+if(!event.data) return;
+if(event.data.type !== "calc") return;
 
-if(qty<1){
-qty=1;
-document.getElementById("qty").value=1;
-}
+let size = event.data.size;
+let sides = event.data.sides;
+let qty = parseInt(event.data.qty) || 1;
 
-let unit=0;
+/* quantity guard */
+
+if(qty > 5) qty = 5;
+if(qty < 1) qty = 1;
+
+/* lookup price */
+
+let unit = 0;
 
 if(pricing[size] && pricing[size][sides]){
-unit=pricing[size][sides];
+unit = pricing[size][sides];
 }
 
-const total=unit*qty;
+let total = unit * qty;
 
-document.getElementById("price").textContent="$"+total;
 
-sendHeight();
+/* send result back to parent page */
 
-}
+window.parent.postMessage({
+type: "crosstalkPrice",
+price: total,
+size: size,
+sides: sides,
+qty: qty
+},"*");
 
-/* attach listeners */
+});
 
-document.getElementById("size").addEventListener("change",update);
-document.getElementById("sides").addEventListener("change",update);
-document.getElementById("qty").addEventListener("input",update);
 
-window.addEventListener("load",update);
-
-/* iframe auto resize */
+/* ------------------------------
+   OPTIONAL HEIGHT SYNC
+------------------------------ */
 
 function sendHeight(){
 
-const height=document.body.scrollHeight;
+const height = document.body.scrollHeight;
 
 window.parent.postMessage({
-type:"resizeCalculator",
-height:height
+type: "resizeCalculator",
+height: height
 },"*");
 
 }
+
+window.addEventListener("load", sendHeight);
 
 </script>
 
