@@ -81,18 +81,24 @@ qty=5;
 document.getElementById("qty").value=5;
 }
 
-const unit=pricing[size]?.[sides]||0;
+const unit=pricing[size]?.[sides] || 0;
 const total=unit*qty;
 
 document.getElementById("price").textContent="$"+total;
 
 }
 
-document.addEventListener("change",update);
-document.addEventListener("input",update);
+/* attach listeners directly to inputs */
+
+document.getElementById("size").addEventListener("change",update);
+document.getElementById("sides").addEventListener("change",update);
+document.getElementById("qty").addEventListener("input",update);
+
+/* run once on load */
+
 window.addEventListener("load",update);
 
-/* iframe auto resize */
+/* auto resize iframe */
 
 function sendHeight(){
 window.parent.postMessage({
