@@ -127,7 +127,10 @@ document.getElementById("size").addEventListener("change",update);
 document.getElementById("sides").addEventListener("change",update);
 document.getElementById("qty").addEventListener("input",update);
 
-window.addEventListener("load",update);
+window.addEventListener("load",function(){
+update();
+sendToParent();
+});
 function sendToParent(){
 
 const size=document.getElementById("size").value;
