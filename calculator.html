@@ -3,69 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <title>Crosstalk Calculator Engine</title>
-
-<style>
-body{
-margin:0;
-padding:0;
-background:transparent;
-}
-</style>
-
 </head>
 
 <body>
 
 <script>
 
-const pricing={
-'7 inch':{'Single-sided':75,'Double-sided':85},
-'10 inch':{'Single-sided':90,'Double-sided':100},
-'12 inch':{'Single-sided':110,'Double-sided':125}
+const pricing = {
+'7 inch': { 'Single-sided':75, 'Double-sided':85 },
+'10 inch': { 'Single-sided':90, 'Double-sided':100 },
+'12 inch': { 'Single-sided':110, 'Double-sided':125 }
 };
 
-function calculate(){
+window.addEventListener("message", function(event){
 
-try{
+if(!event.data || event.data.type !== "calc") return;
 
-const size=parent.document.getElementById("recordSize")?.value;
-const sides=parent.document.getElementById("recordSides")?.value;
-const qtyField=parent.document.getElementById("recordQty");
-const priceOut=parent.document.getElementById("priceEstimate");
+let size = event.data.size;
+let sides = event.data.sides;
+let qty = parseInt(event.data.qty) || 1;
 
-if(!size || !sides || !qtyField || !priceOut) return;
+if(qty > 5) qty = 5;
+if(qty < 1) qty = 1;
 
-let qty=parseInt(qtyField.value)||1;
-
-if(qty>5){
-qty=5;
-qtyField.value=5;
-}
-
-if(qty<1){
-qty=1;
-qtyField.value=1;
-}
-
-let unit=0;
+let unit = 0;
 
 if(pricing[size] && pricing[size][sides]){
-unit=pricing[size][sides];
+unit = pricing[size][sides];
 }
 
-const total=unit*qty;
+let total = unit * qty;
 
-priceOut.textContent="$"+total;
+window.parent.postMessage({
+type: "crosstalkPrice",
+price: total
+},"*");
 
-}catch(e){
-/* ignore cross-frame timing issues */
-}
-
-}
-
-/* poll every 200ms */
-
-setInterval(calculate,200);
+});
 
 </script>
 
