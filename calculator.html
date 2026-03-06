@@ -128,7 +128,24 @@ document.getElementById("sides").addEventListener("change",update);
 document.getElementById("qty").addEventListener("input",update);
 
 window.addEventListener("load",update);
+function sendToParent(){
 
+const size=document.getElementById("size").value;
+const sides=document.getElementById("sides").value;
+const qty=document.getElementById("qty").value;
+const price=document.getElementById("price").textContent;
+
+window.parent.postMessage({
+size:size,
+sides:sides,
+qty:qty,
+price:price
+},"*");
+
+}
+
+document.addEventListener("change",sendToParent);
+document.addEventListener("input",sendToParent);
 </script>
 
 </body>
