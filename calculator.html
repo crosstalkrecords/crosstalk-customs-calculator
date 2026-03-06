@@ -76,7 +76,7 @@ font-size:13px;
 </select>
 
 <label>Quantity</label>
-<input type="number" id="qty" value="1" min="1" max="5">
+<input type="number" id="qty" value="1" min="1">
 
 <div class="price">
 Estimated Cost: <span id="price">$0</span>
@@ -97,9 +97,10 @@ const sides=document.getElementById("sides").value;
 
 let qty=parseInt(document.getElementById("qty").value)||1;
 
-if(qty>5){
-qty=5;
-document.getElementById("qty").value=5;
+
+if(qty<1){
+qty=1;
+document.getElementById("qty").value=1;
 }
 
 if(qty<1){
