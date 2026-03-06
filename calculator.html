@@ -9,9 +9,6 @@ body{
 margin:0;
 padding:0;
 background:transparent;
-font-family:inherit;
-font-size:14px;
-color:inherit;
 }
 </style>
 
@@ -21,75 +18,54 @@ color:inherit;
 
 <script>
 
-/* ------------------------------
-   PRICING TABLE
------------------------------- */
-
-const pricing = {
-'7 inch': { 'Single-sided':75, 'Double-sided':85 },
-'10 inch': { 'Single-sided':90, 'Double-sided':100 },
-'12 inch': { 'Single-sided':110, 'Double-sided':125 }
+const pricing={
+'7 inch':{'Single-sided':75,'Double-sided':85},
+'10 inch':{'Single-sided':90,'Double-sided':100},
+'12 inch':{'Single-sided':110,'Double-sided':125}
 };
 
+function calculate(){
 
-/* ------------------------------
-   LISTEN FOR CONFIG FROM PAGE
------------------------------- */
+try{
 
-window.addEventListener("message", function(event){
+const size=parent.document.getElementById("recordSize")?.value;
+const sides=parent.document.getElementById("recordSides")?.value;
+const qtyField=parent.document.getElementById("recordQty");
+const priceOut=parent.document.getElementById("priceEstimate");
 
-if(!event.data) return;
-if(event.data.type !== "calc") return;
+if(!size || !sides || !qtyField || !priceOut) return;
 
-let size = event.data.size;
-let sides = event.data.sides;
-let qty = parseInt(event.data.qty) || 1;
+let qty=parseInt(qtyField.value)||1;
 
-/* quantity guard */
+if(qty>5){
+qty=5;
+qtyField.value=5;
+}
 
-if(qty > 5) qty = 5;
-if(qty < 1) qty = 1;
+if(qty<1){
+qty=1;
+qtyField.value=1;
+}
 
-/* lookup price */
-
-let unit = 0;
+let unit=0;
 
 if(pricing[size] && pricing[size][sides]){
-unit = pricing[size][sides];
+unit=pricing[size][sides];
 }
 
-let total = unit * qty;
+const total=unit*qty;
 
+priceOut.textContent="$"+total;
 
-/* send result back to parent page */
-
-window.parent.postMessage({
-type: "crosstalkPrice",
-price: total,
-size: size,
-sides: sides,
-qty: qty
-},"*");
-
-});
-
-
-/* ------------------------------
-   OPTIONAL HEIGHT SYNC
------------------------------- */
-
-function sendHeight(){
-
-const height = document.body.scrollHeight;
-
-window.parent.postMessage({
-type: "resizeCalculator",
-height: height
-},"*");
+}catch(e){
+/* ignore cross-frame timing issues */
+}
 
 }
 
-window.addEventListener("load", sendHeight);
+/* poll every 200ms */
+
+setInterval(calculate,200);
 
 </script>
 
