@@ -1,47 +1,34 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Crosstalk Calculator Engine</title>
-</head>
-
-<body>
-
 <script>
 
-const pricing = {
-'7 inch': { 'Single-sided':75, 'Double-sided':85 },
-'10 inch': { 'Single-sided':90, 'Double-sided':100 },
-'12 inch': { 'Single-sided':110, 'Double-sided':125 }
+const pricing={
+7:{1:75,2:85},
+10:{1:90,2:100},
+12:{1:110,2:125}
 };
 
-window.addEventListener("message", function(event){
+function update(){
 
-if(!event.data || event.data.type !== "calc") return;
+const size=document.getElementById("size").value;
+const sides=document.getElementById("sides").value;
+let qty=parseInt(document.getElementById("qty").value)||1;
 
-let size = event.data.size;
-let sides = event.data.sides;
-let qty = parseInt(event.data.qty) || 1;
-
-if(qty > 5) qty = 5;
-if(qty < 1) qty = 1;
-
-let unit = 0;
-
-if(pricing[size] && pricing[size][sides]){
-unit = pricing[size][sides];
+if(qty>5){
+qty=5;
+document.getElementById("qty").value=5;
 }
 
-let total = unit * qty;
+let unit=0;
 
-window.parent.postMessage({
-type: "crosstalkPrice",
-price: total
-},"*");
+if(pricing[size] && pricing[size][sides]){
+unit=pricing[size][sides];
+}
 
-});
+document.getElementById("price").textContent="$"+(unit*qty);
+
+}
+
+document.addEventListener("change",update);
+document.addEventListener("input",update);
+window.addEventListener("load",update);
 
 </script>
-
-</body>
-</html>
