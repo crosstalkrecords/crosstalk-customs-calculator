@@ -5,10 +5,7 @@
 <title>Crosstalk Customs Calculator</title>
 
 <style>
-.ct-form label{
-color:#000 !important;
-font-weight:700 !important;
-}
+
 body{
 margin:0;
 padding:0;
@@ -30,7 +27,8 @@ color:inherit;
 
 /* inputs */
 
-select,input{
+select,
+input{
 width:100%;
 padding:9px 12px;
 border-radius:8px;
@@ -48,13 +46,6 @@ margin-bottom:4px;
 }
 
 /* price */
-
-.price{
-margin-top:10px;
-font-weight:600;
-font-size:13px;
-}
-}
 
 .price{
 margin-top:12px;
@@ -108,6 +99,11 @@ qty=5;
 document.getElementById("qty").value=5;
 }
 
+if(qty<1){
+qty=1;
+document.getElementById("qty").value=1;
+}
+
 let unit=0;
 
 if(pricing[size] && pricing[size][sides]){
@@ -120,8 +116,10 @@ document.getElementById("price").textContent="$"+total;
 
 }
 
-document.addEventListener("change",update);
-document.addEventListener("input",update);
+document.getElementById("size").addEventListener("change",update);
+document.getElementById("sides").addEventListener("change",update);
+document.getElementById("qty").addEventListener("input",update);
+
 window.addEventListener("load",update);
 
 </script>
