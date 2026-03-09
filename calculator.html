@@ -133,29 +133,21 @@ sendToParent();
 });
 function sendToParent(){
 
-const size=document.getElementById("size").value;
-const sides=document.getElementById("sides").value;
-const qty=document.getElementById("qty").value;
-const price=document.getElementById("price").textContent;
+const size = document.getElementById("size").value;
+const sides = document.getElementById("sides").value;
+const qty = document.getElementById("qty").value;
+const price = document.getElementById("price").textContent;
 
-try{
+const params = new URLSearchParams({
+size,
+sides,
+qty,
+price
+});
 
-const parentDoc = window.parent.document;
-
-if(parentDoc){
-
-const sizeField = parentDoc.getElementById("hiddenRecordSize");
-const sidesField = parentDoc.getElementById("hiddenSides");
-const qtyField = parentDoc.getElementById("hiddenQuantity");
-const priceField = parentDoc.getElementById("hiddenPrice");
-
-if(sizeField) sizeField.value = size;
-if(sidesField) sidesField.value = sides;
-if(qtyField) qtyField.value = qty;
-if(priceField) priceField.value = price;
+window.parent.location.hash = params.toString();
 
 }
-
 }catch(e){
 console.log("Parent access blocked");
 }
