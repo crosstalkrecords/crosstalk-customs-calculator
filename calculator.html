@@ -149,6 +149,13 @@ price:price
 
 document.addEventListener("change",sendToParent);
 document.addEventListener("input",sendToParent);
+window.addEventListener("message", function(event){
+
+if(event.data && event.data.request === "values"){
+sendToParent();
+}
+
+});  
 </script>
 
 </body>
