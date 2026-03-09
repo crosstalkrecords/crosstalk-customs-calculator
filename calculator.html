@@ -133,24 +133,17 @@ sendToParent();
 });
 function sendToParent(){
 
-const size = document.getElementById("size").value;
-const sides = document.getElementById("sides").value;
-const qty = document.getElementById("qty").value;
-const price = document.getElementById("price").textContent;
+const size=document.getElementById("size").value;
+const sides=document.getElementById("sides").value;
+const qty=document.getElementById("qty").value;
+const price=document.getElementById("price").textContent;
 
-const params = new URLSearchParams({
-size,
-sides,
-qty,
-price
-});
-
-window.parent.location.hash = params.toString();
-
-}
-}catch(e){
-console.log("Parent access blocked");
-}
+window.parent.postMessage({
+size:size,
+sides:sides,
+qty:qty,
+price:price
+},"*");
 
 }
 
@@ -163,8 +156,6 @@ sendToParent();
 }
 
 });  
-
-
 </script>
 
 </body>
