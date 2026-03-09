@@ -136,16 +136,18 @@ const sides=document.getElementById("sides").value;
 const qty=document.getElementById("qty").value;
 const price=document.getElementById("price").textContent;
 
-const data={
-size:size,
-sides:sides,
-qty:qty,
-price:price
-};
+try{
 
-console.log("CALCULATOR → PARENT:",data);
+const parentDoc=window.parent.document;
 
-window.parent.postMessage(data,"*");
+parentDoc.getElementById("hiddenRecordSize").value=size;
+parentDoc.getElementById("hiddenSides").value=sides;
+parentDoc.getElementById("hiddenQuantity").value=qty;
+parentDoc.getElementById("hiddenPrice").value=price;
+
+}catch(e){
+console.log("Parent access blocked:",e);
+}
 
 }
 
