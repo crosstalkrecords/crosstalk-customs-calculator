@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <title>Crosstalk Customs Calculator</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
 <style>
 
 body{
 margin:0;
 padding:0;
-font-family:'Inter', sans-serif;
+font-family:'Inter',sans-serif;
 font-size:14px;
 color:#000;
 background:transparent;
 }
-
-/* labels */
 
 label{
 display:block;
@@ -23,11 +23,7 @@ font-size:12px;
 font-weight:700;
 margin-top:16px;
 margin-bottom:6px;
-font-family:'Inter', sans-serif;
-color:#000;
 }
-
-/* inputs */
 
 select,
 input{
@@ -35,19 +31,14 @@ width:100%;
 padding:9px 12px;
 border-radius:8px;
 border:1px solid #ddd;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 font-size:14px;
 background:#fafafa;
 box-sizing:border-box;
 }
 
-/* quantity spacing */
-
 input[type="number"]{
 margin-bottom:4px;
 }
-
-/* price */
 
 .price{
 margin-top:12px;
@@ -59,92 +50,6 @@ font-size:13px;
 </style>
 </head>
 
-<body>
-
-<label>Record Size</label>
-<select id="size">
-<option value="">Select</option>
-<option value="7">7 inch</option>
-<option value="10">10 inch</option>
-<option value="12">12 inch</option>
-</select>
-
-<label>Sides</label>
-<select id="sides">
-<option value="1">Single-sided</option>
-<option value="2">Double-sided</option>
-</select>
-
-<label>Quantity</label>
-<input type="number" id="qty" value="1" min="1">
-
-<div class="price">
-Estimated cutting cost: <span id="price">$0</span>
-</div>
-
-<p style="font-size:11px;opacity:.65;margin-top:4px;">
-Estimate excludes shipping and final mastering review.
-</p>
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Crosstalk Customs Calculator</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-
-body{
-margin:0;
-padding:0;
-font-family:'Inter', sans-serif;
-font-size:14px;
-color:#000;
-background:transparent;
-}
-
-/* labels */
-
-label{
-display:block;
-font-size:12px;
-font-weight:700;
-margin-top:16px;
-margin-bottom:6px;
-font-family:'Inter', sans-serif;
-color:#000;
-}
-
-/* inputs */
-
-select,
-input{
-width:100%;
-padding:9px 12px;
-border-radius:8px;
-border:1px solid #ddd;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-font-size:14px;
-background:#fafafa;
-box-sizing:border-box;
-}
-
-/* quantity spacing */
-
-input[type="number"]{
-margin-bottom:4px;
-}
-
-/* price */
-
-.price{
-margin-top:12px;
-margin-bottom:10px;
-font-weight:700;
-font-size:13px;
-}
-
-</style>
-</head>
 
 <body>
 
@@ -156,23 +61,32 @@ font-size:13px;
 <option value="12">12 inch</option>
 </select>
 
+
 <label>Sides</label>
 <select id="sides">
 <option value="1">Single-sided</option>
 <option value="2">Double-sided</option>
 </select>
 
+
 <label>Quantity</label>
 <input type="number" id="qty" value="1" min="1">
+
 
 <div class="price">
 Estimated cutting cost: <span id="price">$0</span>
 </div>
 
+
 <p style="font-size:11px;opacity:.65;margin-top:4px;">
 Estimate excludes shipping and final mastering review.
 </p>
+
+
+
 <script>
+
+/* pricing table */
 
 const pricing={
 7:{1:75,2:85},
@@ -180,18 +94,15 @@ const pricing={
 12:{1:110,2:125}
 };
 
+
+/* calculator */
+
 function update(){
 
 const size=document.getElementById("size").value;
 const sides=document.getElementById("sides").value;
 
 let qty=parseInt(document.getElementById("qty").value)||1;
-
-
-if(qty<1){
-qty=1;
-document.getElementById("qty").value=1;
-}
 
 if(qty<1){
 qty=1;
@@ -208,59 +119,45 @@ const total=unit*qty;
 
 document.getElementById("price").textContent="$"+total;
 
+
+/* send values to parent form */
+
+sendToParent();
+
 }
+
+
+/* messaging */
+
+function sendToParent(){
+
+const data={
+size:document.getElementById("size").value,
+sides:document.getElementById("sides").value,
+qty:document.getElementById("qty").value,
+price:document.getElementById("price").textContent
+};
+
+console.log("CALCULATOR → PARENT:",data);
+
+window.parent.postMessage(data,"*");
+
+}
+
+
+/* listeners */
 
 document.getElementById("size").addEventListener("change",update);
 document.getElementById("sides").addEventListener("change",update);
 document.getElementById("qty").addEventListener("input",update);
 
-window.addEventListener("load",function(){
-update();
-sendToParent();
-});
-function sendToParent(){
 
-const size=document.getElementById("size").value;
-const sides=document.getElementById("sides").value;
-const qty=document.getElementById("qty").value;
-const price=document.getElementById("price").textContent;
+/* initialise */
 
-window.parent.postMessage({
-size:size,
-sides:sides,
-qty:qty,
-price:price
-},"*");
+window.addEventListener("load",update);
 
-}
-
-function sendToParent(){
-
-const data = {
-size: recordSize,
-sides: sides,
-qty: quantity,
-price: price
-};
-
-console.log("SENDING:", data);
-
-window.parent.postMessage(data, "*");
-
-}
-
-/* fire whenever user changes inputs */
-
-document.addEventListener("change", sendToParent);
-document.addEventListener("input", sendToParent);
-
-/* fire once immediately */
-
-window.addEventListener("load", sendToParent); 
 </script>
 
-</body>
-</html>
 
 </body>
 </html>
