@@ -456,7 +456,7 @@ updatePrice();
 </script>
 <script>
 
-function validateForm() {
+function validateForm(){
 
 let valid = true
 
@@ -477,12 +477,41 @@ valid = false
 
 })
 
-if(!valid){
+/* Runtime validation */
+
+const size = document.getElementById("size").value
+const a = parseFloat(document.getElementById("runtimeA").value) || 0
+const b = parseFloat(document.getElementById("runtimeB").value) || 0
+
+let limit = 18
+
+if(size === "7") limit = 4
+if(size === "10") limit = 10
+
+if(a > limit || b > limit){
+
+document.getElementById("runtimeWarning").style.display = "block"
+
+document.getElementById("runtimeA").style.borderColor = "#c9302c"
+document.getElementById("runtimeB").style.borderColor = "#c9302c"
+
+alert("Side length exceeds the safe runtime for this record size.")
+
+valid = false
+
+}
+
+/* Required field warning */
+
+if(!valid && (a <= limit && b <= limit)){
 
 alert("Please complete all required fields before submitting your project.")
+
 }
 
 return valid
+
+}
 
 }
 
