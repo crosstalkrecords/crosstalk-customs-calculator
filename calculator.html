@@ -96,7 +96,18 @@ background:#a52320;
 #shippingFields{
 display:none;
 }
+.ship-toggle{
+display:flex;
+align-items:center;
+gap:10px;
+margin-top:16px;
+font-size:14px;
+font-weight:600;
+}
 
+.ship-toggle input{
+width:auto;
+}
 .warning{
 display:none;
 font-size:12px;
@@ -157,18 +168,6 @@ We'll review the project and confirm details before cutting.
 <input type="hidden" name="Quantity" id="formQty">
 <input type="hidden" name="Price" id="formPrice">
 
-<label>Customer Name</label>
-<input type="text" name="Customer Name" required>
-
-<label>Email</label>
-<input type="email" name="Email" required>
-
-<label>Copyright Ownership</label>
-<select name="Copyright Status" required>
-<option value="">Select</option>
-<option value="owner">This is my music / I own the rights</option>
-<option value="licensed">I have permission to reproduce this audio</option>
-</select>
 
 <label>Playback Speed</label>
 <select name="Format">
@@ -197,9 +196,10 @@ Upload Audio Files
 ⚠ Runtime exceeds the safe cutting limit for the selected record size.
 </p>
 
-<label>
-<input type="checkbox" id="shipCheck"> Shipping required
-</label>
+<div class="ship-toggle">
+<input type="checkbox" id="shipCheck">
+<label for="shipCheck">Shipping Required</label>
+</div>
 
 <div id="shippingFields">
 
