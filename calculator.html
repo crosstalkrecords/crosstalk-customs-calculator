@@ -281,7 +281,9 @@ Upload Audio Files
 <p class="warning" id="runtimeWarning">
 ⚠ Runtime exceeds the safe cutting limit for the selected record size.
 </p>
-
+runtimeWarning.style.display = "block"
+runtimeWarning.style.color = "#c9302c"
+runtimeWarning.style.fontWeight = "700"
 
 <div class="checkbox-row">
 <input type="checkbox" id="shipCheck">
@@ -433,6 +435,46 @@ setTimeout(sendHeight,500);
 updatePrice();
 
 </script>
+<script>
 
+function validateForm() {
+
+let valid = true
+
+const requiredFields = document.querySelectorAll(
+'input[required], select[required], textarea[required]'
+)
+
+requiredFields.forEach(field => {
+
+field.style.borderColor = '#ddd'
+
+if(!field.value){
+
+field.style.borderColor = '#c9302c'
+valid = false
+
+}
+
+})
+
+if(!valid){
+
+alert("Please complete all required fields before submitting your project.")
+}
+
+return valid
+
+}
+
+document.querySelector("form").addEventListener("submit", function(e){
+
+if(!validateForm()){
+e.preventDefault()
+}
+
+})
+
+</script>
 </body>
 </html>
