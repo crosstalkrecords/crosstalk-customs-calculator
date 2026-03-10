@@ -128,29 +128,20 @@ sendToParent();
 
 
 /* messaging */
-
 function sendToParent(){
 
-const size=document.getElementById("size").value;
-const sides=document.getElementById("sides").value;
-const qty=document.getElementById("qty").value;
-const price=document.getElementById("price").textContent;
+const data={
+size:document.getElementById("size").value,
+sides:document.getElementById("sides").value,
+qty:document.getElementById("qty").value,
+price:document.getElementById("price").textContent
+};
 
-try{
+console.log("CALCULATOR → TOP:",data);
 
-const parentDoc=window.parent.document;
-
-parentDoc.getElementById("hiddenRecordSize").value=size;
-parentDoc.getElementById("hiddenSides").value=sides;
-parentDoc.getElementById("hiddenQuantity").value=qty;
-parentDoc.getElementById("hiddenPrice").value=price;
-
-}catch(e){
-console.log("Parent access blocked:",e);
-}
+window.top.postMessage(data,"*");
 
 }
-
 /* listeners */
 
 document.getElementById("size").addEventListener("change",update);
