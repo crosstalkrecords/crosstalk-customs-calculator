@@ -43,7 +43,7 @@ font-weight:700;
 
 p{
 font-size:14px;
-opacity:.75;
+opacity:.8;
 margin:0 0 16px;
 }
 
@@ -72,7 +72,6 @@ resize:vertical;
 
 input[type="checkbox"]{
 width:auto;
-padding:0;
 margin:0;
 }
 
@@ -96,7 +95,6 @@ line-height:1.6;
 .summary strong{
 display:block;
 margin-bottom:6px;
-font-size:13px;
 }
 
 button{
@@ -118,21 +116,26 @@ background:#a52320;
 
 .upload-button{
 display:inline-block;
-margin-top:6px;
-margin-bottom:4px;
-padding:10px 16px;
+padding:12px 18px;
 background:#c9302c;
 color:white;
 border-radius:8px;
 font-size:13px;
 font-weight:600;
 text-decoration:none;
+margin-top:6px;
 box-shadow:0 3px 6px rgba(0,0,0,0.12);
-transition:background .15s ease;
 }
 
 .upload-button:hover{
 background:#a52320;
+}
+
+.upload-note{
+font-size:12px;
+opacity:.65;
+margin-top:6px;
+line-height:1.5;
 }
 
 .checkbox-row{
@@ -153,7 +156,7 @@ cursor:pointer;
 
 #shippingFields{
 display:none;
-margin-top:12px;
+margin-top:10px;
 }
 
 .warning{
@@ -176,16 +179,6 @@ line-height:1.6;
 margin-top:18px;
 }
 
-a{
-color:#c9302c;
-font-weight:600;
-text-decoration:none;
-}
-
-a:hover{
-text-decoration:underline;
-}
-
 </style>
 
 </head>
@@ -203,6 +196,22 @@ We'll review the project and confirm details before cutting.
 
 <form action="https://hook.eu1.make.com/9qnwohttdlpsvffpdrwp942ialmpybou" method="POST">
 
+
+<label>Customer Name</label>
+<input type="text" name="Customer Name" required>
+
+<label>Email</label>
+<input type="email" name="Email" required>
+
+<label>Copyright Ownership</label>
+<select name="Copyright Ownership" required>
+<option value="">Select</option>
+<option>I own the copyright</option>
+<option>I have permission from the copyright holder</option>
+<option>This is my original recording</option>
+</select>
+
+
 <label>Record Size</label>
 <select id="size">
 <option value="7">7 inch</option>
@@ -217,7 +226,7 @@ We'll review the project and confirm details before cutting.
 </select>
 
 <label>Quantity</label>
-<input type="number" id="qty" value="1" min="1">
+<input type="number" id="qty" value="1" min="1" max="5">
 
 <div class="price" id="price">$75</div>
 
@@ -246,17 +255,25 @@ Estimated Cost: <span id="summaryPrice">$75</span>
 <option>45 RPM</option>
 </select>
 
-<p>Upload your audio to our Google Drive folder first.</p>
 
-<a 
+<label>Upload Audio</label>
+
+<a
 class="upload-button"
 href="https://drive.google.com/drive/folders/1NQcTCME19QaRCzpW8uvof391uUkY53VT"
 target="_blank">
 Upload Audio Files
 </a>
 
+<div class="upload-note">
+This opens our Google Drive upload folder in a new tab.  
+Google may ask you to sign in before uploading your files.
+</div>
+
+
 <label>Track Listing</label>
 <textarea name="Tracklist"></textarea>
+
 
 <label>Side A runtime (minutes)</label>
 <input type="number" id="runtimeA" min="0" max="30" step="0.1">
@@ -268,10 +285,12 @@ Upload Audio Files
 ⚠ Runtime exceeds the safe cutting limit for the selected record size.
 </p>
 
+
 <div class="checkbox-row">
 <input type="checkbox" id="shipCheck">
 <label for="shipCheck">Shipping Required</label>
 </div>
+
 
 <div id="shippingFields">
 
@@ -293,6 +312,7 @@ Upload Audio Files
 
 </div>
 
+
 <div class="legal">
 
 <strong>Copyright Declaration</strong>
@@ -309,10 +329,12 @@ unauthorised reproduction of copyrighted works.
 
 </div>
 
+
 <div class="checkbox-row">
 <input type="checkbox" name="Legal Agreement" id="legalAgree" required>
 <label for="legalAgree">I agree to the declaration above</label>
 </div>
+
 
 <button type="submit">Submit Project</button>
 
