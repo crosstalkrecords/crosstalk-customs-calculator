@@ -1,20 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Crosstalk Customs Calculator</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<title>Crosstalk Customs</title>
 
 <style>
 
 body{
+font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+background:#f4f4f4;
 margin:0;
-padding:0;
-font-family:'Inter',sans-serif;
-font-size:14px;
-color:#000;
-background:transparent;
+padding:40px;
+display:flex;
+justify-content:center;
+}
+
+.card{
+background:white;
+border-radius:24px;
+box-shadow:0 40px 120px rgba(0,0,0,0.12);
+padding:36px;
+max-width:520px;
+width:100%;
+}
+
+h2{
+margin:0 0 20px 0;
 }
 
 label{
@@ -25,138 +36,111 @@ margin-top:16px;
 margin-bottom:6px;
 }
 
-select,
-input{
+select,input{
 width:100%;
-padding:9px 12px;
+padding:10px;
 border-radius:8px;
 border:1px solid #ddd;
-font-size:14px;
-background:#fafafa;
-box-sizing:border-box;
-}
-
-input[type="number"]{
-margin-bottom:4px;
 }
 
 .price{
-margin-top:12px;
-margin-bottom:10px;
+margin-top:20px;
+font-size:22px;
 font-weight:700;
-font-size:13px;
+color:#c9302c;
+}
+
+button{
+margin-top:20px;
+width:100%;
+padding:14px;
+border:none;
+border-radius:999px;
+background:#c9302c;
+color:white;
+font-weight:700;
+cursor:pointer;
 }
 
 </style>
-</head>
 
+</head>
 
 <body>
 
+<div class="card">
+
+<h2>Start Your Custom Record</h2>
+
 <label>Record Size</label>
 <select id="size">
-<option value="">Select</option>
 <option value="7">7 inch</option>
 <option value="10">10 inch</option>
 <option value="12">12 inch</option>
 </select>
 
-
 <label>Sides</label>
 <select id="sides">
-<option value="1">Single-sided</option>
-<option value="2">Double-sided</option>
+<option value="1">Single</option>
+<option value="2">Double</option>
 </select>
-
 
 <label>Quantity</label>
 <input type="number" id="qty" value="1" min="1">
 
+<div class="price" id="price">$75</div>
 
-<div class="price">
-Estimated cutting cost: <span id="price">$0</span>
+<form action="https://hook.eu1.make.com/9qnwohttdlpsvffpdrwp942ialmpybou" method="POST">
+
+<input type="hidden" name="Record Size" id="formSize">
+<input type="hidden" name="Sides" id="formSides">
+<input type="hidden" name="Quantity" id="formQty">
+<input type="hidden" name="Price" id="formPrice">
+
+<label>Name</label>
+<input type="text" name="Customer Name" required>
+
+<label>Email</label>
+<input type="email" name="Email" required>
+
+<button type="submit">Submit Project</button>
+
+</form>
+
 </div>
-
-
-<p style="font-size:11px;opacity:.65;margin-top:4px;">
-Estimate excludes shipping and final mastering review.
-</p>
-
-
 
 <script>
 
-/* pricing table */
-
-const pricing={
-7:{1:75,2:85},
-10:{1:90,2:100},
-12:{1:110,2:125}
+const prices = {
+"7": {1:75,2:85},
+"10": {1:90,2:100},
+"12": {1:110,2:125}
 };
-
-
-/* calculator */
 
 function update(){
 
 const size=document.getElementById("size").value;
 const sides=document.getElementById("sides").value;
-
-let qty=parseInt(document.getElementById("qty").value)||1;
-
-if(qty<1){
-qty=1;
-document.getElementById("qty").value=1;
-}
-
-let unit=0;
-
-if(pricing[size] && pricing[size][sides]){
-unit=pricing[size][sides];
-}
-
-const total=unit*qty;
-
-document.getElementById("price").textContent="$"+total;
-
-
-/* send values to parent form */
-
-sendToParent();
-
-}
-
-
-/* messaging */
-function sendToParent(){
-
-const size=document.getElementById("size").value;
-const sides=document.getElementById("sides").value;
 const qty=document.getElementById("qty").value;
-const price=document.getElementById("price").textContent;
 
-window.parent.postMessage({
-type:"crosstalk_price",
-size:size,
-sides:sides,
-qty:qty,
-price:price
-},"*");
+const price=prices[size][sides]*qty;
+
+document.getElementById("price").textContent="$"+price;
+
+document.getElementById("formSize").value=size+'"';
+document.getElementById("formSides").value=sides==1?"Single":"Double";
+document.getElementById("formQty").value=qty;
+document.getElementById("formPrice").value=price;
 
 }
-/* listeners */
 
 document.getElementById("size").addEventListener("change",update);
 document.getElementById("sides").addEventListener("change",update);
 document.getElementById("qty").addEventListener("input",update);
 
-
-/* initialise */
-
-window.addEventListener("load",update);
+update();
 
 </script>
-
 
 </body>
 </html>
