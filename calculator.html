@@ -77,6 +77,22 @@ font-weight:700;
 color:#c9302c;
 }
 
+.summary{
+margin-top:14px;
+padding:14px;
+border-radius:10px;
+background:#fafafa;
+border:1px solid #e3e3e3;
+font-size:13px;
+line-height:1.6;
+}
+
+.summary strong{
+display:block;
+margin-bottom:6px;
+font-size:13px;
+}
+  
 button{
 margin-top:24px;
 width:100%;
@@ -177,7 +193,19 @@ We'll review the project and confirm details before cutting.
 <input type="number" id="qty" value="1" min="1">
 
 <div class="price" id="price">$75</div>
+<div class="summary" id="summaryBox">
 
+<strong>Order Summary</strong>
+
+<div id="summarySize">7"</div>
+<div id="summarySides">Single-sided</div>
+<div id="summaryQty">Quantity: 1</div>
+
+<div style="margin-top:6px;">
+Estimated Cost: <span id="summaryPrice">$75</span>
+</div>
+
+</div>
 <input type="hidden" name="Record Size" id="formSize">
 <input type="hidden" name="Sides" id="formSides">
 <input type="hidden" name="Quantity" id="formQty">
@@ -277,7 +305,14 @@ const qty=document.getElementById("qty").value;
 const price=prices[size][sides]*qty;
 
 document.getElementById("price").textContent="$"+price;
+document.getElementById("summaryPrice").textContent="$"+price;
 
+const sizeLabel = size + '"';
+const sideLabel = sides==1 ? "Single-sided" : "Double-sided";
+
+document.getElementById("summarySize").textContent=sizeLabel;
+document.getElementById("summarySides").textContent=sideLabel;
+document.getElementById("summaryQty").textContent="Quantity: "+qty;
 document.getElementById("formSize").value=size+'"';
 document.getElementById("formSides").value=sides==1?"Single":"Double";
 document.getElementById("formQty").value=qty;
