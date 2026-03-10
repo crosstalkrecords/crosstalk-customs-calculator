@@ -70,6 +70,12 @@ min-height:70px;
 resize:vertical;
 }
 
+input[type="checkbox"]{
+width:auto;
+padding:0;
+margin:0;
+}
+
 .price{
 margin-top:16px;
 font-size:22px;
@@ -92,7 +98,7 @@ display:block;
 margin-bottom:6px;
 font-size:13px;
 }
-  
+
 button{
 margin-top:24px;
 width:100%;
@@ -110,12 +116,26 @@ button:hover{
 background:#a52320;
 }
 
-#shippingFields{
-display:none;
-margin-top:10px;
+.upload-button{
+display:inline-block;
+margin-top:6px;
+margin-bottom:4px;
+padding:10px 16px;
+background:#c9302c;
+color:white;
+border-radius:8px;
+font-size:13px;
+font-weight:600;
+text-decoration:none;
+box-shadow:0 3px 6px rgba(0,0,0,0.12);
+transition:background .15s ease;
 }
 
-.ship-toggle{
+.upload-button:hover{
+background:#a52320;
+}
+
+.checkbox-row{
 display:flex;
 align-items:center;
 gap:10px;
@@ -124,9 +144,16 @@ font-size:14px;
 font-weight:600;
 }
 
-.ship-toggle input{
-width:auto;
+.checkbox-row label{
 margin:0;
+font-size:14px;
+font-weight:600;
+cursor:pointer;
+}
+
+#shippingFields{
+display:none;
+margin-top:12px;
 }
 
 .warning{
@@ -146,7 +173,7 @@ border-radius:8px;
 padding:14px;
 font-size:12px;
 line-height:1.6;
-margin-top:16px;
+margin-top:18px;
 }
 
 a{
@@ -193,7 +220,8 @@ We'll review the project and confirm details before cutting.
 <input type="number" id="qty" value="1" min="1">
 
 <div class="price" id="price">$75</div>
-<div class="summary" id="summaryBox">
+
+<div class="summary">
 
 <strong>Order Summary</strong>
 
@@ -206,6 +234,7 @@ Estimated Cost: <span id="summaryPrice">$75</span>
 </div>
 
 </div>
+
 <input type="hidden" name="Record Size" id="formSize">
 <input type="hidden" name="Sides" id="formSides">
 <input type="hidden" name="Quantity" id="formQty">
@@ -219,7 +248,10 @@ Estimated Cost: <span id="summaryPrice">$75</span>
 
 <p>Upload your audio to our Google Drive folder first.</p>
 
-<a href="https://drive.google.com/drive/folders/1NQcTCME19QaRCzpW8uvof391uUkY53VT" target="_blank">
+<a 
+class="upload-button"
+href="https://drive.google.com/drive/folders/1NQcTCME19QaRCzpW8uvof391uUkY53VT"
+target="_blank">
 Upload Audio Files
 </a>
 
@@ -236,7 +268,7 @@ Upload Audio Files
 ⚠ Runtime exceeds the safe cutting limit for the selected record size.
 </p>
 
-<div class="ship-toggle">
+<div class="checkbox-row">
 <input type="checkbox" id="shipCheck">
 <label for="shipCheck">Shipping Required</label>
 </div>
@@ -277,10 +309,10 @@ unauthorised reproduction of copyrighted works.
 
 </div>
 
-<label>
-<input type="checkbox" name="Legal Agreement" required>
-I agree to the declaration above
-</label>
+<div class="checkbox-row">
+<input type="checkbox" name="Legal Agreement" id="legalAgree" required>
+<label for="legalAgree">I agree to the declaration above</label>
+</div>
 
 <button type="submit">Submit Project</button>
 
@@ -307,12 +339,13 @@ const price=prices[size][sides]*qty;
 document.getElementById("price").textContent="$"+price;
 document.getElementById("summaryPrice").textContent="$"+price;
 
-const sizeLabel = size + '"';
-const sideLabel = sides==1 ? "Single-sided" : "Double-sided";
+const sizeLabel=size+'"';
+const sideLabel=sides==1?"Single-sided":"Double-sided";
 
 document.getElementById("summarySize").textContent=sizeLabel;
 document.getElementById("summarySides").textContent=sideLabel;
 document.getElementById("summaryQty").textContent="Quantity: "+qty;
+
 document.getElementById("formSize").value=size+'"';
 document.getElementById("formSides").value=sides==1?"Single":"Double";
 document.getElementById("formQty").value=qty;
