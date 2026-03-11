@@ -43,7 +43,7 @@ font-weight:700;
 
 p{
 font-size:14px;
-opacity:.8;
+opacity:.85;
 margin:0 0 16px;
 }
 
@@ -150,14 +150,6 @@ display:none;
 margin-top:10px;
 }
 
-.warning{
-display:none;
-font-size:12px;
-color:#c9302c;
-margin-top:6px;
-font-weight:600;
-}
-
 .runtimeGuide{
 font-size:12px;
 opacity:.7;
@@ -176,12 +168,38 @@ line-height:1.6;
 margin-top:18px;
 }
 
+/* SUCCESS SCREEN */
+
+.success{
+text-align:center;
+padding:20px;
+}
+
+.success h2{
+color:#c9302c;
+}
+
+.success a{
+display:inline-block;
+margin-top:16px;
+padding:12px 20px;
+background:#c9302c;
+color:white;
+border-radius:999px;
+text-decoration:none;
+font-weight:600;
+}
+
+.success a:hover{
+background:#a52320;
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="card" id="formCard">
 
 <h2>Start Your Custom Record</h2>
 
@@ -190,10 +208,7 @@ Tell us about your audio, format and quantity.
 We'll review the project and confirm details before cutting.
 </p>
 
-<form
-action="https://hook.eu1.make.com/e738vk61z1ijbgsqhsnue9w8d6k14vas"
-method="POST"
-target="_top">
+<form id="orderForm">
 
 <label>Customer Name</label>
 <input type="text" name="Customer Name" required>
@@ -204,20 +219,12 @@ target="_top">
 <label>Are you allowed to make a vinyl copy of this audio?</label>
 
 <select name="Copyright Ownership" id="copyrightSelect" required>
-
 <option value="">Select</option>
-
-<option value="own">
-This is my own music or recording
-</option>
-
-<option value="permission">
-I have permission or the legal right to reproduce this audio
-</option>
-
+<option value="own">This is my own music or recording</option>
+<option value="permission">I have permission or the legal right to reproduce this audio</option>
 </select>
 
-<p id="copyrightHelp" style="font-size:12px; opacity:.7; margin-top:6px;"></p>
+<p id="copyrightHelp" style="font-size:12px;opacity:.7;margin-top:6px;"></p>
 
 <label>Record Size</label>
 <select id="size">
@@ -271,17 +278,13 @@ Upload Audio Files
 <textarea name="Tracklist"></textarea>
 
 <label>Side A runtime (minutes)</label>
-<input type="number" id="runtimeA" step="0.1">
+<input type="number" step="0.1">
 
 <label>Side B runtime (minutes)</label>
-<input type="number" id="runtimeB" step="0.1">
+<input type="number" step="0.1">
 
 <p id="runtimeGuide" class="runtimeGuide">
-Max runtime: 4 minutes per side for 7" records
-</p>
-
-<p class="warning" id="runtimeWarning">
-⚠ Runtime exceeds the recommended cutting limit.
+Max recommended runtime: 4 minutes per side for 7" records
 </p>
 
 <div class="checkbox-row">
@@ -326,21 +329,6 @@ unauthorised reproduction of copyrighted works.
 </p>
 
 <p>
-By submitting this form you confirm that:
-</p>
-
-<p>
-• You are the copyright owner of the supplied material, OR<br>
-• You have obtained explicit permission from the copyright holder
-to reproduce the audio on vinyl.
-</p>
-
-<p>
-Crosstalk Records reserves the right to refuse any order where the
-copyright status of the material appears unclear or disputed.
-</p>
-
-<p>
 Submitting this order constitutes a legal declaration that you have
 the authority to reproduce the supplied recordings.
 </p>
@@ -360,48 +348,33 @@ the authority to reproduce the supplied recordings.
 
 <script>
 
+const webhook="https://hook.eu1.make.com/e738vk61z1ijbgsqhsnue9w8d6k14vas"
+
 const prices={
 "7":{1:75,2:85},
 "10":{1:90,2:100},
 "12":{1:110,2:125}
-};
+}
 
 function updatePrice(){
 
-const size=document.getElementById("size").value;
-const sides=document.getElementById("sides").value;
-const qty=document.getElementById("qty").value;
-
-const price=prices[size][sides]*qty;
-
-document.getElementById("price").textContent="$"+price;
-document.getElementById("summaryPrice").textContent="$"+price;
-
-document.getElementById("summarySize").textContent=size+'"';
-document.getElementById("summarySides").textContent=sides==1?"Single-sided":"Double-sided";
-document.getElementById("summaryQty").textContent="Quantity: "+qty;
-
-document.getElementById("formSize").value=size+'"';
-document.getElementById("formSides").value=sides==1?"Single":"Double";
-document.getElementById("formQty").value=qty;
-document.getElementById("formPrice").value=price;
-
-updateRuntimeGuide()
-
-sendHeight();
-
-}
-
-function updateRuntimeGuide(){
-
 const size=document.getElementById("size").value
-let limit=18
+const sides=document.getElementById("sides").value
+const qty=document.getElementById("qty").value
 
-if(size==="7") limit=4
-if(size==="10") limit=10
+const price=prices[size][sides]*qty
 
-document.getElementById("runtimeGuide").textContent =
-"Max recommended runtime: "+limit+" minutes per side for "+size+'" records'
+document.getElementById("price").textContent="$"+price
+document.getElementById("summaryPrice").textContent="$"+price
+
+document.getElementById("summarySize").textContent=size+'"'
+document.getElementById("summarySides").textContent=sides==1?"Single-sided":"Double-sided"
+document.getElementById("summaryQty").textContent="Quantity: "+qty
+
+document.getElementById("formSize").value=size+'"'
+document.getElementById("formSides").value=sides==1?"Single":"Double"
+document.getElementById("formQty").value=qty
+document.getElementById("formPrice").value=price
 
 }
 
@@ -409,52 +382,71 @@ document.getElementById("size").addEventListener("change",updatePrice)
 document.getElementById("sides").addEventListener("change",updatePrice)
 document.getElementById("qty").addEventListener("input",updatePrice)
 
+updatePrice()
+
 document.getElementById("shipCheck").addEventListener("change",function(){
 
 document.getElementById("shippingFields").style.display=
 this.checked?"block":"none"
 
-sendHeight()
-
 })
 
-function sendHeight(){
+/* copyright helper */
 
-const height=document.body.scrollHeight;
+const copyrightSelect=document.getElementById("copyrightSelect")
+const copyrightHelp=document.getElementById("copyrightHelp")
 
-window.parent.postMessage({
-type:"resize-form",
-height:height
-},"*");
+copyrightSelect.addEventListener("change",function(){
 
+if(this.value==="own"){
+copyrightHelp.innerHTML="Example: music you wrote, recorded, or created yourself."
 }
-
-window.addEventListener("load",sendHeight)
-window.addEventListener("resize",sendHeight)
-
-setTimeout(sendHeight,500)
-
-updatePrice()
-const copyrightSelect = document.getElementById("copyrightSelect")
-const copyrightHelp = document.getElementById("copyrightHelp")
-
-copyrightSelect.addEventListener("change", function(){
-
-if(this.value === "own"){
-copyrightHelp.innerHTML =
-"Example: music you wrote, recorded, or created yourself."
+else if(this.value==="permission"){
+copyrightHelp.innerHTML="Example: a mixtape, playlist, or audio you have permission to reproduce."
 }
-
-else if(this.value === "permission"){
-copyrightHelp.innerHTML =
-"Example: a mixtape, playlist, or audio you have permission to reproduce."
-}
-
 else{
-copyrightHelp.innerHTML = ""
+copyrightHelp.innerHTML=""
 }
 
 })
+
+/* SUBMIT HANDLER */
+
+document.getElementById("orderForm").addEventListener("submit",async function(e){
+
+e.preventDefault()
+
+const formData=new FormData(this)
+
+await fetch(webhook,{
+method:"POST",
+body:formData
+})
+
+document.getElementById("formCard").innerHTML=`
+
+<div class="success">
+
+<h2>Order received</h2>
+
+<p>Your Crosstalk Customs project has been submitted.</p>
+
+<p>If you haven't uploaded your audio yet, you can do so here:</p>
+
+<a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW" target="_blank">
+Upload Audio Files
+</a>
+
+<p style="margin-top:18px;">
+We'll review your project and confirm details shortly.
+</p>
+
+</div>
+
+`
+
+})
+
 </script>
 
 </body>
