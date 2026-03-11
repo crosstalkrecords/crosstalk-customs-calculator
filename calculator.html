@@ -201,13 +201,23 @@ target="_top">
 <label>Email</label>
 <input type="email" name="Email" required>
 
-<label>Copyright Ownership</label>
-<select name="Copyright Ownership" required>
+<label>Are you allowed to make a vinyl copy of this audio?</label>
+
+<select name="Copyright Ownership" id="copyrightSelect" required>
+
 <option value="">Select</option>
-<option>I own the copyright</option>
-<option>I have permission from the copyright holder</option>
-<option>This is my original recording</option>
+
+<option value="own">
+This is my own music or recording
+</option>
+
+<option value="permission">
+I have permission or the legal right to reproduce this audio
+</option>
+
 </select>
+
+<p id="copyrightHelp" style="font-size:12px; opacity:.7; margin-top:6px;"></p>
 
 <label>Record Size</label>
 <select id="size">
@@ -425,7 +435,26 @@ window.addEventListener("resize",sendHeight)
 setTimeout(sendHeight,500)
 
 updatePrice()
+const copyrightSelect = document.getElementById("copyrightSelect")
+const copyrightHelp = document.getElementById("copyrightHelp")
 
+copyrightSelect.addEventListener("change", function(){
+
+if(this.value === "own"){
+copyrightHelp.innerHTML =
+"Example: music you wrote, recorded, or created yourself."
+}
+
+else if(this.value === "permission"){
+copyrightHelp.innerHTML =
+"Example: a mixtape, playlist, or audio you have permission to reproduce."
+}
+
+else{
+copyrightHelp.innerHTML = ""
+}
+
+})
 </script>
 
 </body>
