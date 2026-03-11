@@ -1,9 +1,161 @@
-<div class="checkbox-row">
-<input type="checkbox" id="artistCheck">
-<label for="artistCheck">I am a local / independent artist and this is my own work</label>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
 
-<div id="artistMessage" style="
+<meta charset="UTF-8">
+<title>Crosstalk Customs</title>
+
+<style>
+
+body{
+font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+background:transparent;
+margin:0;
+padding:0;
+}
+
+.card{
+background:#ffffff;
+border-radius:18px;
+padding:28px;
+max-width:560px;
+margin:0 auto;
+position:relative;
+box-sizing:border-box;
+}
+
+.card::before{
+content:"";
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:4px;
+background:#c9302c;
+border-radius:18px 18px 0 0;
+}
+
+h2{
+margin:0 0 16px;
+font-size:26px;
+font-weight:700;
+}
+
+p{
+font-size:14px;
+opacity:.85;
+margin:0 0 16px;
+}
+
+label{
+display:block;
+font-size:12px;
+font-weight:700;
+margin-top:16px;
+margin-bottom:6px;
+}
+
+input,select,textarea{
+width:100%;
+padding:10px 12px;
+border-radius:8px;
+border:1px solid #ddd;
+font-size:14px;
+background:#fafafa;
+box-sizing:border-box;
+}
+
+textarea{
+min-height:70px;
+resize:vertical;
+}
+
+input[type="checkbox"]{
+width:auto;
+margin:0;
+}
+
+.price{
+margin-top:16px;
+font-size:22px;
+font-weight:700;
+color:#c9302c;
+}
+
+.summary{
+margin-top:14px;
+padding:14px;
+border-radius:10px;
+background:#fafafa;
+border:1px solid #e3e3e3;
+font-size:13px;
+line-height:1.6;
+}
+
+.summary strong{
+display:block;
+margin-bottom:6px;
+}
+
+button{
+margin-top:24px;
+width:100%;
+padding:14px;
+border:none;
+border-radius:999px;
+background:#c9302c;
+color:white;
+font-weight:700;
+font-size:14px;
+cursor:pointer;
+}
+
+button:hover{
+background:#a52320;
+}
+
+.upload-button{
+display:inline-block;
+padding:12px 18px;
+background:#c9302c;
+color:white;
+border-radius:8px;
+font-size:13px;
+font-weight:600;
+text-decoration:none;
+margin-top:6px;
+}
+
+.upload-button:hover{
+background:#a52320;
+}
+
+.checkbox-row{
+display:flex;
+align-items:center;
+gap:10px;
+margin-top:18px;
+font-size:14px;
+font-weight:600;
+}
+
+.checkbox-row label{
+margin:0;
+cursor:pointer;
+}
+
+#shippingFields{
+display:none;
+margin-top:10px;
+}
+
+.runtimeGuide{
+font-size:12px;
+opacity:.7;
+margin-top:6px;
+}
+
+.artistBox{
 display:none;
 margin-top:12px;
 padding:14px;
@@ -12,17 +164,89 @@ background:#fafafa;
 border:1px solid #ddd;
 font-size:13px;
 line-height:1.6;
-">
+}
+
+.artistUnlocked{
+display:none;
+color:#2f8f3a;
+font-weight:600;
+margin-top:6px;
+}
+
+.legal{
+max-height:220px;
+overflow:auto;
+background:#fafafa;
+border:1px solid #ddd;
+border-radius:8px;
+padding:14px;
+font-size:12px;
+line-height:1.6;
+margin-top:18px;
+}
+
+.success{
+text-align:center;
+padding:20px;
+}
+
+.success h2{
+color:#c9302c;
+}
+
+.success a{
+display:inline-block;
+margin-top:16px;
+padding:12px 20px;
+background:#c9302c;
+color:white;
+border-radius:999px;
+text-decoration:none;
+font-weight:600;
+}
+
+.success a:hover{
+background:#a52320;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card" id="formCard">
+
+<h2>Start Your Custom Record</h2>
+
+<p>
+Tell us about your audio, format and quantity.
+We'll review the project and confirm details before cutting.
+</p>
+
+<form id="orderForm">
+
+<label>Customer Name</label>
+<input type="text" name="Customer Name" required>
+
+<label>Email</label>
+<input type="email" name="Email" required>
+
+<div class="checkbox-row">
+<input type="checkbox" id="artistCheck">
+<label for="artistCheck">I am a local / independent artist and this is my own work</label>
+</div>
+
+<div id="artistBox" class="artistBox">
 
 <strong>Artist pricing available</strong>
 
-<p style="margin-top:6px;">
-Crosstalk Customs is proud to offer discounted vinyl pricing for
-local and independent musicians in Australia.
+<p>
+Crosstalk Customs offers discounted vinyl pricing for local
+and independent musicians in Australia.
 </p>
 
 <p>
-Please contact us directly to discuss pricing and receive an artist code.
+Contact us to receive an artist code.
 </p>
 
 <p>
@@ -33,8 +257,255 @@ Please contact us directly to discuss pricing and receive an artist code.
 <label>Artist Code</label>
 <input type="text" id="artistCode" placeholder="Enter artist code if provided">
 
-<p id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
+<p id="artistUnlocked" class="artistUnlocked">
 Artist pricing unlocked
 </p>
 
 </div>
+
+<label>Record Size</label>
+<select id="size">
+<option value="7">7 inch</option>
+<option value="10">10 inch</option>
+<option value="12">12 inch</option>
+</select>
+
+<label>Sides</label>
+<select id="sides">
+<option value="1">Single</option>
+<option value="2">Double</option>
+</select>
+
+<label>Quantity</label>
+<input type="number" id="qty" value="1" min="1">
+
+<div class="price" id="price">$75</div>
+
+<div class="summary">
+
+<strong>Order Summary</strong>
+
+<div id="summarySize">7"</div>
+<div id="summarySides">Single-sided</div>
+<div id="summaryQty">Quantity: 1</div>
+
+<div style="margin-top:6px;">
+Estimated Cost: <span id="summaryPrice">$75</span>
+</div>
+
+</div>
+
+<input type="hidden" name="Record Size" id="formSize">
+<input type="hidden" name="Sides" id="formSides">
+<input type="hidden" name="Quantity" id="formQty">
+<input type="hidden" name="Price" id="formPrice">
+
+<label>Playback Speed</label>
+<select name="Format">
+<option>33 RPM</option>
+<option>45 RPM</option>
+</select>
+
+<label>Upload Audio</label>
+
+<a class="upload-button"
+href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW"
+target="_blank">
+Upload Audio Files
+</a>
+
+<label>Track Listing</label>
+<textarea name="Tracklist"></textarea>
+
+<label>Side A runtime (minutes)</label>
+<input type="number" step="0.1">
+
+<label>Side B runtime (minutes)</label>
+<input type="number" step="0.1">
+
+<p class="runtimeGuide">
+Recommended runtime: shorter sides produce better cuts.
+</p>
+
+<div class="checkbox-row">
+<input type="checkbox" id="shipCheck">
+<label for="shipCheck">Shipping Required</label>
+</div>
+
+<div id="shippingFields">
+
+<label>Shipping Address</label>
+<textarea name="Shipping Address"></textarea>
+
+<label>Shipping Type</label>
+<select name="Shipping Type">
+<option value="">Select</option>
+<option>Standard</option>
+<option>Express</option>
+</select>
+
+<label>Delivery Method</label>
+<select name="Delivery Method">
+<option>Australia Post</option>
+<option>Courier</option>
+</select>
+
+</div>
+
+<div class="legal">
+
+<strong>Copyright Declaration</strong>
+
+<p>
+By submitting this order you confirm that you either own the copyright
+to the supplied audio or have permission from the copyright holder
+to reproduce the material on vinyl.
+</p>
+
+<p>
+Crosstalk Records provides a custom lathe-cut duplication service.
+We do not verify copyright ownership and accept no liability for
+unauthorised reproduction of copyrighted works.
+</p>
+
+</div>
+
+<div class="checkbox-row">
+<input type="checkbox" name="Legal Agreement" required>
+<label>I agree to the declaration above</label>
+</div>
+
+<button type="submit">Submit Project</button>
+
+</form>
+
+</div>
+
+<script>
+
+const webhook="https://hook.eu1.make.com/e738vk61z1ijbgsqhsnue9w8d6k14vas"
+
+const prices={
+"7":{1:75,2:85},
+"10":{1:90,2:100},
+"12":{1:110,2:125}
+}
+
+/* artist codes */
+
+const artistCodes={
+"CROSSTALKARTIST":0.7,
+"LOCALVINYL":0.75
+}
+
+const artistCheck=document.getElementById("artistCheck")
+const artistBox=document.getElementById("artistBox")
+const artistCode=document.getElementById("artistCode")
+const artistUnlocked=document.getElementById("artistUnlocked")
+
+artistCheck.addEventListener("change",function(){
+artistBox.style.display=this.checked?"block":"none"
+})
+
+function getArtistDiscount(){
+
+if(!artistCode)return 1
+
+const code=artistCode.value.trim().toUpperCase()
+
+if(artistCodes[code]){
+artistUnlocked.style.display="block"
+return artistCodes[code]
+}
+
+artistUnlocked.style.display="none"
+return 1
+
+}
+
+/* price calculator */
+
+function updatePrice(){
+
+const size=document.getElementById("size").value
+const sides=document.getElementById("sides").value
+const qty=document.getElementById("qty").value
+
+let discount=getArtistDiscount()
+
+const price=prices[size][sides]*qty*discount
+
+document.getElementById("price").textContent="$"+price.toFixed(2)
+document.getElementById("summaryPrice").textContent="$"+price.toFixed(2)
+
+document.getElementById("summarySize").textContent=size+'"'
+document.getElementById("summarySides").textContent=sides==1?"Single-sided":"Double-sided"
+document.getElementById("summaryQty").textContent="Quantity: "+qty
+
+document.getElementById("formSize").value=size+'"'
+document.getElementById("formSides").value=sides==1?"Single":"Double"
+document.getElementById("formQty").value=qty
+document.getElementById("formPrice").value=price
+
+}
+
+document.getElementById("size").addEventListener("change",updatePrice)
+document.getElementById("sides").addEventListener("change",updatePrice)
+document.getElementById("qty").addEventListener("input",updatePrice)
+
+if(artistCode){
+artistCode.addEventListener("input",updatePrice)
+}
+
+updatePrice()
+
+/* shipping toggle */
+
+document.getElementById("shipCheck").addEventListener("change",function(){
+
+document.getElementById("shippingFields").style.display=
+this.checked?"block":"none"
+
+})
+
+/* form submit */
+
+document.getElementById("orderForm").addEventListener("submit",async function(e){
+
+e.preventDefault()
+
+const formData=new FormData(this)
+
+await fetch(webhook,{
+method:"POST",
+body:formData
+})
+
+document.getElementById("formCard").innerHTML=`
+
+<div class="success">
+
+<h2>Order received</h2>
+
+<p>Your Crosstalk Customs project has been submitted.</p>
+
+<p>If you haven't uploaded your audio yet, you can do so here:</p>
+
+<a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW" target="_blank">
+Upload Audio Files
+</a>
+
+<p style="margin-top:18px;">
+We'll review your project and confirm details shortly.
+</p>
+
+</div>
+
+`
+
+})
+
+</script>
+
+</body>
+</html>
