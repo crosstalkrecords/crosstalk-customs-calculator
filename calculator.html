@@ -142,13 +142,6 @@ font-weight:600;
 cursor:pointer;
 }
 
-.checkbox-row label{
-display:inline;
-margin:0;
-font-weight:600;
-cursor:pointer;
-}
-
 .artistBox{
 display:none;
 margin-top:14px;
@@ -167,6 +160,13 @@ margin-top:10px;
 font-size:12px;
 opacity:.7;
 margin-top:6px;
+}
+
+.runtimeWarning{
+font-size:12px;
+color:#c9302c;
+margin-top:6px;
+display:none;
 }
 
 .legal{
@@ -248,6 +248,10 @@ Invalid artist code
 <option value="12">12 inch</option>
 </select>
 
+<p class="runtimeGuide" id="sizeGuide">
+Recommended runtime: up to ~5 minutes per side.
+</p>
+
 <label>Sides</label>
 <select id="sides">
 <option value="1">Single</option>
@@ -287,14 +291,18 @@ Upload Audio Files
 <textarea name="Tracklist"></textarea>
 
 <label>Side A runtime (minutes)</label>
-<input type="number" step="0.1">
+<input type="number" id="sideA" step="0.1">
 
 <label>Side B runtime (minutes)</label>
-<input type="number" step="0.1">
+<input type="number" id="sideB" step="0.1">
 
 <p class="runtimeGuide">
-Recommended runtime: shorter sides produce better cuts.
+Guide: 7" ≈ 5 minutes • 10" ≈ 9 minutes • 12" ≈ 18 minutes per side.
 </p>
+
+<div class="runtimeWarning" id="runtimeWarning">
+Runtime exceeds recommended limit for this format. We may contact you to adjust the cut.
+</div>
 
 <div class="checkbox-row">
 <input type="checkbox" id="shipCheck">
@@ -329,60 +337,11 @@ Recommended runtime: shorter sides produce better cuts.
 
 <div class="legal">
 
-<strong>Copyright Declaration</strong>
-
-</div>
-<div class="legal">
-
 <strong>Copyright Declaration & Terms</strong>
 
 <p>
 By submitting this order you confirm that you either own the copyright to the supplied audio
 or have obtained permission from the copyright holder(s) to reproduce the material on vinyl.
-</p>
-
-<p>
-Crosstalk Records provides a custom lathe-cut duplication service. We do not verify copyright
-ownership and accept no liability for unauthorised reproduction of copyrighted works.
-</p>
-
-<p>
-Under the <strong>Copyright Act 1968 (Australia)</strong>, reproduction of copyrighted sound
-recordings without permission from the rights holder may constitute copyright infringement.
-Customers are solely responsible for ensuring they have the legal right to reproduce
-any material submitted for cutting.
-</p>
-
-<p>
-By proceeding with this order you agree that:
-</p>
-
-<ul>
-<li>You have the legal right to reproduce the submitted material.</li>
-<li>You will indemnify Crosstalk Records against any claims arising from copyright infringement.</li>
-<li>Crosstalk Records may refuse or cancel an order if copyright ownership is unclear.</li>
-</ul>
-
-<p>
-For more information about Australian copyright law, see:
-</p>
-
-<ul>
-<li>
-<a href="https://www.legislation.gov.au/Details/C2023C00096" target="_blank">
-Copyright Act 1968 (Cth)
-</a>
-</li>
-<li>
-<a href="https://www.copyright.org.au/" target="_blank">
-Australian Copyright Council
-</a>
-</li>
-</ul>
-
-<p>
-Crosstalk Customs records are cut individually in real time using a lathe-cut process and are
-intended for small-run releases, personal projects, and independent artists.
 </p>
 
 </div>
@@ -420,6 +379,36 @@ const summarySize=document.getElementById("summarySize")
 const summarySides=document.getElementById("summarySides")
 const summaryQty=document.getElementById("summaryQty")
 
+const sideA=document.getElementById("sideA")
+const sideB=document.getElementById("sideB")
+const runtimeWarning=document.getElementById("runtimeWarning")
+const sizeGuide=document.getElementById("sizeGuide")
+
+function updateRuntimeGuide(){
+
+if(size.value==="7"){ sizeGuide.textContent="Recommended runtime: up to ~5 minutes per side." }
+if(size.value==="10"){ sizeGuide.textContent="Recommended runtime: up to ~9 minutes per side." }
+if(size.value==="12"){ sizeGuide.textContent="Recommended runtime: up to ~18 minutes per side." }
+
+}
+
+function checkRuntime(){
+
+let max=5
+if(size.value==="10") max=9
+if(size.value==="12") max=18
+
+const a=parseFloat(sideA.value)||0
+const b=parseFloat(sideB.value)||0
+
+if(a>max || b>max){
+runtimeWarning.style.display="block"
+}else{
+runtimeWarning.style.display="none"
+}
+
+}
+
 function updatePrice(){
 
 const s=size.value
@@ -452,19 +441,21 @@ document.getElementById("formPrice").value=price
 
 }
 
-size.addEventListener("change",updatePrice)
+size.addEventListener("change",function(){
+updatePrice()
+updateRuntimeGuide()
+checkRuntime()
+})
+
+sideA.addEventListener("input",checkRuntime)
+sideB.addEventListener("input",checkRuntime)
+
 sides.addEventListener("change",updatePrice)
 qty.addEventListener("input",updatePrice)
 artistCode.addEventListener("input",updatePrice)
-artistCode.addEventListener("blur",function(){
-
-if(artistCheck.checked && artistCode.value.toUpperCase()!==ARTIST_CODE){
-document.getElementById("artistInvalid").style.display="block"
-}
-
-})
 
 updatePrice()
+updateRuntimeGuide()
 
 const artistCheck=document.getElementById("artistCheck")
 const artistBox=document.getElementById("artistBox")
