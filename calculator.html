@@ -540,5 +540,26 @@ online orders are limited to five copies as each disc must be cut in real time.
 Please contact Crosstalk Records if you would like to discuss larger runs.
 
 </div>
+
+  <script>
+
+function resizeParent(){
+
+  const height = document.documentElement.scrollHeight;
+
+  window.parent.postMessage({
+    type: "resize-form",
+    height: height
+  }, "*");
+
+}
+
+/* run after load */
+window.addEventListener("load", resizeParent);
+
+/* run after any DOM changes */
+new ResizeObserver(resizeParent).observe(document.body);
+
+</script>
 </body>
 </html>
