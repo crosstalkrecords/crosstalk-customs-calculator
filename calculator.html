@@ -75,28 +75,6 @@ width:auto;
 margin:0;
 }
 
-.price{
-margin-top:16px;
-font-size:22px;
-font-weight:700;
-color:#c9302c;
-}
-
-.summary{
-margin-top:14px;
-padding:14px;
-border-radius:10px;
-background:#fafafa;
-border:1px solid #e3e3e3;
-font-size:13px;
-line-height:1.6;
-}
-
-.summary strong{
-display:block;
-margin-bottom:6px;
-}
-
 button{
 margin-top:24px;
 width:100%;
@@ -181,6 +159,16 @@ line-height:1.6;
 margin-top:18px;
 }
 
+.successBox{
+display:none;
+text-align:center;
+padding:28px;
+border-radius:14px;
+background:#f6f6f6;
+border:1px solid #e5e5e5;
+margin-top:24px;
+}
+
 </style>
 </head>
 
@@ -191,8 +179,7 @@ margin-top:18px;
 <h2>Start Your Custom Record</h2>
 
 <p>
-Tell us about your audio, format and quantity.
-We'll review the project and confirm details before cutting.
+Tell us about your audio, format and quantity. We'll review the project and confirm details before cutting.
 </p>
 
 <form id="orderForm">
@@ -215,10 +202,9 @@ We'll review the project and confirm details before cutting.
 <h3>Independent Artist Pricing</h3>
 
 <p>
-Crosstalk Records is proud to offer special discounted local/independent
-artist pricing. If this is you, please contact the Crosstalk team at
+For more information please contact
 <a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
-or <strong>(02) 9145 8567</strong> to be provided with a unique Artist Code.
+or <strong>(02) 9145 8567</strong>.
 </p>
 
 <p>Thanks for staying independent!</p>
@@ -252,10 +238,10 @@ Invalid artist code
 <p class="runtimeGuide" id="sizeGuide"></p>
 
 <label>Side A runtime (minutes)</label>
-<input type="number" id="sideA" step="0.1">
+<input type="number" id="sideA" step="0.1" name="Side A Runtime">
 
 <label>Side B runtime (minutes)</label>
-<input type="number" id="sideB" step="0.1">
+<input type="number" id="sideB" step="0.1" name="Side B Runtime">
 
 <div class="runtimeWarning" id="runtimeWarning">
 Runtime exceeds recommended limit for this format.
@@ -286,10 +272,10 @@ Upload Audio Files
 <input name="Suburb">
 
 <label>Postcode</label>
-<input name="Postcode" id="postcode">
+<input name="Postcode">
 
 <label>State</label>
-<select name="State" id="state">
+<select name="State">
 <option value="">Select</option>
 <option>NSW</option>
 <option>VIC</option>
@@ -308,47 +294,29 @@ Upload Audio Files
 <strong>Copyright Declaration & Terms</strong>
 
 <p>
-By submitting this order you confirm that you either own the copyright to the supplied audio
-or have obtained permission from the copyright holder(s) to reproduce the material on vinyl.
+By submitting this order you confirm that you either own the copyright
+to the supplied audio or have obtained permission from the copyright
+holder(s) to reproduce the material on vinyl.
 </p>
 
 <p>
-Crosstalk Records provides a custom lathe-cut duplication service. We do not verify copyright
-ownership and accept no liability for unauthorised reproduction of copyrighted works.
+Crosstalk Records provides a custom lathe-cut duplication service.
+We do not verify copyright ownership and accept no liability
+for unauthorised reproduction of copyrighted works.
 </p>
 
 <p>
-Under the <strong>Copyright Act 1968 (Australia)</strong>, reproduction of copyrighted sound
-recordings without permission from the rights holder may constitute copyright infringement.
-Customers are solely responsible for ensuring they have the legal right to reproduce
-any material submitted for cutting.
-</p>
-
-<p>
-By proceeding with this order you agree that:
+Under the <strong>Copyright Act 1968 (Australia)</strong>,
+reproduction of copyrighted sound recordings without permission
+from the rights holder may constitute copyright infringement.
+Customers are solely responsible for ensuring they have the legal
+right to reproduce any material submitted for cutting.
 </p>
 
 <ul>
 <li>You have the legal right to reproduce the submitted material.</li>
-<li>You will indemnify Crosstalk Records against any claims arising from copyright infringement.</li>
-<li>Crosstalk Records may refuse or cancel an order if copyright ownership is unclear.</li>
-</ul>
-
-<p>
-For more information about Australian copyright law, see:
-</p>
-
-<ul>
-<li>
-<a href="https://www.legislation.gov.au/Details/C2023C00096" target="_blank">
-Copyright Act 1968 (Cth)
-</a>
-</li>
-<li>
-<a href="https://www.copyright.org.au/" target="_blank">
-Australian Copyright Council
-</a>
-</li>
+<li>You will indemnify Crosstalk Records against any claims.</li>
+<li>Crosstalk Records may refuse or cancel orders if ownership is unclear.</li>
 </ul>
 
 </div>
@@ -361,6 +329,20 @@ Australian Copyright Council
 <button type="submit">Submit Project</button>
 
 </form>
+
+<div id="successBox" class="successBox">
+
+<h2>Order received</h2>
+
+<p>Your Crosstalk Customs project has been submitted.</p>
+
+<p>If you haven't uploaded your audio yet:</p>
+
+<a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW" target="_blank">
+Upload Audio Files
+</a>
+
+</div>
 
 </div>
 
@@ -392,45 +374,29 @@ const shipCheck=document.getElementById("shipCheck")
 const shippingFields=document.getElementById("shippingFields")
 
 function updateGuide(){
-
 const limit=runtimeLimits[size.value][rpm.value]
-
 const m=Math.floor(limit)
 const s=Math.round((limit-m)*60)
-
 guide.textContent=`Recommended runtime: ${m}:${s.toString().padStart(2,'0')} per side`
-
 }
 
 function checkRuntime(){
-
 const limit=runtimeLimits[size.value][rpm.value]
-
 const a=parseFloat(sideA.value)||0
 const b=parseFloat(sideB.value)||0
-
 warn.style.display=(a>limit||b>limit)?"block":"none"
-
 }
 
 function validateArtistCode(){
-
 const code=artistCode.value.trim().toUpperCase()
-
-if(code===""){
 artistUnlocked.style.display="none"
 artistInvalid.style.display="none"
-return
-}
-
+if(code==="") return
 if(code===ARTIST_CODE){
 artistUnlocked.style.display="block"
-artistInvalid.style.display="none"
 }else{
-artistUnlocked.style.display="none"
 artistInvalid.style.display="block"
 }
-
 }
 
 artistCheck.addEventListener("change",()=>{
@@ -440,16 +406,71 @@ artistOrder.value=artistCheck.checked?"Yes":"No"
 
 shipCheck.addEventListener("change",()=>{
 shippingFields.style.display=shipCheck.checked?"block":"none"
+
+shippingFields.querySelectorAll("input,select").forEach(el=>{
+el.required=shipCheck.checked
+})
 })
 
 artistCode.addEventListener("input",validateArtistCode)
 
 size.addEventListener("change",()=>{updateGuide();checkRuntime()})
 rpm.addEventListener("change",()=>{updateGuide();checkRuntime()})
+
 sideA.addEventListener("input",checkRuntime)
 sideB.addEventListener("input",checkRuntime)
 
 updateGuide()
+
+document.getElementById("orderForm").addEventListener("submit",async function(e){
+
+e.preventDefault()
+
+if(artistCheck.checked && artistCode.value.trim().toUpperCase()!==ARTIST_CODE){
+alert("Please enter a valid artist code.")
+return
+}
+
+const limit=runtimeLimits[size.value][rpm.value]
+const a=parseFloat(sideA.value)||0
+const b=parseFloat(sideB.value)||0
+
+if(a>limit||b>limit){
+alert("Runtime exceeds safe limits for this format.")
+return
+}
+
+const button=this.querySelector("button")
+button.disabled=true
+button.textContent="Submitting..."
+
+try{
+
+const response=await fetch(
+"https://hook.eu1.make.com/e738vk61z1ijbgsqhsnue9w8d6k14vas",
+{
+method:"POST",
+body:new FormData(this)
+}
+)
+
+if(!response.ok){
+throw new Error("Webhook failed")
+}
+
+this.style.display="none"
+document.getElementById("successBox").style.display="block"
+
+}catch(err){
+
+alert("Submission failed. Please try again.")
+
+button.disabled=false
+button.textContent="Submit Project"
+
+}
+
+})
 
 </script>
 
