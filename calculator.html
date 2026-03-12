@@ -1,6 +1,344 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
 
-// ---------------- ARTIST CHECKBOX ----------------
+<meta charset="UTF-8">
+<title>Crosstalk Customs</title>
+
+<style>
+
+body{
+font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+background:transparent;
+margin:0;
+padding:0;
+}
+
+.card{
+background:#ffffff;
+border-radius:18px;
+padding:28px;
+max-width:560px;
+margin:0 auto;
+position:relative;
+box-sizing:border-box;
+}
+
+.card::before{
+content:"";
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:4px;
+background:#c9302c;
+border-radius:18px 18px 0 0;
+}
+
+h2{
+margin:0 0 16px;
+font-size:26px;
+font-weight:700;
+}
+
+p{
+font-size:14px;
+opacity:.9;
+margin:0 0 16px;
+}
+
+label{
+display:block;
+font-size:12px;
+font-weight:700;
+margin-top:16px;
+margin-bottom:6px;
+}
+
+input,select,textarea{
+width:100%;
+padding:10px 12px;
+border-radius:8px;
+border:1px solid #ddd;
+font-size:14px;
+background:#fafafa;
+box-sizing:border-box;
+}
+
+textarea{
+min-height:70px;
+resize:vertical;
+}
+
+input[type="checkbox"]{
+width:auto;
+margin:0;
+}
+
+.price{
+margin-top:16px;
+font-size:22px;
+font-weight:700;
+color:#c9302c;
+}
+
+.summary{
+margin-top:14px;
+padding:14px;
+border-radius:10px;
+background:#fafafa;
+border:1px solid #e3e3e3;
+font-size:13px;
+line-height:1.6;
+}
+
+.summary strong{
+display:block;
+margin-bottom:6px;
+}
+
+button{
+margin-top:24px;
+width:100%;
+padding:14px;
+border:none;
+border-radius:999px;
+background:#c9302c;
+color:white;
+font-weight:700;
+font-size:14px;
+cursor:pointer;
+}
+
+button:hover{
+background:#a52320;
+}
+
+.upload-button{
+display:inline-block;
+padding:12px 18px;
+background:#c9302c;
+color:white;
+border-radius:8px;
+font-size:13px;
+font-weight:600;
+text-decoration:none;
+margin-top:6px;
+}
+
+.checkbox-row{
+display:flex;
+align-items:center;
+gap:10px;
+margin-top:18px;
+font-size:14px;
+font-weight:600;
+}
+
+.artistBox{
+display:none;
+margin-top:14px;
+padding:18px;
+border-radius:12px;
+background:#f7f7f7;
+border:1px solid #e4e4e4;
+}
+
+#shippingFields{
+display:none;
+margin-top:10px;
+}
+
+.runtimeGuide{
+font-size:12px;
+opacity:.7;
+margin-top:6px;
+}
+
+.legal{
+max-height:220px;
+overflow:auto;
+background:#fafafa;
+border:1px solid #ddd;
+border-radius:8px;
+padding:14px;
+font-size:12px;
+line-height:1.6;
+margin-top:18px;
+}
+
+.successBox{
+display:none;
+text-align:center;
+padding:28px;
+border-radius:14px;
+background:#f6f6f6;
+border:1px solid #e5e5e5;
+margin-top:24px;
+}
+
+.disclaimer{
+margin-top:24px;
+font-size:12px;
+opacity:.7;
+line-height:1.5;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>Start Your Custom Record</h2>
+
+<p>
+Tell us about your audio, format and quantity.
+We'll review the project and confirm details before cutting.
+</p>
+
+<form id="orderForm">
+
+<input type="hidden" name="Artist Order" id="artistOrder" value="No">
+
+<label>Customer Name</label>
+<input type="text" name="Customer Name" required>
+
+<label>Email</label>
+<input type="email" name="Email" required>
+
+<div class="checkbox-row">
+<input type="checkbox" id="artistCheck">
+<label for="artistCheck">I am a local / independent artist and this is my own work</label>
+</div>
+
+<div id="artistBox" class="artistBox">
+
+<h3>Artist pricing available</h3>
+
+<p>
+Crosstalk Customs offers discounted vinyl pricing for local and independent musicians in Australia.
+</p>
+
+<label>Artist Code</label>
+<input type="text" id="artistCode">
+
+<div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
+Artist pricing unlocked
+</div>
+
+<div id="artistInvalid" style="display:none;color:#c9302c;font-weight:600;margin-top:6px;">
+Invalid artist code
+</div>
+
+</div>
+
+<label>Record Size</label>
+<select id="size">
+<option value="7">7 inch</option>
+<option value="10">10 inch</option>
+<option value="12">12 inch</option>
+</select>
+
+<label>Sides</label>
+<select id="sides">
+<option value="1">Single</option>
+<option value="2">Double</option>
+</select>
+
+<label>Quantity</label>
+<input type="number" id="qty" value="1" min="1">
+
+<div class="price" id="price">$75</div>
+
+<div class="summary">
+<strong>Order Summary</strong>
+<div id="summarySize">7"</div>
+<div id="summarySides">Single-sided</div>
+<div id="summaryQty">Quantity: 1</div>
+<div style="margin-top:6px;">
+Estimated Cost: <span id="summaryPrice">$75</span>
+</div>
+</div>
+
+<label>Playback Speed</label>
+<select name="Format">
+<option>33 RPM</option>
+<option>45 RPM</option>
+</select>
+
+<label>Upload Audio</label>
+
+<a class="upload-button"
+href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW"
+target="_blank">
+Upload Audio Files
+</a>
+
+<label>Track Listing</label>
+<textarea name="Tracklist"></textarea>
+
+<label>Side A runtime (minutes)</label>
+<input type="number" step="0.1">
+
+<label>Side B runtime (minutes)</label>
+<input type="number" step="0.1">
+
+<p class="runtimeGuide">
+Recommended runtime: shorter sides produce better cuts.
+</p>
+
+<div class="checkbox-row">
+<input type="checkbox" id="shipCheck">
+<label for="shipCheck">Shipping Required</label>
+</div>
+
+<div id="shippingFields">
+
+<label>Street Address</label>
+<input name="Street Address">
+
+<label>Suburb</label>
+<input name="Suburb">
+
+<label>Postcode</label>
+<input name="Postcode" id="postcode">
+
+<label>State</label>
+<select name="State" id="state">
+<option value="">Select</option>
+<option>NSW</option>
+<option>VIC</option>
+<option>QLD</option>
+<option>WA</option>
+<option>SA</option>
+<option>TAS</option>
+<option>ACT</option>
+<option>NT</option>
+</select>
+
+</div>
+
+<div class="legal">
+
+<strong>Copyright Declaration</strong>
+
+<p>
+By submitting this order you confirm that you either own the copyright
+to the supplied audio or have permission from the copyright holder
+to reproduce the material on vinyl.
+</p>
+
+</div>
+
+<button type="submit">Submit Project</button>
+
+</form>
+
+</div>
+
+<script>
 
 const artistCheck = document.getElementById("artistCheck")
 const artistBox = document.getElementById("artistBox")
@@ -9,17 +347,9 @@ const artistOrder = document.getElementById("artistOrder")
 artistCheck.addEventListener("change", function(){
 
 artistBox.style.display = this.checked ? "block" : "none"
-
 artistOrder.value = this.checked ? "Yes" : "No"
 
-if (typeof resizeParent === "function") {
-resizeParent()
-}
-
 })
-
-
-// ---------------- SHIPPING CHECKBOX ----------------
 
 const shipCheck=document.getElementById("shipCheck")
 const shippingFields=document.getElementById("shippingFields")
@@ -28,18 +358,7 @@ shipCheck.addEventListener("change",function(){
 
 shippingFields.style.display=this.checked?"block":"none"
 
-shippingFields.querySelectorAll("input,select").forEach(el=>{
-el.required=this.checked
 })
-
-if (typeof resizeParent === "function") {
-resizeParent()
-}
-
-})
-
-
-// ---------------- POSTCODE → STATE HELPER ----------------
 
 document.getElementById("postcode").addEventListener("input",function(){
 
@@ -48,10 +367,10 @@ const pc=this.value
 if(pc.startsWith("2")) document.getElementById("state").value="NSW"
 if(pc.startsWith("3")) document.getElementById("state").value="VIC"
 if(pc.startsWith("4")) document.getElementById("state").value="QLD"
-if(pc.startsWith("5")) document.getElementById("state").value="SA"
-if(pc.startsWith("6")) document.getElementById("state").value="WA"
-if(pc.startsWith("7")) document.getElementById("state").value="TAS"
 
 })
 
 </script>
+
+</body>
+</html>
