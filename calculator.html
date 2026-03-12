@@ -198,10 +198,6 @@ We'll review the project and confirm details before cutting.
 <form id="orderForm">
 
 <input type="hidden" name="Artist Order" id="artistOrder" value="No">
-<input type="hidden" name="Record Size" id="formSize">
-<input type="hidden" name="Sides" id="formSides">
-<input type="hidden" name="Quantity" id="formQty">
-<input type="hidden" name="Price" id="formPrice">
 
 <label>Customer Name</label>
 <input type="text" name="Customer Name" required>
@@ -219,23 +215,16 @@ We'll review the project and confirm details before cutting.
 <h3>Independent Artist Pricing</h3>
 
 <p>
-Crosstalk Records is proud to offer special discounted local/independent artist pricing. If this is you, please contact the Crosstalk team at
+Crosstalk Records is proud to offer special discounted local/independent
+artist pricing. If this is you, please contact the Crosstalk team at
 <a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
-or <strong>(02) 9145 8567</strong> to be provided with a unique Artist Code. 
+or <strong>(02) 9145 8567</strong> to be provided with a unique Artist Code.
 </p>
 
 <p>Thanks for staying independent!</p>
 
 <label>Artist Code</label>
-<input type="text" id="starvingartist">
-
-<div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
-Artist pricing unlocked
-</div>
-
-<div id="artistInvalid" style="display:none;color:#c9302c;font-weight:600;margin-top:6px;">
-Invalid artist code
-</div>
+<input type="text" id="artistCode">
 
 <div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
 Artist pricing unlocked
@@ -255,34 +244,21 @@ Invalid artist code
 </select>
 
 <label>Playback Speed</label>
-<select id="rpm" name="Format">
+<select id="rpm">
 <option value="33">33 RPM</option>
 <option value="45">45 RPM</option>
 </select>
 
-<p class="runtimeGuide" id="sizeGuide">
-Recommended runtime: 3:45 per side
-</p>
+<p class="runtimeGuide" id="sizeGuide"></p>
 
-<label>Sides</label>
-<select id="sides">
-<option value="1">Single</option>
-<option value="2">Double</option>
-</select>
+<label>Side A runtime (minutes)</label>
+<input type="number" id="sideA" step="0.1">
 
-<label>Quantity</label>
-<input type="number" id="qty" value="1" min="1">
+<label>Side B runtime (minutes)</label>
+<input type="number" id="sideB" step="0.1">
 
-<div class="price" id="price">$75</div>
-
-<div class="summary">
-<strong>Order Summary</strong>
-<div id="summarySize">7"</div>
-<div id="summarySides">Single-sided</div>
-<div id="summaryQty">Quantity: 1</div>
-<div style="margin-top:6px;">
-Estimated Cost: <span id="summaryPrice">$75</span>
-</div>
+<div class="runtimeWarning" id="runtimeWarning">
+Runtime exceeds recommended limit for this format.
 </div>
 
 <label>Upload Audio</label>
@@ -295,16 +271,6 @@ Upload Audio Files
 
 <label>Track Listing</label>
 <textarea name="Tracklist"></textarea>
-
-<label>Side A runtime (minutes)</label>
-<input type="number" id="sideA" step="0.1">
-
-<label>Side B runtime (minutes)</label>
-<input type="number" id="sideB" step="0.1">
-
-<div class="runtimeWarning" id="runtimeWarning">
-Runtime exceeds recommended limit for this format.
-</div>
 
 <div class="checkbox-row">
 <input type="checkbox" id="shipCheck">
@@ -385,15 +351,10 @@ Australian Copyright Council
 </li>
 </ul>
 
-<p>
-Crosstalk Customs records are cut individually in real time using a lathe-cut process and are
-intended for small-run releases, personal projects, and independent artists.
-</p>
-
 </div>
 
 <div class="checkbox-row">
-<input type="checkbox" name="Legal Agreement" required>
+<input type="checkbox" required>
 <label>I agree to the declaration and terms above</label>
 </div>
 
@@ -413,10 +374,6 @@ const runtimeLimits={
 
 const ARTIST_CODE="8F3A9C2B"
 
-const artistCode=document.getElementById("artistCode")
-const artistUnlocked=document.getElementById("artistUnlocked")
-const artistInvalid=document.getElementById("artistInvalid")
-
 const size=document.getElementById("size")
 const rpm=document.getElementById("rpm")
 const sideA=document.getElementById("sideA")
@@ -424,35 +381,68 @@ const sideB=document.getElementById("sideB")
 const guide=document.getElementById("sizeGuide")
 const warn=document.getElementById("runtimeWarning")
 
+const artistCheck=document.getElementById("artistCheck")
+const artistBox=document.getElementById("artistBox")
+const artistCode=document.getElementById("artistCode")
+const artistUnlocked=document.getElementById("artistUnlocked")
+const artistInvalid=document.getElementById("artistInvalid")
+const artistOrder=document.getElementById("artistOrder")
+
+const shipCheck=document.getElementById("shipCheck")
+const shippingFields=document.getElementById("shippingFields")
+
 function updateGuide(){
 
-const s=size.value
-const r=rpm.value
-const limit=runtimeLimits[s][r]
+const limit=runtimeLimits[size.value][rpm.value]
 
-const minutes=Math.floor(limit)
-const seconds=Math.round((limit-minutes)*60)
+const m=Math.floor(limit)
+const s=Math.round((limit-m)*60)
 
-guide.textContent=`Recommended runtime: ${minutes}:${seconds.toString().padStart(2,'0')} per side`
+guide.textContent=`Recommended runtime: ${m}:${s.toString().padStart(2,'0')} per side`
 
 }
 
 function checkRuntime(){
 
-const s=size.value
-const r=rpm.value
-const limit=runtimeLimits[s][r]
+const limit=runtimeLimits[size.value][rpm.value]
 
 const a=parseFloat(sideA.value)||0
 const b=parseFloat(sideB.value)||0
 
-if(a>limit || b>limit){
-warn.style.display="block"
+warn.style.display=(a>limit||b>limit)?"block":"none"
+
+}
+
+function validateArtistCode(){
+
+const code=artistCode.value.trim().toUpperCase()
+
+if(code===""){
+artistUnlocked.style.display="none"
+artistInvalid.style.display="none"
+return
+}
+
+if(code===ARTIST_CODE){
+artistUnlocked.style.display="block"
+artistInvalid.style.display="none"
 }else{
-warn.style.display="none"
+artistUnlocked.style.display="none"
+artistInvalid.style.display="block"
 }
 
 }
+
+artistCheck.addEventListener("change",()=>{
+artistBox.style.display=artistCheck.checked?"block":"none"
+artistOrder.value=artistCheck.checked?"Yes":"No"
+})
+
+shipCheck.addEventListener("change",()=>{
+shippingFields.style.display=shipCheck.checked?"block":"none"
+})
+
+artistCode.addEventListener("input",validateArtistCode)
 
 size.addEventListener("change",()=>{updateGuide();checkRuntime()})
 rpm.addEventListener("change",()=>{updateGuide();checkRuntime()})
@@ -460,31 +450,7 @@ sideA.addEventListener("input",checkRuntime)
 sideB.addEventListener("input",checkRuntime)
 
 updateGuide()
-  
-// ---------------- ARTIST CHECKBOX ----------------
 
-const artistCheck=document.getElementById("artistCheck")
-const artistBox=document.getElementById("artistBox")
-const artistOrder=document.getElementById("artistOrder")
-
-artistCheck.addEventListener("change",function(){
-
-artistBox.style.display=this.checked?"block":"none"
-
-artistOrder.value=this.checked?"Yes":"No"
-
-})
-
-// ---------------- SHIPPING TOGGLE ----------------
-
-const shipCheck=document.getElementById("shipCheck")
-const shippingFields=document.getElementById("shippingFields")
-
-shipCheck.addEventListener("change",function(){
-
-shippingFields.style.display=this.checked?"block":"none"
-
-})
 </script>
 
 </body>
