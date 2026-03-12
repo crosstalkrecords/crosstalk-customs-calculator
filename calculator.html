@@ -144,8 +144,6 @@ margin:0;
 cursor:pointer;
 }
 
-/* Artist box styling */
-
 .artistBox{
 display:none;
 margin-top:14px;
@@ -210,16 +208,21 @@ line-height:1.6;
 margin-top:18px;
 }
 
-.success{
+.successBox{
+display:none;
 text-align:center;
-padding:20px;
+padding:28px;
+border-radius:14px;
+background:#f6f6f6;
+border:1px solid #e5e5e5;
+margin-top:24px;
 }
 
-.success h2{
+.successBox h2{
 color:#c9302c;
 }
 
-.success a{
+.successBox a{
 display:inline-block;
 margin-top:16px;
 padding:12px 20px;
@@ -230,16 +233,12 @@ text-decoration:none;
 font-weight:600;
 }
 
-.success a:hover{
-background:#a52320;
-}
-
 </style>
 </head>
 
 <body>
 
-<div class="card" id="formCard">
+<div class="card">
 
 <h2>Start Your Custom Record</h2>
 
@@ -272,7 +271,7 @@ independent musicians in Australia.
 
 <div class="artistContact">
 📧 custom@crosstalkrecords.com<br>
-📞 ((02) 9145 8567)
+📞 (02) 9145 8567
 </div>
 
 <label class="artistCodeInput">Artist Code</label>
@@ -307,17 +306,13 @@ Invalid artist code
 <div class="price" id="price">$75</div>
 
 <div class="summary">
-
 <strong>Order Summary</strong>
-
 <div id="summarySize">7"</div>
 <div id="summarySides">Single-sided</div>
 <div id="summaryQty">Quantity: 1</div>
-
 <div style="margin-top:6px;">
 Estimated Cost: <span id="summaryPrice">$75</span>
 </div>
-
 </div>
 
 <input type="hidden" name="Record Size" id="formSize">
@@ -403,56 +398,30 @@ unauthorised reproduction of copyrighted works.
 <button type="submit">Submit Project</button>
 
 </form>
-<div id="confirmationMessage" style="
-display:none;
-padding:28px;
-border-radius:14px;
-background:#f6f6f6;
-border:1px solid #e5e5e5;
-margin-top:24px;
-">
 
-<h2 style="margin-top:0;">✓ Order Received</h2>
+<div id="successBox" class="successBox">
 
-<p>
-Thanks for submitting your Crosstalk Customs order.
-</p>
+<h2>Order received</h2>
 
-<p>
-We've received your project and will review your audio shortly.
-</p>
+<p>Your Crosstalk Customs project has been submitted.</p>
 
-<p>
-You’ll receive a confirmation email with your order ID.
-</p>
+<p>If you haven't uploaded your audio yet, you can do so here:</p>
 
-<p>
-If you haven't uploaded your audio yet, you can do so here:
-</p>
-
-<p>
-<a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW"
-style="
-display:inline-block;
-padding:12px 18px;
-background:#c9302c;
-color:white;
-border-radius:8px;
-text-decoration:none;
-font-weight:600;
-">
+<a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW" target="_blank">
 Upload Audio Files
 </a>
+
+<p style="margin-top:18px;">
+We'll review your project and confirm details shortly.
 </p>
 
 </div>
+
 </div>
 
 <script>
 
 const webhook="https://hook.eu1.make.com/e738vk61z1ijbgsqhsnue9w8d6k14vas"
-
-/* SINGLE ARTIST PASSWORD */
 
 const ARTIST_CODE="8F3A9C2B"
 const ARTIST_DISCOUNT=0.7
@@ -480,30 +449,22 @@ if(!artistCheck.checked)return 1
 const code=artistCode.value.trim().toUpperCase()
 
 if(code===ARTIST_CODE){
-
 artistUnlocked.style.display="block"
 artistInvalid.style.display="none"
-
 return ARTIST_DISCOUNT
-
 }
 
 if(code.length>0){
-
 artistUnlocked.style.display="none"
 artistInvalid.style.display="block"
-
 }
 
 else{
-
 artistUnlocked.style.display="none"
 artistInvalid.style.display="none"
-
 }
 
 return 1
-
 }
 
 function updatePrice(){
@@ -538,10 +499,8 @@ artistCode.addEventListener("input",updatePrice)
 updatePrice()
 
 document.getElementById("shipCheck").addEventListener("change",function(){
-
 document.getElementById("shippingFields").style.display=
 this.checked?"block":"none"
-
 })
 
 document.getElementById("orderForm").addEventListener("submit",async function(e){
@@ -555,40 +514,14 @@ method:"POST",
 body:formData
 })
 
-document.getElementById("formCard").innerHTML=`
+document.getElementById("orderForm").style.display="none"
+document.getElementById("successBox").style.display="block"
 
-<div class="success">
-
-<h2>Order received</h2>
-
-<p>Your Crosstalk Customs project has been submitted.</p>
-
-<p>If you haven't uploaded your audio yet, you can do so here:</p>
-
-<a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW" target="_blank">
-Upload Audio Files
-</a>
-
-<p style="margin-top:18px;">
-We'll review your project and confirm details shortly.
-</p>
-
-</div>
-
-`
+window.scrollTo({top:0,behavior:"smooth"})
+window.parent.postMessage({type:"scroll-top"},"*")
 
 })
-/* Prevent page jumping on submit */
 
-document.querySelector("form").addEventListener("submit", function() {
-
-    window.scrollTo(0,0);
-
-    window.parent.postMessage({
-        type:"scroll-top"
-    },"*");
-
-});
 </script>
 
 </body>
