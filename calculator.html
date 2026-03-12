@@ -219,15 +219,15 @@ We'll review the project and confirm details before cutting.
 <h3>Independent Artist Pricing</h3>
 
 <p>
-For more information, before proceeding please contact the Crosstalk team at
+Crosstalk Records is proud to offer special discounted local/independent artist pricing. If this is you, please contact the Crosstalk team at
 <a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
-or <strong>(02) 9145 8567</strong>.
+or <strong>(02) 9145 8567</strong> to be provided with a unique Artist Code. 
 </p>
 
 <p>Thanks for staying independent!</p>
 
 <label>Artist Code</label>
-<input type="text" id="artistCode">
+<input type="text" id="STARVINGARTIST">
 
 <div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
 Artist pricing unlocked
@@ -446,7 +446,20 @@ sideA.addEventListener("input",checkRuntime)
 sideB.addEventListener("input",checkRuntime)
 
 updateGuide()
+  
+// ---------------- ARTIST CHECKBOX ----------------
 
+const artistCheck=document.getElementById("artistCheck")
+const artistBox=document.getElementById("artistBox")
+const artistOrder=document.getElementById("artistOrder")
+
+artistCheck.addEventListener("change",function(){
+
+artistBox.style.display=this.checked?"block":"none"
+
+artistOrder.value=this.checked?"Yes":"No"
+
+})
 </script>
 
 </body>
