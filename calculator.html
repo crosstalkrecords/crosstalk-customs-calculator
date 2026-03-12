@@ -340,6 +340,20 @@ to reproduce the material on vinyl.
 
 <script>
 
+// ---------------- ARTIST CHECKBOX ----------------
+
+const artistCheck = document.getElementById("artistCheck")
+const artistBox = document.getElementById("artistBox")
+const artistOrder = document.getElementById("artistOrder")
+
+artistCheck.addEventListener("change", function(){
+
+artistBox.style.display = this.checked ? "block" : "none"
+
+artistOrder.value = this.checked ? "Yes" : "No"
+
+})
+
 const artistCheck = document.getElementById("artistCheck")
 const artistBox = document.getElementById("artistBox")
 const artistOrder = document.getElementById("artistOrder")
