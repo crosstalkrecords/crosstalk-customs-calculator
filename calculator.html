@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
 <title>Crosstalk Customs</title>
 
 <style>
-
 body{
 font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 background:transparent;
@@ -168,7 +166,6 @@ background:#f6f6f6;
 border:1px solid #e5e5e5;
 margin-top:24px;
 }
-
 </style>
 </head>
 
@@ -202,10 +199,12 @@ Tell us about your audio, format and quantity. We'll review the project and conf
 <h3>Independent Artist Pricing</h3>
 
 <p>
-For more information please contact
+For more information, before proceeding please contact the Crosstalk team at
 <a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
 or <strong>(02) 9145 8567</strong>.
 </p>
+
+<p>Thanks for staying independent!</p>
 
 <label>Artist Code</label>
 <input type="text" id="artistCode">
@@ -255,7 +254,6 @@ Runtime exceeds recommended limit for this format.
 </div>
 
 <label>Upload Audio</label>
-
 <a class="upload-button"
 href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW"
 target="_blank">
@@ -302,15 +300,31 @@ Upload Audio Files
 
 <p>
 By submitting this order you confirm that you either own the copyright
-to the supplied audio or have obtained permission from the copyright
-holder(s) to reproduce the material on vinyl.
+to the supplied audio or have obtained permission from the copyright holder(s)
+to reproduce the material on vinyl.
 </p>
 
 <p>
 Crosstalk Records provides a custom lathe-cut duplication service.
-We do not verify copyright ownership and accept no liability
-for unauthorised reproduction of copyrighted works.
+We do not verify copyright ownership and accept no liability for
+unauthorised reproduction of copyrighted works.
 </p>
+
+<p>
+Under the <strong>Copyright Act 1968 (Australia)</strong>,
+reproduction of copyrighted sound recordings without permission
+from the rights holder may constitute copyright infringement.
+Customers are solely responsible for ensuring they have the legal
+right to reproduce any material submitted for cutting.
+</p>
+
+<p>By proceeding with this order you agree that:</p>
+
+<ul>
+<li>You have the legal right to reproduce the submitted material.</li>
+<li>You will indemnify Crosstalk Records against any claims arising from copyright infringement.</li>
+<li>Crosstalk Records may refuse or cancel an order if copyright ownership is unclear.</li>
+</ul>
 
 </div>
 
@@ -328,6 +342,8 @@ for unauthorised reproduction of copyrighted works.
 <h2>Order received</h2>
 
 <p>Your Crosstalk Customs project has been submitted.</p>
+
+<p>If you haven't uploaded your audio yet, you can do so here:</p>
 
 <a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW" target="_blank">
 Upload Audio Files
@@ -352,9 +368,6 @@ const sideB=document.getElementById("sideB")
 const guide=document.getElementById("sizeGuide")
 const warn=document.getElementById("runtimeWarning")
 
-const shipCheck=document.getElementById("shipCheck")
-const shippingFields=document.getElementById("shippingFields")
-
 function updateGuide(){
 const limit=runtimeLimits[size.value][rpm.value]
 const m=Math.floor(limit)
@@ -368,10 +381,6 @@ const a=parseFloat(sideA.value)||0
 const b=parseFloat(sideB.value)||0
 warn.style.display=(a>limit||b>limit)?"block":"none"
 }
-
-shipCheck.addEventListener("change",()=>{
-shippingFields.style.display=shipCheck.checked?"block":"none"
-})
 
 size.addEventListener("change",()=>{updateGuide();checkRuntime()})
 rpm.addEventListener("change",()=>{updateGuide();checkRuntime()})
