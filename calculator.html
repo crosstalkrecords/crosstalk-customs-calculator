@@ -5,6 +5,7 @@
 <title>Crosstalk Customs</title>
 
 <style>
+
 body{
 font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 background:transparent;
@@ -64,8 +65,13 @@ box-sizing:border-box;
 }
 
 textarea{
-min-height:70px;
+min-height:80px;
 resize:vertical;
+}
+
+textarea::placeholder{
+color:#999;
+font-style:italic;
 }
 
 input[type="checkbox"]{
@@ -120,11 +126,24 @@ cursor:pointer;
 
 .artistBox{
 display:none;
-margin-top:14px;
-padding:18px;
+margin-top:16px;
+padding:20px;
 border-radius:12px;
 background:#f7f7f7;
 border:1px solid #e4e4e4;
+}
+
+.artistHeader{
+font-size:18px;
+font-weight:800;
+margin-bottom:12px;
+}
+
+.artistText{
+font-size:13px;
+line-height:1.6;
+opacity:.85;
+margin-bottom:12px;
 }
 
 #shippingFields{
@@ -143,6 +162,13 @@ font-size:12px;
 color:#c9302c;
 margin-top:6px;
 display:none;
+}
+
+.priceBox{
+margin-top:12px;
+font-weight:800;
+font-size:22px;
+color:#c9302c;
 }
 
 .legal{
@@ -166,6 +192,7 @@ background:#f6f6f6;
 border:1px solid #e5e5e5;
 margin-top:24px;
 }
+
 </style>
 </head>
 
@@ -196,15 +223,19 @@ Tell us about your audio, format and quantity. We'll review the project and conf
 
 <div id="artistBox" class="artistBox">
 
-<h3>Independent Artist Pricing</h3>
+<div class="artistHeader">
+HELL YEAH BROTHER, we love independent artists!
+</div>
 
-<p>
-For more information, before proceeding please contact the Crosstalk team at
+<div class="artistText">
+Crosstalk Customs is happy to provide discounted artist pricing for independent musicians releasing their own work.
+</div>
+
+<div class="artistText">
+For more information before proceeding please contact the Crosstalk team at
 <a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
 or <strong>(02) 9145 8567</strong>.
-</p>
-
-<p>Thanks for staying independent!</p>
+</div>
 
 <label>Artist Code</label>
 <input type="text" id="artistCode">
@@ -233,13 +264,15 @@ Invalid artist code
 </select>
 
 <label>Sides</label>
-<select name="Sides">
+<select id="sides" name="Sides">
 <option value="Single">Single</option>
 <option value="Double">Double</option>
 </select>
 
 <label>Quantity</label>
-<input type="number" name="Quantity" min="1" value="1">
+<input type="number" id="qty" name="Quantity" min="1" value="1">
+
+<div id="priceBox" class="priceBox"></div>
 
 <p class="runtimeGuide" id="sizeGuide"></p>
 
@@ -261,7 +294,12 @@ Upload Audio Files
 </a>
 
 <label>Track Listing</label>
-<textarea name="Tracklist"></textarea>
+<textarea
+name="Tracklist"
+placeholder="Example:
+A1 Overture
+A2 Rat King
+A3 Tubthumping.mp4"></textarea>
 
 <div class="checkbox-row">
 <input type="checkbox" id="shipCheck">
@@ -299,23 +337,16 @@ Upload Audio Files
 <strong>Copyright Declaration & Terms</strong>
 
 <p>
-By submitting this order you confirm that you either own the copyright
-to the supplied audio or have obtained permission from the copyright holder(s)
-to reproduce the material on vinyl.
+By submitting this order you confirm that you either own the copyright to the supplied audio or have obtained permission from the copyright holder(s) to reproduce the material on vinyl.
 </p>
 
 <p>
-Crosstalk Records provides a custom lathe-cut duplication service.
-We do not verify copyright ownership and accept no liability for
-unauthorised reproduction of copyrighted works.
+Crosstalk Records provides a custom lathe-cut duplication service. We do not verify copyright ownership and accept no liability for unauthorised reproduction of copyrighted works.
 </p>
 
 <p>
-Under the <strong>Copyright Act 1968 (Australia)</strong>,
-reproduction of copyrighted sound recordings without permission
-from the rights holder may constitute copyright infringement.
-Customers are solely responsible for ensuring they have the legal
-right to reproduce any material submitted for cutting.
+Under the <strong>Copyright Act 1968 (Australia)</strong>, reproduction of copyrighted sound recordings without permission from the rights holder may constitute copyright infringement.
+Customers are solely responsible for ensuring they have the legal right to reproduce any material submitted for cutting.
 </p>
 
 <p>By proceeding with this order you agree that:</p>
@@ -355,43 +386,33 @@ Upload Audio Files
 
 <script>
 
-const runtimeLimits={
-"7":{"33":3.75,"45":3.75},
-"10":{"33":14,"45":11.83},
-"12":{"33":18.5,"45":15.17}
+const prices={
+"7":{"Single":35,"Double":45},
+"10":{"Single":45,"Double":55},
+"12":{"Single":55,"Double":65}
 }
 
 const size=document.getElementById("size")
-const rpm=document.getElementById("rpm")
-const sideA=document.getElementById("sideA")
-const sideB=document.getElementById("sideB")
-const guide=document.getElementById("sizeGuide")
-const warn=document.getElementById("runtimeWarning")
+const sides=document.getElementById("sides")
+const qty=document.getElementById("qty")
+const priceBox=document.getElementById("priceBox")
 
-function updateGuide(){
-const limit=runtimeLimits[size.value][rpm.value.split(" ")[0]]
-const m=Math.floor(limit)
-const s=Math.round((limit-m)*60)
-guide.textContent=`Recommended runtime: ${m}:${s.toString().padStart(2,'0')} per side`
+function updatePrice(){
+
+const base=prices[size.value][sides.value]
+const total=base*qty.value
+
+priceBox.textContent=`Estimated price: $${total}`
+
 }
 
-function checkRuntime(){
-const limit=runtimeLimits[size.value][rpm.value.split(" ")[0]]
-const a=parseFloat(sideA.value)||0
-const b=parseFloat(sideB.value)||0
-warn.style.display=(a>limit||b>limit)?"block":"none"
-}
+size.addEventListener("change",updatePrice)
+sides.addEventListener("change",updatePrice)
+qty.addEventListener("input",updatePrice)
 
-size.addEventListener("change",()=>{updateGuide();checkRuntime()})
-rpm.addEventListener("change",()=>{updateGuide();checkRuntime()})
-sideA.addEventListener("input",checkRuntime)
-sideB.addEventListener("input",checkRuntime)
+updatePrice()
 
-updateGuide()
-
-/* -------------------------
-ARTIST LOGIC
--------------------------- */
+/* ARTIST */
 
 const artistCheck=document.getElementById("artistCheck")
 const artistBox=document.getElementById("artistBox")
@@ -400,23 +421,22 @@ const artistUnlocked=document.getElementById("artistUnlocked")
 const artistInvalid=document.getElementById("artistInvalid")
 const artistOrder=document.getElementById("artistOrder")
 
-const ARTIST_PASSWORD="CROSSTALK"   // change if needed
+const ARTIST_PASSWORD="STARVINGARTIST"
 
-artistCheck.addEventListener("change",function(){
+artistCheck.addEventListener("change",()=>{
 
-if(this.checked){
-artistBox.style.display="block"
-}else{
-artistBox.style.display="none"
+artistBox.style.display=artistCheck.checked?"block":"none"
+
+if(!artistCheck.checked){
 artistUnlocked.style.display="none"
 artistInvalid.style.display="none"
-artistOrder.value="No"
 artistCode.value=""
+artistOrder.value="No"
 }
 
 })
 
-artistCode.addEventListener("input",function(){
+artistCode.addEventListener("input",()=>{
 
 if(artistCode.value.trim().toUpperCase()===ARTIST_PASSWORD){
 
@@ -434,47 +454,18 @@ artistOrder.value="No"
 
 })
 
-/* -------------------------
-SHIPPING LOGIC
--------------------------- */
+/* SHIPPING */
 
 const shipCheck=document.getElementById("shipCheck")
 const shippingFields=document.getElementById("shippingFields")
 
-shipCheck.addEventListener("change",function(){
+shipCheck.addEventListener("change",()=>{
 
-shippingFields.style.display=this.checked?"block":"none"
+shippingFields.style.display=shipCheck.checked?"block":"none"
 
-})
-
-/* -------------------------
-FORM SUBMISSION
--------------------------- */
-
-document.getElementById("orderForm").addEventListener("submit",async function(e){
-
-e.preventDefault()
-
-const response=await fetch(
-"https://hook.eu1.make.com/e738vk61z1ijbgsqhsnue9w8d6k14vas",
-{
-method:"POST",
-body:new FormData(this)
+if(!shipCheck.checked){
+shippingFields.querySelectorAll("input,select").forEach(el=>el.value="")
 }
-)
-
-if(!response.ok){
-alert("Submission failed. Please try again.")
-return
-}
-
-this.style.display="none"
-document.getElementById("successBox").style.display="block"
-
-document.querySelector(".card").scrollIntoView({
-behavior:"smooth",
-block:"start"
-})
 
 })
 
