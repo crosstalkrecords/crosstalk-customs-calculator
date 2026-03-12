@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,6 @@
 <title>Crosstalk Customs</title>
 
 <style>
-
 body{
 font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 background:transparent;
@@ -34,17 +34,8 @@ background:#c9302c;
 border-radius:18px 18px 0 0;
 }
 
-h2{
-margin:0 0 16px;
-font-size:26px;
-font-weight:700;
-}
-
-p{
-font-size:14px;
-opacity:.9;
-margin:0 0 16px;
-}
+h2{margin:0 0 16px;font-size:26px;font-weight:700;}
+p{font-size:14px;opacity:.9;margin:0 0 16px;}
 
 label{
 display:block;
@@ -92,9 +83,7 @@ font-size:14px;
 cursor:pointer;
 }
 
-button:hover{
-background:#a52320;
-}
+button:hover{background:#a52320;}
 
 .upload-button{
 display:inline-block;
@@ -151,23 +140,26 @@ display:none;
 margin-top:10px;
 }
 
-.runtimeGuide{
-font-size:12px;
-opacity:.75;
-margin-top:6px;
-}
-
-.runtimeWarning{
-font-size:12px;
-color:#c9302c;
-margin-top:6px;
-display:none;
-}
-
 .priceBox{
 margin-top:12px;
 font-weight:800;
 font-size:22px;
+color:#c9302c;
+}
+
+.rushBox{
+margin-top:16px;
+padding:14px;
+border-radius:10px;
+background:#fff6f6;
+border:1px solid #e2b4b4;
+font-size:13px;
+line-height:1.6;
+}
+
+.rushTitle{
+font-weight:800;
+margin-bottom:6px;
 color:#c9302c;
 }
 
@@ -192,7 +184,6 @@ background:#f6f6f6;
 border:1px solid #e5e5e5;
 margin-top:24px;
 }
-
 </style>
 </head>
 
@@ -274,16 +265,15 @@ Invalid artist code
 
 <div id="priceBox" class="priceBox"></div>
 
-<p class="runtimeGuide" id="sizeGuide"></p>
+<div class="rushBox">
+<div class="rushTitle">Rush Orders</div>
+Standard Crosstalk Customs turnaround is currently <strong>3–5 days</strong>.<br><br>
+Need it faster? We can usually accommodate <strong>48 hour rush orders</strong> for an additional <strong>$80 rush fee</strong>.
+</div>
 
-<label>Side A runtime (minutes)</label>
-<input type="number" id="sideA" step="0.1" name="Side A Runtime">
-
-<label>Side B runtime (minutes)</label>
-<input type="number" id="sideB" step="0.1" name="Side B Runtime">
-
-<div class="runtimeWarning" id="runtimeWarning">
-Runtime exceeds recommended limit for this format.
+<div class="checkbox-row">
+<input type="checkbox" id="rushCheck" name="Rush">
+<label for="rushCheck">Add Rush Order (48hr turnaround + $80)</label>
 </div>
 
 <label>Upload Audio</label>
@@ -369,17 +359,8 @@ Customers are solely responsible for ensuring they have the legal right to repro
 </form>
 
 <div id="successBox" class="successBox">
-
 <h2>Order received</h2>
-
 <p>Your Crosstalk Customs project has been submitted.</p>
-
-<p>If you haven't uploaded your audio yet, you can do so here:</p>
-
-<a href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW" target="_blank">
-Upload Audio Files
-</a>
-
 </div>
 
 </div>
@@ -395,12 +376,17 @@ const prices={
 const size=document.getElementById("size")
 const sides=document.getElementById("sides")
 const qty=document.getElementById("qty")
+const rush=document.getElementById("rushCheck")
 const priceBox=document.getElementById("priceBox")
 
 function updatePrice(){
 
 const base=prices[size.value][sides.value]
-const total=base*qty.value
+let total=base*qty.value
+
+if(rush.checked){
+total += 80
+}
 
 priceBox.textContent=`Estimated price: $${total}`
 
@@ -409,6 +395,7 @@ priceBox.textContent=`Estimated price: $${total}`
 size.addEventListener("change",updatePrice)
 sides.addEventListener("change",updatePrice)
 qty.addEventListener("input",updatePrice)
+rush.addEventListener("change",updatePrice)
 
 updatePrice()
 
