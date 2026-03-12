@@ -233,6 +233,13 @@ text-decoration:none;
 font-weight:600;
 }
 
+.disclaimer{
+margin-top:24px;
+font-size:12px;
+opacity:.7;
+line-height:1.5;
+}
+
 </style>
 </head>
 
@@ -417,6 +424,18 @@ We'll review your project and confirm details shortly.
 
 </div>
 
+<div class="disclaimer">
+
+Small runs work best with lathe cutting.  
+For full-length LP style records (approximately 10 minutes or longer per side),  
+online orders are limited to five copies as each disc must be cut in real time.
+
+<br><br>
+
+Please contact Crosstalk Records if you would like to discuss larger runs.
+
+</div>
+
 </div>
 
 <script>
@@ -438,9 +457,12 @@ const artistCode=document.getElementById("artistCode")
 const artistUnlocked=document.getElementById("artistUnlocked")
 const artistInvalid=document.getElementById("artistInvalid")
 
-artistCheck.addEventListener("change",function(){
-artistBox.style.display=this.checked?"block":"none"
+artistCheck.addEventListener("change",()=>{
+artistBox.style.display=artistCheck.checked?"block":"none"
+resizeParent()
 })
+
+artistCode.addEventListener("input",updatePrice)
 
 function getArtistDiscount(){
 
@@ -489,18 +511,23 @@ document.getElementById("formSides").value=sides==1?"Single":"Double"
 document.getElementById("formQty").value=qty
 document.getElementById("formPrice").value=price
 
+resizeParent()
+
 }
 
 document.getElementById("size").addEventListener("change",updatePrice)
 document.getElementById("sides").addEventListener("change",updatePrice)
 document.getElementById("qty").addEventListener("input",updatePrice)
-artistCode.addEventListener("input",updatePrice)
 
 updatePrice()
 
 document.getElementById("shipCheck").addEventListener("change",function(){
+
 document.getElementById("shippingFields").style.display=
 this.checked?"block":"none"
+
+resizeParent()
+
 })
 
 document.getElementById("orderForm").addEventListener("submit",async function(e){
@@ -517,49 +544,28 @@ body:formData
 document.getElementById("orderForm").style.display="none"
 document.getElementById("successBox").style.display="block"
 
+resizeParent()
+
 window.scrollTo({top:0,behavior:"smooth"})
 window.parent.postMessage({type:"scroll-top"},"*")
 
 })
 
-</script>
-<div style="
-margin-top:24px;
-font-size:12px;
-opacity:.7;
-line-height:1.5;
-text-align:left;
-">
-
-Small runs work best with lathe cutting.  
-For full-length LP style records (approximately 10 minutes or longer per side),  
-online orders are limited to five copies as each disc must be cut in real time.  
-
-<br><br>
-
-Please contact Crosstalk Records if you would like to discuss larger runs.
-
-</div>
-
-  <script>
-
 function resizeParent(){
 
-  const height = document.documentElement.scrollHeight;
+const height=document.documentElement.scrollHeight
 
-  window.parent.postMessage({
-    type: "resize-form",
-    height: height
-  }, "*");
+window.parent.postMessage({
+type:"resize-form",
+height:height
+},"*")
 
 }
 
-/* run after load */
-window.addEventListener("load", resizeParent);
-
-/* run after any DOM changes */
-new ResizeObserver(resizeParent).observe(document.body);
+window.addEventListener("load",resizeParent)
+new ResizeObserver(resizeParent).observe(document.body)
 
 </script>
+
 </body>
 </html>
