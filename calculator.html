@@ -220,16 +220,16 @@ Invalid artist code
 </div>
 
 <label>Record Size</label>
-<select id="size" name="Size">
+<select id="size" name="Record Size">
 <option value="7">7 inch</option>
 <option value="10">10 inch</option>
 <option value="12">12 inch</option>
 </select>
 
 <label>Playback Speed</label>
-<select id="rpm" name="Speed">
-<option value="33">33 RPM</option>
-<option value="45">45 RPM</option>
+<select id="rpm" name="Speed" required>
+<option value="33 RPM">33 RPM</option>
+<option value="45 RPM">45 RPM</option>
 </select>
 
 <label>Sides</label>
@@ -239,7 +239,7 @@ Invalid artist code
 </select>
 
 <label>Quantity</label>
-<input type="number" name="Qty" min="1" value="1">
+<input type="number" name="Quantity" min="1" value="1">
 
 <p class="runtimeGuide" id="sizeGuide"></p>
 
