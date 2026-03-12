@@ -369,14 +369,14 @@ const guide=document.getElementById("sizeGuide")
 const warn=document.getElementById("runtimeWarning")
 
 function updateGuide(){
-const limit=runtimeLimits[size.value][rpm.value]
+const limit=runtimeLimits[size.value][rpm.value.split(" ")[0]]
 const m=Math.floor(limit)
 const s=Math.round((limit-m)*60)
 guide.textContent=`Recommended runtime: ${m}:${s.toString().padStart(2,'0')} per side`
 }
 
 function checkRuntime(){
-const limit=runtimeLimits[size.value][rpm.value]
+const limit=runtimeLimits[size.value][rpm.value.split(" ")[0]]
 const a=parseFloat(sideA.value)||0
 const b=parseFloat(sideB.value)||0
 warn.style.display=(a>limit||b>limit)?"block":"none"
