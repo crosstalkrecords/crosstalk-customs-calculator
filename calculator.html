@@ -158,7 +158,7 @@ margin-top:10px;
 
 .runtimeGuide{
 font-size:12px;
-opacity:.7;
+opacity:.75;
 margin-top:6px;
 }
 
@@ -219,13 +219,9 @@ We'll review the project and confirm details before cutting.
 <h3>Independent Artist Pricing</h3>
 
 <p>
-For more information, before proceeding please contact the Crosstalk team at
-<a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a> or
-<strong>(02) 9145 8567</strong>.
-</p>
-
-<p>
-Thanks for staying independent!
+For more information please contact
+<a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
+or <strong>(02) 9145 8567</strong>.
 </p>
 
 <label>Artist Code</label>
@@ -248,8 +244,14 @@ Invalid artist code
 <option value="12">12 inch</option>
 </select>
 
+<label>Playback Speed</label>
+<select id="rpm" name="Format">
+<option value="33">33 RPM</option>
+<option value="45">45 RPM</option>
+</select>
+
 <p class="runtimeGuide" id="sizeGuide">
-Recommended runtime: up to ~5 minutes per side.
+Recommended runtime: 3:45 per side
 </p>
 
 <label>Sides</label>
@@ -273,12 +275,6 @@ Estimated Cost: <span id="summaryPrice">$75</span>
 </div>
 </div>
 
-<label>Playback Speed</label>
-<select name="Format">
-<option>33 RPM</option>
-<option>45 RPM</option>
-</select>
-
 <label>Upload Audio</label>
 
 <a class="upload-button"
@@ -297,11 +293,11 @@ Upload Audio Files
 <input type="number" id="sideB" step="0.1">
 
 <p class="runtimeGuide">
-Guide: 7" ≈ 5 minutes • 10" ≈ 9 minutes • 12" ≈ 18 minutes per side.
+Runtime limits depend on format and playback speed.
 </p>
 
 <div class="runtimeWarning" id="runtimeWarning">
-Runtime exceeds recommended limit for this format. We may contact you to adjust the cut.
+Runtime exceeds recommended limit for this format.
 </div>
 
 <div class="checkbox-row">
@@ -341,7 +337,7 @@ Runtime exceeds recommended limit for this format. We may contact you to adjust 
 
 <p>
 By submitting this order you confirm that you either own the copyright to the supplied audio
-or have obtained permission from the copyright holder(s) to reproduce the material on vinyl.
+or have permission from the copyright holder to reproduce the material.
 </p>
 
 </div>
@@ -359,129 +355,57 @@ or have obtained permission from the copyright holder(s) to reproduce the materi
 
 <script>
 
-const prices={
-"7":{1:75,2:85},
-"10":{1:90,2:100},
-"12":{1:110,2:125}
+const runtimeLimits={
+"7":{"33":3.75,"45":3.75},
+"10":{"33":14,"45":11.83},
+"12":{"33":18.5,"45":15.17}
 }
 
-const ARTIST_CODE="8F3A9C2B"
-const ARTIST_DISCOUNT=0.7
-
 const size=document.getElementById("size")
-const sides=document.getElementById("sides")
-const qty=document.getElementById("qty")
-const artistCode=document.getElementById("artistCode")
-
-const priceDisplay=document.getElementById("price")
-const summaryPrice=document.getElementById("summaryPrice")
-const summarySize=document.getElementById("summarySize")
-const summarySides=document.getElementById("summarySides")
-const summaryQty=document.getElementById("summaryQty")
-
+const rpm=document.getElementById("rpm")
 const sideA=document.getElementById("sideA")
 const sideB=document.getElementById("sideB")
-const runtimeWarning=document.getElementById("runtimeWarning")
-const sizeGuide=document.getElementById("sizeGuide")
+const guide=document.getElementById("sizeGuide")
+const warn=document.getElementById("runtimeWarning")
 
-function updateRuntimeGuide(){
+function updateGuide(){
 
-if(size.value==="7"){ sizeGuide.textContent="Recommended runtime: up to ~5 minutes per side." }
-if(size.value==="10"){ sizeGuide.textContent="Recommended runtime: up to ~9 minutes per side." }
-if(size.value==="12"){ sizeGuide.textContent="Recommended runtime: up to ~18 minutes per side." }
+const s=size.value
+const r=rpm.value
+
+const limit=runtimeLimits[s][r]
+
+const minutes=Math.floor(limit)
+const seconds=Math.round((limit-minutes)*60)
+
+guide.textContent=`Recommended runtime: ${minutes}:${seconds.toString().padStart(2,'0')} per side`
 
 }
 
 function checkRuntime(){
 
-let max=5
-if(size.value==="10") max=9
-if(size.value==="12") max=18
+const s=size.value
+const r=rpm.value
+
+const limit=runtimeLimits[s][r]
 
 const a=parseFloat(sideA.value)||0
 const b=parseFloat(sideB.value)||0
 
-if(a>max || b>max){
-runtimeWarning.style.display="block"
+if(a>limit || b>limit){
+warn.style.display="block"
 }else{
-runtimeWarning.style.display="none"
+warn.style.display="none"
 }
 
 }
 
-function updatePrice(){
-
-const s=size.value
-const sd=sides.value
-const q=qty.value
-
-let discount=1
-
-if(artistCode.value.toUpperCase()===ARTIST_CODE){
-discount=ARTIST_DISCOUNT
-document.getElementById("artistUnlocked").style.display="block"
-document.getElementById("artistInvalid").style.display="none"
-}else{
-document.getElementById("artistUnlocked").style.display="none"
-}
-
-const price=prices[s][sd]*q*discount
-
-priceDisplay.textContent="$"+price.toFixed(2)
-summaryPrice.textContent="$"+price.toFixed(2)
-
-summarySize.textContent=s+'"'
-summarySides.textContent=sd==1?"Single-sided":"Double-sided"
-summaryQty.textContent="Quantity: "+q
-
-document.getElementById("formSize").value=s+'"'
-document.getElementById("formSides").value=sd==1?"Single":"Double"
-document.getElementById("formQty").value=q
-document.getElementById("formPrice").value=price
-
-}
-
-size.addEventListener("change",function(){
-updatePrice()
-updateRuntimeGuide()
-checkRuntime()
-})
-
+size.addEventListener("change",()=>{updateGuide();checkRuntime()})
+rpm.addEventListener("change",()=>{updateGuide();checkRuntime()})
 sideA.addEventListener("input",checkRuntime)
 sideB.addEventListener("input",checkRuntime)
 
-sides.addEventListener("change",updatePrice)
-qty.addEventListener("input",updatePrice)
-artistCode.addEventListener("input",updatePrice)
-
-updatePrice()
-updateRuntimeGuide()
-
-const artistCheck=document.getElementById("artistCheck")
-const artistBox=document.getElementById("artistBox")
-const artistOrder=document.getElementById("artistOrder")
-
-artistCheck.addEventListener("change",function(){
-artistBox.style.display=this.checked?"block":"none"
-artistOrder.value=this.checked?"Yes":"No"
-})
-
-const shipCheck=document.getElementById("shipCheck")
-const shippingFields=document.getElementById("shippingFields")
-
-shipCheck.addEventListener("change",function(){
-shippingFields.style.display=this.checked?"block":"none"
-})
-
-document.getElementById("postcode").addEventListener("input",function(){
-
-const pc=this.value
-
-if(pc.startsWith("2")) document.getElementById("state").value="NSW"
-if(pc.startsWith("3")) document.getElementById("state").value="VIC"
-if(pc.startsWith("4")) document.getElementById("state").value="QLD"
-
-})
+updateGuide()
 
 </script>
 
