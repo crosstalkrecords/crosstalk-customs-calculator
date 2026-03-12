@@ -227,7 +227,15 @@ or <strong>(02) 9145 8567</strong> to be provided with a unique Artist Code.
 <p>Thanks for staying independent!</p>
 
 <label>Artist Code</label>
-<input type="text" id="STARVINGARTIST">
+<input type="text" id="starvingartist">
+
+<div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
+Artist pricing unlocked
+</div>
+
+<div id="artistInvalid" style="display:none;color:#c9302c;font-weight:600;margin-top:6px;">
+Invalid artist code
+</div>
 
 <div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
 Artist pricing unlocked
@@ -402,6 +410,12 @@ const runtimeLimits={
 "10":{"33":14,"45":11.83},
 "12":{"33":18.5,"45":15.17}
 }
+
+const ARTIST_CODE="8F3A9C2B"
+
+const artistCode=document.getElementById("artistCode")
+const artistUnlocked=document.getElementById("artistUnlocked")
+const artistInvalid=document.getElementById("artistInvalid")
 
 const size=document.getElementById("size")
 const rpm=document.getElementById("rpm")
