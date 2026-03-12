@@ -460,6 +460,17 @@ artistBox.style.display=this.checked?"block":"none"
 artistOrder.value=this.checked?"Yes":"No"
 
 })
+
+// ---------------- SHIPPING TOGGLE ----------------
+
+const shipCheck=document.getElementById("shipCheck")
+const shippingFields=document.getElementById("shippingFields")
+
+shipCheck.addEventListener("change",function(){
+
+shippingFields.style.display=this.checked?"block":"none"
+
+})
 </script>
 
 </body>
