@@ -536,7 +536,17 @@ We'll review your project and confirm details shortly.
 `
 
 })
+/* Prevent page jumping on submit */
 
+document.querySelector("form").addEventListener("submit", function() {
+
+    window.scrollTo(0,0);
+
+    window.parent.postMessage({
+        type:"scroll-top"
+    },"*");
+
+});
 </script>
 
 </body>
