@@ -135,6 +135,20 @@ font-size:14px;
 font-weight:600;
 }
 
+.checkbox-row label{
+display:inline;
+margin:0;
+font-weight:600;
+cursor:pointer;
+}
+
+.checkbox-row label{
+display:inline;
+margin:0;
+font-weight:600;
+cursor:pointer;
+}
+
 .artistBox{
 display:none;
 margin-top:14px;
@@ -202,10 +216,16 @@ We'll review the project and confirm details before cutting.
 
 <div id="artistBox" class="artistBox">
 
-<h3>Artist pricing available</h3>
+<h3>Independent Artist Pricing</h3>
 
 <p>
-Crosstalk Customs offers discounted vinyl pricing for local and independent musicians in Australia.
+For more information, before proceeding please contact the Crosstalk team at
+<strong>custom@crosstalkrecords.com</strong> or
+<strong>(02) 9145 8567</strong>.
+</p>
+
+<p>
+Thanks for staying independent!
 </p>
 
 <label>Artist Code</label>
@@ -383,6 +403,13 @@ size.addEventListener("change",updatePrice)
 sides.addEventListener("change",updatePrice)
 qty.addEventListener("input",updatePrice)
 artistCode.addEventListener("input",updatePrice)
+artistCode.addEventListener("blur",function(){
+
+if(artistCheck.checked && artistCode.value.toUpperCase()!==ARTIST_CODE){
+document.getElementById("artistInvalid").style.display="block"
+}
+
+})
 
 updatePrice()
 
