@@ -389,6 +389,68 @@ sideB.addEventListener("input",checkRuntime)
 
 updateGuide()
 
+/* -------------------------
+ARTIST LOGIC
+-------------------------- */
+
+const artistCheck=document.getElementById("artistCheck")
+const artistBox=document.getElementById("artistBox")
+const artistCode=document.getElementById("artistCode")
+const artistUnlocked=document.getElementById("artistUnlocked")
+const artistInvalid=document.getElementById("artistInvalid")
+const artistOrder=document.getElementById("artistOrder")
+
+const ARTIST_PASSWORD="CROSSTALK"   // change if needed
+
+artistCheck.addEventListener("change",function(){
+
+if(this.checked){
+artistBox.style.display="block"
+}else{
+artistBox.style.display="none"
+artistUnlocked.style.display="none"
+artistInvalid.style.display="none"
+artistOrder.value="No"
+artistCode.value=""
+}
+
+})
+
+artistCode.addEventListener("input",function(){
+
+if(artistCode.value.trim().toUpperCase()===ARTIST_PASSWORD){
+
+artistUnlocked.style.display="block"
+artistInvalid.style.display="none"
+artistOrder.value="Yes"
+
+}else{
+
+artistUnlocked.style.display="none"
+artistInvalid.style.display="block"
+artistOrder.value="No"
+
+}
+
+})
+
+/* -------------------------
+SHIPPING LOGIC
+-------------------------- */
+
+const shipCheck=document.getElementById("shipCheck")
+const shippingFields=document.getElementById("shippingFields")
+
+shipCheck.addEventListener("change",function(){
+
+shippingFields.style.display=this.checked?"block":"none"
+
+})
+
+/* -------------------------
+FORM SUBMISSION
+-------------------------- */
+
 document.getElementById("orderForm").addEventListener("submit",async function(e){
 
 e.preventDefault()
