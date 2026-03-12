@@ -167,23 +167,6 @@ line-height:1.6;
 margin-top:18px;
 }
 
-.successBox{
-display:none;
-text-align:center;
-padding:28px;
-border-radius:14px;
-background:#f6f6f6;
-border:1px solid #e5e5e5;
-margin-top:24px;
-}
-
-.disclaimer{
-margin-top:24px;
-font-size:12px;
-opacity:.7;
-line-height:1.5;
-}
-
 </style>
 </head>
 
@@ -201,6 +184,10 @@ We'll review the project and confirm details before cutting.
 <form id="orderForm">
 
 <input type="hidden" name="Artist Order" id="artistOrder" value="No">
+<input type="hidden" name="Record Size" id="formSize">
+<input type="hidden" name="Sides" id="formSides">
+<input type="hidden" name="Quantity" id="formQty">
+<input type="hidden" name="Price" id="formPrice">
 
 <label>Customer Name</label>
 <input type="text" name="Customer Name" required>
@@ -340,38 +327,79 @@ to reproduce the material on vinyl.
 
 <script>
 
-// ---------------- ARTIST CHECKBOX ----------------
+const prices={
+"7":{1:75,2:85},
+"10":{1:90,2:100},
+"12":{1:110,2:125}
+}
 
-const artistCheck = document.getElementById("artistCheck")
-const artistBox = document.getElementById("artistBox")
-const artistOrder = document.getElementById("artistOrder")
+const ARTIST_CODE="8F3A9C2B"
+const ARTIST_DISCOUNT=0.7
 
-artistCheck.addEventListener("change", function(){
+const size=document.getElementById("size")
+const sides=document.getElementById("sides")
+const qty=document.getElementById("qty")
+const artistCode=document.getElementById("artistCode")
 
-artistBox.style.display = this.checked ? "block" : "none"
+const priceDisplay=document.getElementById("price")
+const summaryPrice=document.getElementById("summaryPrice")
+const summarySize=document.getElementById("summarySize")
+const summarySides=document.getElementById("summarySides")
+const summaryQty=document.getElementById("summaryQty")
 
-artistOrder.value = this.checked ? "Yes" : "No"
+function updatePrice(){
 
-})
+const s=size.value
+const sd=sides.value
+const q=qty.value
 
-const artistCheck = document.getElementById("artistCheck")
-const artistBox = document.getElementById("artistBox")
-const artistOrder = document.getElementById("artistOrder")
+let discount=1
 
-artistCheck.addEventListener("change", function(){
+if(artistCode.value.toUpperCase()===ARTIST_CODE){
+discount=ARTIST_DISCOUNT
+document.getElementById("artistUnlocked").style.display="block"
+document.getElementById("artistInvalid").style.display="none"
+}else{
+document.getElementById("artistUnlocked").style.display="none"
+}
 
-artistBox.style.display = this.checked ? "block" : "none"
-artistOrder.value = this.checked ? "Yes" : "No"
+const price=prices[s][sd]*q*discount
 
+priceDisplay.textContent="$"+price.toFixed(2)
+summaryPrice.textContent="$"+price.toFixed(2)
+
+summarySize.textContent=s+'"'
+summarySides.textContent=sd==1?"Single-sided":"Double-sided"
+summaryQty.textContent="Quantity: "+q
+
+document.getElementById("formSize").value=s+'"'
+document.getElementById("formSides").value=sd==1?"Single":"Double"
+document.getElementById("formQty").value=q
+document.getElementById("formPrice").value=price
+
+}
+
+size.addEventListener("change",updatePrice)
+sides.addEventListener("change",updatePrice)
+qty.addEventListener("input",updatePrice)
+artistCode.addEventListener("input",updatePrice)
+
+updatePrice()
+
+const artistCheck=document.getElementById("artistCheck")
+const artistBox=document.getElementById("artistBox")
+const artistOrder=document.getElementById("artistOrder")
+
+artistCheck.addEventListener("change",function(){
+artistBox.style.display=this.checked?"block":"none"
+artistOrder.value=this.checked?"Yes":"No"
 })
 
 const shipCheck=document.getElementById("shipCheck")
 const shippingFields=document.getElementById("shippingFields")
 
 shipCheck.addEventListener("change",function(){
-
 shippingFields.style.display=this.checked?"block":"none"
-
 })
 
 document.getElementById("postcode").addEventListener("input",function(){
