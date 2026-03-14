@@ -416,7 +416,25 @@ let table = (artistOrder.value === "Yes") ? artistPrices : retailPrices
 let base = table[size.value][sides.value]
 
 let total = base * qty.value
+// limit double sided 12" orders
+const limitNotice = document.getElementById("twelveLimitNotice")
 
+if(size.value==="12" && sides.value==="Double"){
+
+qty.max = 5
+
+if(qty.value > 5){
+qty.value = 5
+}
+
+limitNotice.style.display = "block"
+
+}else{
+
+qty.removeAttribute("max")
+limitNotice.style.display = "none"
+
+}
 if(rush.checked) total += 80
 
 priceBox.innerHTML=`Estimated price<br>$${total.toFixed(2)}`
