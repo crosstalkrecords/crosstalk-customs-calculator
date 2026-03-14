@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +5,7 @@
 <title>Crosstalk Customs</title>
 
 <style>
+
 body{
 font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 background:transparent;
@@ -14,7 +14,7 @@ padding:0;
 }
 
 .card{
-background:#ffffff;
+background:#fff;
 border-radius:18px;
 padding:28px;
 max-width:560px;
@@ -56,13 +56,10 @@ box-sizing:border-box;
 }
 
 textarea{
-min-height:80px;
+min-height:90px;
 resize:vertical;
-}
-
-textarea::placeholder{
-color:#999;
-font-style:italic;
+font-family:monospace;
+font-size:13px;
 }
 
 input[type="checkbox"]{
@@ -106,13 +103,6 @@ font-size:14px;
 font-weight:600;
 }
 
-.checkbox-row label{
-display:inline;
-margin:0;
-font-weight:600;
-cursor:pointer;
-}
-
 .artistBox{
 display:none;
 margin-top:16px;
@@ -122,45 +112,34 @@ background:#f7f7f7;
 border:1px solid #e4e4e4;
 }
 
-.artistHeader{
-font-size:18px;
+.priceBox{
+margin-top:14px;
 font-weight:800;
-margin-bottom:12px;
+font-size:24px;
+color:#c9302c;
 }
 
-.artistText{
+.runtimeGuide{
+margin-top:10px;
+padding:12px;
+background:#fafafa;
+border:1px solid #eee;
+border-radius:8px;
 font-size:13px;
-line-height:1.6;
-opacity:.85;
-margin-bottom:12px;
+}
+
+.rushBox{
+margin-top:14px;
+padding:12px;
+background:#fafafa;
+border:1px solid #eee;
+border-radius:8px;
+font-size:12px;
 }
 
 #shippingFields{
 display:none;
 margin-top:10px;
-}
-
-.priceBox{
-margin-top:12px;
-font-weight:800;
-font-size:22px;
-color:#c9302c;
-}
-
-.rushBox{
-margin-top:16px;
-padding:14px;
-border-radius:10px;
-background:#fff6f6;
-border:1px solid #e2b4b4;
-font-size:13px;
-line-height:1.6;
-}
-
-.rushTitle{
-font-weight:800;
-margin-bottom:6px;
-color:#c9302c;
 }
 
 .legal{
@@ -184,6 +163,7 @@ background:#f6f6f6;
 border:1px solid #e5e5e5;
 margin-top:24px;
 }
+
 </style>
 </head>
 
@@ -214,20 +194,6 @@ Tell us about your audio, format and quantity. We'll review the project and conf
 
 <div id="artistBox" class="artistBox">
 
-<div class="artistHeader">
-HELL YEAH BROTHER, we love independent artists!
-</div>
-
-<div class="artistText">
-Crosstalk Customs is happy to provide discounted artist pricing for independent musicians releasing their own work.
-</div>
-
-<div class="artistText">
-For more information before proceeding please contact the Crosstalk team at
-<a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
-or <strong>(02) 9145 8567</strong>.
-</div>
-
 <label>Artist Code</label>
 <input type="text" id="artistCode">
 
@@ -254,20 +220,8 @@ Invalid artist code
 <option value="45 RPM">45 RPM</option>
 </select>
 
-<div id="lengthGuide" style="
-margin-top:10px;
-padding:12px;
-background:#fafafa;
-border:1px solid #e5e5e5;
-border-radius:8px;
-font-size:13px;
-line-height:1.5;
-">
-</div>
+<div id="runtimeGuide" class="runtimeGuide"></div>
 
-<label>Total Runtime (minutes per side)</label>
-<input type="number" id="runtime" name="Runtime" min="1" placeholder="Example: 14">
-  
 <label>Sides</label>
 <select id="sides" name="Sides">
 <option value="Single">Single</option>
@@ -280,30 +234,46 @@ line-height:1.5;
 <div id="priceBox" class="priceBox"></div>
 
 <div class="rushBox">
-<div class="rushTitle">Rush Orders</div>
-Standard Crosstalk Customs turnaround is currently <strong>3–5 days</strong>.<br><br>
-Need it faster? We can usually accommodate <strong>48 hour rush orders</strong> for an additional <strong>$80 rush fee</strong>.
+48 hour rush orders available (+$80)
 </div>
 
 <div class="checkbox-row">
 <input type="checkbox" id="rushCheck" name="Rush">
-<label for="rushCheck">Add Rush Order (48hr turnaround + $80)</label>
+<label for="rushCheck">Add Rush Order</label>
 </div>
 
 <label>Upload Audio</label>
+
 <a class="upload-button"
 href="https://www.dropbox.com/request/xXocRJVtmMxHkqCfoQRW"
 target="_blank">
 Upload Audio Files
 </a>
 
+<p style="font-size:12px;opacity:.65;margin-top:6px;">
+The upload window opens in a new tab. Upload your audio there, then return to this page to finish the order.
+</p>
+
+<label>Side A Length (optional)</label>
+<input type="text" name="Side A Length" placeholder="Example: 14:30">
+
+<div id="sideBContainer">
+
+<label>Side B Length (optional)</label>
+<input type="text" name="Side B Length" placeholder="Example: 13:45">
+
+</div>
+
 <label>Track Listing</label>
+
 <textarea
 name="Tracklist"
 placeholder="Example:
 A1 Overture
 A2 Rat King
-A3 Tubthumping.mp4"></textarea>
+A3 Tubthumping
+
+Playlists and compilations welcome."></textarea>
 
 <div class="checkbox-row">
 <input type="checkbox" id="shipCheck">
@@ -387,146 +357,92 @@ const prices={
 "12":{"Single":55,"Double":65}
 }
 
-const size=document.getElementById("size")
-const sides=document.getElementById("sides")
-const qty=document.getElementById("qty")
-const rush=document.getElementById("rushCheck")
-const priceBox=document.getElementById("priceBox")
-
-function updatePrice(){
-/* LENGTH / SPEED GUIDELINES */
-
-const rpm=document.getElementById("rpm")
-const runtime=document.getElementById("runtime")
-const guide=document.getElementById("lengthGuide")
-
 const limits={
-"7":{"33 RPM":6,"45 RPM":4},
+"7":{"45 RPM":4},
 "10":{"33 RPM":12,"45 RPM":9},
 "12":{"33 RPM":18,"45 RPM":14}
 }
 
-function updateGuide(){
+const size=document.getElementById("size")
+const rpm=document.getElementById("rpm")
+const sides=document.getElementById("sides")
+const qty=document.getElementById("qty")
+const rush=document.getElementById("rushCheck")
 
-const sizeVal=size.value
-const rpmVal=rpm.value
-const max=limits[sizeVal][rpmVal]
+const priceBox=document.getElementById("priceBox")
+const runtimeGuide=document.getElementById("runtimeGuide")
+const sideBContainer=document.getElementById("sideBContainer")
 
-let text=`Recommended maximum runtime: ${max} minutes per side.`
+function updatePrice(){
 
-if(runtime.value){
-
-const entered=parseFloat(runtime.value)
-
-if(entered>max){
-
-text=`⚠ Runtime exceeds recommended limit (${max} min per side). Audio quality may suffer.`
-
-guide.style.background="#fff3f3"
-guide.style.borderColor="#e2b4b4"
-guide.style.color="#c9302c"
-
-}else{
-
-guide.style.background="#fafafa"
-guide.style.borderColor="#e5e5e5"
-guide.style.color="#333"
-
-}
-
-}
-
-guide.innerHTML=`<strong>${text}</strong>`
-
-}
-
-size.addEventListener("change",updateGuide)
-rpm.addEventListener("change",updateGuide)
-runtime.addEventListener("input",updateGuide)
-
-updateGuide()
-const base=prices[size.value][sides.value]
+let base=prices[size.value][sides.value]
 let total=base*qty.value
 
-if(rush.checked){
-total += 80
-}
+if(rush.checked) total+=80
 
-priceBox.textContent=`Estimated price: $${total}`
+priceBox.innerHTML=`Estimated price<br>$${total}`
 
 }
 
-size.addEventListener("change",updatePrice)
-sides.addEventListener("change",updatePrice)
-qty.addEventListener("input",updatePrice)
-rush.addEventListener("change",updatePrice)
-runtime.addEventListener("input",updateGuide)
-  
+function updateRuntime(){
+
+if(size.value==="7"){
+rpm.value="45 RPM"
+rpm.querySelector('option[value="33 RPM"]').disabled=true
+}else{
+rpm.querySelector('option[value="33 RPM"]').disabled=false
+}
+
+const max=limits[size.value][rpm.value]
+
+runtimeGuide.innerHTML=`Maximum side length: <strong>${max} minutes</strong>`
+
+}
+
+size.addEventListener("change",()=>{updatePrice();updateRuntime()})
+rpm.addEventListener("change",updateRuntime)
+
+sides.addEventListener("change",()=>{
 updatePrice()
 
-/* ARTIST */
+if(sides.value==="Single"){
+sideBContainer.style.display="none"
+}else{
+sideBContainer.style.display="block"
+}
+
+})
+
+qty.addEventListener("input",updatePrice)
+rush.addEventListener("change",updatePrice)
+
+updatePrice()
+updateRuntime()
+
+if(sides.value==="Single"){
+sideBContainer.style.display="none"
+}
 
 const artistCheck=document.getElementById("artistCheck")
 const artistBox=document.getElementById("artistBox")
-const artistCode=document.getElementById("artistCode")
-const artistUnlocked=document.getElementById("artistUnlocked")
-const artistInvalid=document.getElementById("artistInvalid")
-const artistOrder=document.getElementById("artistOrder")
-
-const ARTIST_PASSWORD="STARVINGARTIST"
 
 artistCheck.addEventListener("change",()=>{
-
 artistBox.style.display=artistCheck.checked?"block":"none"
-
-if(!artistCheck.checked){
-artistUnlocked.style.display="none"
-artistInvalid.style.display="none"
-artistCode.value=""
-artistOrder.value="No"
-}
-
 })
-
-artistCode.addEventListener("input",()=>{
-
-if(artistCode.value.trim().toUpperCase()===ARTIST_PASSWORD){
-
-artistUnlocked.style.display="block"
-artistInvalid.style.display="none"
-artistOrder.value="Yes"
-
-}else{
-
-artistUnlocked.style.display="none"
-artistInvalid.style.display="block"
-artistOrder.value="No"
-
-}
-
-})
-
-/* SHIPPING */
 
 const shipCheck=document.getElementById("shipCheck")
 const shippingFields=document.getElementById("shippingFields")
 
 shipCheck.addEventListener("change",()=>{
-
 shippingFields.style.display=shipCheck.checked?"block":"none"
-
-if(!shipCheck.checked){
-shippingFields.querySelectorAll("input,select").forEach(el=>el.value="")
-}
-
 })
-/* SUBMIT HANDLER */
 
-document.getElementById("orderForm").addEventListener("submit", async function(e){
+document.getElementById("orderForm").addEventListener("submit",async function(e){
 
 e.preventDefault()
 
 const button=this.querySelector("button")
+
 button.disabled=true
 button.innerText="Submitting..."
 
@@ -539,10 +455,12 @@ body:new FormData(this)
 )
 
 if(!response.ok){
+
 alert("Submission failed. Please try again.")
 button.disabled=false
 button.innerText="Submit Project"
 return
+
 }
 
 this.style.display="none"
@@ -554,6 +472,7 @@ block:"start"
 })
 
 })
+
 </script>
 
 </body>
