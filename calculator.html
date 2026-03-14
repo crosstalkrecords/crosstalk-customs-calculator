@@ -21,7 +21,6 @@ max-width:560px;
 margin:0 auto;
 position:relative;
 box-sizing:border-box;
-overflow:visible;
 }
 
 .card::before{
@@ -35,17 +34,9 @@ background:#c9302c;
 border-radius:18px 18px 0 0;
 }
 
-h2{
-margin:0 0 16px;
-font-size:26px;
-font-weight:700;
-}
+h2{margin:0 0 16px;font-size:26px;font-weight:700}
 
-p{
-font-size:14px;
-opacity:.9;
-margin:0 0 16px;
-}
+p{font-size:14px;opacity:.9;margin:0 0 16px}
 
 label{
 display:block;
@@ -84,9 +75,7 @@ font-size:14px;
 cursor:pointer;
 }
 
-button:hover{
-background:#a52320;
-}
+button:hover{background:#a52320}
 
 .upload-button{
 display:inline-block;
@@ -372,10 +361,16 @@ Customers are solely responsible for ensuring they have the legal right to repro
 
 <script>
 
-const prices={
-"7":{"Single":35,"Double":45},
-"10":{"Single":45,"Double":55},
-"12":{"Single":55,"Double":65}
+const retailPrices={
+"7":{"Single":75,"Double":85},
+"10":{"Single":90,"Double":100},
+"12":{"Single":110,"Double":125}
+}
+
+const artistPrices={
+"7":{"Single":33,"Double":37},
+"10":{"Single":39.5,"Double":42.5},
+"12":{"Single":55.1,"Double":58.1}
 }
 
 const limits={
@@ -389,19 +384,22 @@ const rpm=document.getElementById("rpm")
 const sides=document.getElementById("sides")
 const qty=document.getElementById("qty")
 const rush=document.getElementById("rushCheck")
-
 const priceBox=document.getElementById("priceBox")
 const runtimeGuide=document.getElementById("runtimeGuide")
 const sideBContainer=document.getElementById("sideBContainer")
+const artistOrder=document.getElementById("artistOrder")
 
 function updatePrice(){
 
-let base=prices[size.value][sides.value]
-let total=base*qty.value
+let table = (artistOrder.value === "Yes") ? artistPrices : retailPrices
 
-if(rush.checked) total+=80
+let base = table[size.value][sides.value]
 
-priceBox.innerHTML=`Estimated price<br>$${total}`
+let total = base * qty.value
+
+if(rush.checked) total += 80
+
+priceBox.innerHTML=`Estimated price<br>$${total.toFixed(2)}`
 
 }
 
@@ -414,14 +412,14 @@ rpm.querySelector('option[value="33 RPM"]').disabled=true
 rpm.querySelector('option[value="33 RPM"]').disabled=false
 }
 
-const max=limits[size.value][rpm.value]
-
-runtimeGuide.innerHTML=`Maximum side length: <strong>${max}</strong>`
+runtimeGuide.innerHTML=`Maximum side length: <strong>${limits[size.value][rpm.value]}</strong>`
 
 }
 
-size.addEventListener("change",()=>{updatePrice();updateRuntime()})
+size.addEventListener("change",()=>{updateRuntime();updatePrice()})
 rpm.addEventListener("change",updateRuntime)
+qty.addEventListener("input",updatePrice)
+rush.addEventListener("change",updatePrice)
 
 sides.addEventListener("change",()=>{
 
@@ -435,16 +433,12 @@ sideBContainer.style.display="block"
 
 })
 
-qty.addEventListener("input",updatePrice)
-rush.addEventListener("change",updatePrice)
-
-updatePrice()
 updateRuntime()
+updatePrice()
 
 const artistCheck=document.getElementById("artistCheck")
 const artistBox=document.getElementById("artistBox")
 const artistCode=document.getElementById("artistCode")
-const artistOrder=document.getElementById("artistOrder")
 
 artistCheck.addEventListener("change",()=>{
 artistBox.classList.toggle("open")
@@ -465,6 +459,8 @@ document.getElementById("artistInvalid").style.display="block"
 artistOrder.value="No"
 
 }
+
+updatePrice()
 
 })
 
