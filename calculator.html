@@ -20,6 +20,7 @@ padding:28px;
 max-width:560px;
 margin:auto;
 position:relative;
+box-sizing:border-box;
 }
 
 .card::before{
@@ -33,7 +34,9 @@ background:#c9302c;
 border-radius:18px 18px 0 0;
 }
 
-h2{margin:0 0 16px;font-size:26px}
+h2{margin:0 0 16px;font-size:26px;font-weight:700}
+
+p{font-size:14px;opacity:.9;margin:0 0 16px}
 
 label{
 display:block;
@@ -45,15 +48,17 @@ margin-bottom:6px;
 
 input,select,textarea{
 width:100%;
-padding:10px;
+padding:10px 12px;
 border-radius:8px;
 border:1px solid #ddd;
 background:#fafafa;
 box-sizing:border-box;
+font-size:14px;
 }
 
 textarea{
 min-height:90px;
+resize:vertical;
 font-family:monospace;
 }
 
@@ -69,6 +74,8 @@ font-weight:700;
 cursor:pointer;
 }
 
+button:hover{background:#a52320}
+
 .upload-button{
 display:inline-block;
 padding:12px 18px;
@@ -76,6 +83,7 @@ background:#c9302c;
 color:#fff;
 border-radius:8px;
 text-decoration:none;
+font-weight:600;
 margin-top:6px;
 }
 
@@ -84,10 +92,12 @@ display:flex;
 align-items:center;
 gap:10px;
 margin-top:18px;
+font-size:14px;
 }
 
 .checkbox-row input{
 width:auto;
+margin:0;
 }
 
 .expand{
@@ -97,7 +107,7 @@ transition:max-height .35s ease;
 }
 
 .expand.open{
-max-height:400px;
+max-height:500px;
 }
 
 .priceBox{
@@ -123,6 +133,7 @@ background:#fafafa;
 border:1px solid #eee;
 border-radius:8px;
 font-size:12px;
+opacity:.85;
 }
 
 .legal{
@@ -185,14 +196,20 @@ HELL YEAH BROTHER, we love independent artists!
 Crosstalk Customs is happy to provide discounted artist pricing for independent musicians releasing their own work.
 </p>
 
+<p style="font-size:13px">
+For more information please contact
+<a href="mailto:custom@crosstalkrecords.com">custom@crosstalkrecords.com</a>
+or <strong>(02) 9145 8567</strong>.
+</p>
+
 <label>Artist Code</label>
 <input type="text" id="artistCode">
 
-<div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600">
+<div id="artistUnlocked" style="display:none;color:#2f8f3a;font-weight:600;margin-top:6px;">
 Artist pricing unlocked
 </div>
 
-<div id="artistInvalid" style="display:none;color:#c9302c;font-weight:600">
+<div id="artistInvalid" style="display:none;color:#c9302c;font-weight:600;margin-top:6px;">
 Invalid artist code
 </div>
 
@@ -220,7 +237,7 @@ Invalid artist code
 </select>
 
 <label>Quantity</label>
-<input type="number" id="qty" name="Quantity" value="1">
+<input type="number" id="qty" name="Quantity" value="1" min="1">
 
 <div id="priceBox" class="priceBox"></div>
 
@@ -276,6 +293,7 @@ The upload window opens in a new tab. Upload your audio there, then return to th
 
 <label>State</label>
 <select name="State">
+<option value="">Select</option>
 <option>NSW</option>
 <option>VIC</option>
 <option>QLD</option>
@@ -287,8 +305,6 @@ The upload window opens in a new tab. Upload your audio there, then return to th
 </select>
 
 </div>
-
-<!-- LEGAL BLOCK LEFT COMPLETELY UNCHANGED -->
 
 <div class="legal">
 
@@ -404,8 +420,6 @@ rush.addEventListener("change",updatePrice)
 updatePrice()
 updateRuntime()
 
-/* artist */
-
 const artistCheck=document.getElementById("artistCheck")
 const artistBox=document.getElementById("artistBox")
 const artistCode=document.getElementById("artistCode")
@@ -433,16 +447,12 @@ artistOrder.value="No"
 
 })
 
-/* shipping */
-
 const shipCheck=document.getElementById("shipCheck")
 const shippingFields=document.getElementById("shippingFields")
 
 shipCheck.addEventListener("change",()=>{
 shippingFields.classList.toggle("open")
 })
-
-/* submit */
 
 document.getElementById("orderForm").addEventListener("submit",async function(e){
 
