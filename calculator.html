@@ -187,6 +187,8 @@ Tell us about your audio, format and quantity. We'll review the project and conf
 
 <label>Customer Name</label>
 <input type="text" name="Customer Name" required>
+  
+<input type="hidden" name="Estimated Price Given" id="estimatedPrice">
 
 <label>Email</label>
 <input type="email" name="Email" required>
@@ -435,7 +437,7 @@ limitNotice.style.display = "none"
 if(rush.checked) total += 80
 
 priceBox.innerHTML=`Estimated price<br>$${total.toFixed(2)}`
-
+document.getElementById("estimatedPrice").value = total
 }
 
 function updateRuntime(){
