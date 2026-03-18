@@ -538,6 +538,7 @@ document.getElementById("successBox").style.display="block"
 
 // 👇 THIS IS THE FIX
 const data = await response.json();
+console.log(data);
 const uploadLink = data.upload_link;
 
 if (uploadLink) {
