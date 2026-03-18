@@ -364,11 +364,16 @@ Customers are solely responsible for ensuring they have the legal right to repro
 <button type="submit">Submit Project</button>
 
 </form>
-
+  
 <div id="successBox" class="successBox">
-<h2>Order received</h2>
-<p>Your Crosstalk Customs project has been submitted.</p>
-</div>
+  <h2>Order received</h2>
+  <p>Your Crosstalk Customs project has been submitted.</p>
+
+  <div id="uploadButtonWrap" style="display:none; margin-top:16px;">
+    <a id="uploadButton" class="upload-button" href="#" target="_blank">
+      Upload Your Audio
+    </a>
+  </div>
 
 </div>
 
@@ -530,6 +535,15 @@ return
 
 this.style.display="none"
 document.getElementById("successBox").style.display="block"
+
+// 👇 THIS IS THE FIX
+const data = await response.json();
+const uploadLink = data.upload_link;
+
+if (uploadLink) {
+  document.getElementById("uploadButton").href = uploadLink;
+  document.getElementById("uploadButtonWrap").style.display = "block";
+}
 
 document.querySelector(".card").scrollIntoView({
 behavior:"smooth",
