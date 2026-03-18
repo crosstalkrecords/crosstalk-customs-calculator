@@ -533,7 +533,7 @@ return
 
 }
 
-this.style.display="none"
+this.innerHTML = "";
 document.getElementById("successBox").style.display="block"
 
 // 👇 THIS IS THE FIX
@@ -546,10 +546,10 @@ if (uploadLink) {
   document.getElementById("uploadButtonWrap").style.display = "block";
 }
 
-document.querySelector(".card").scrollIntoView({
-behavior:"smooth",
-block:"start"
-})
+document.getElementById("successBox").scrollIntoView({
+  behavior: "smooth",
+  block: "center"
+});
 
 })
 
