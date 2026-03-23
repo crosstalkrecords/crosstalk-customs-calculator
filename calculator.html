@@ -477,8 +477,15 @@ document.getElementById("tracklistGuide").innerHTML =
 `Keep each side under <strong>${limits[size.value][rpm.value]}</strong> for best results`
 }
 
-size.addEventListener("change",()=>{updateRuntime();updatePrice()})
-rpm.addEventListener("change",updateRuntime)
+size.addEventListener("change",()=>{
+updateRuntime();
+updatePrice();
+updateTracklistGuide();
+})
+rpm.addEventListener("change",()=>{
+updateRuntime();
+updateTracklistGuide();
+})
 qty.addEventListener("input",updatePrice)
 rush.addEventListener("change",updatePrice)
 
