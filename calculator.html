@@ -435,7 +435,7 @@ limitNotice.style.display = "none"
 }
 if(rush.checked) total += 80
 
-priceBox.innerHTML=Estimated price<br>$${total.toFixed(2)}
+priceBox.innerHTML=`Estimated price<br>$${total.toFixed(2)}`
 document.getElementById("estimatedPrice").value = total.toFixed(2)
 }
 
@@ -448,7 +448,7 @@ rpm.querySelector('option[value="33 RPM"]').disabled=true
 rpm.querySelector('option[value="33 RPM"]').disabled=false
 }
 
-runtimeGuide.innerHTML=Maximum side length: <strong>${limits[size.value][rpm.value]}</strong>
+runtimeGuide.innerHTML=`Maximum side length: <strong>${limits[size.value][rpm.value]}</strong>`
 
 }
 
