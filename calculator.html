@@ -189,6 +189,7 @@ Tell us about your audio, format and quantity. We'll review the project and conf
 <input type="text" name="Customer Name" required>
   
 <input type="hidden" name="Estimated Price Given" id="estimatedPrice">
+<input type="hidden" name="Estimated Price (cents)" id="estimatedPriceCents">
 
 <label>Email</label>
 <input type="email" name="Email" required>
@@ -284,14 +285,6 @@ If you're planning a larger project please feel free to contact Crosstalk Record
 <p style="font-size:13px;margin-top:10px;">
 You’ll receive your private upload link immediately after submitting your order.
 </p>
-
-<label>Side A Length (estimate)</label>
-<input type="text" name="Side A Length">
-
-<div id="sideBContainer">
-
-<label>Side B Length (estimate)</label>
-<input type="text" name="Side B Length">
 
 </div>
 
@@ -435,8 +428,8 @@ limitNotice.style.display = "none"
 }
 if(rush.checked) total += 80
 
-priceBox.innerHTML=`Estimated price<br>$${total.toFixed(2)}`
 document.getElementById("estimatedPrice").value = total.toFixed(2)
+document.getElementById("estimatedPriceCents").value = Math.round(total * 100)
 }
 
 function updateRuntime(){
