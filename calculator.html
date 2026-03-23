@@ -296,7 +296,27 @@ You’ll receive your private upload link immediately after submitting your orde
 </div>
 
 <label>Track Listing</label>
-<textarea name="Tracklist"></textarea>
+
+<div style="
+font-size:11px;
+color:#c9302c;
+margin-bottom:6px;
+line-height:1.4;
+opacity:.9;
+">
+Format tracks like:<br>
+<strong>A1, A2, A3…</strong> (Side A)<br>
+<strong>B1, B2…</strong> (Side B if applicable)
+</div>
+
+<textarea name="Tracklist" placeholder="A1 - Track Name&#10;A2 - Track Name&#10;&#10;B1 - Track Name"></textarea>
+
+<div id="tracklistGuide" style="
+font-size:11px;
+margin-top:8px;
+color:#999;
+line-height:1.4;
+"></div>
 
 <div class="checkbox-row">
 <input type="checkbox" id="shipCheck" name="Shipping Required" value="on">
@@ -450,6 +470,11 @@ rpm.querySelector('option[value="33 RPM"]').disabled=false
 
 runtimeGuide.innerHTML=`Maximum side length: <strong>${limits[size.value][rpm.value]}</strong>`
 
+}
+
+function updateTracklistGuide(){
+document.getElementById("tracklistGuide").innerHTML =
+`Keep each side under <strong>${limits[size.value][rpm.value]}</strong> for best results`
 }
 
 size.addEventListener("change",()=>{updateRuntime();updatePrice()})
