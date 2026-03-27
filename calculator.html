@@ -467,7 +467,7 @@ limitNotice.style.display = "none"
 }
 if(rush.checked) total += 80
 
-priceBox.innerHTML=`Estimated price<br>$${total.toFixed(2)}`
+priceBox.innerHTML=`Estimated price<br>$${total.toFixed(2)}${document.getElementById("shipCheck").checked ? " (incl. shipping)" : ""}`
 document.getElementById("estimatedPrice").value = total.toFixed(2)
 }
 
@@ -500,6 +500,7 @@ updateTracklistGuide();
 })
 qty.addEventListener("input",updatePrice)
 rush.addEventListener("change",updatePrice)
+document.getElementById("shipCheck").addEventListener("change", updatePrice)
 
 sides.addEventListener("change",()=>{
 
