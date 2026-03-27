@@ -445,6 +445,7 @@ let table = (artistOrder.value === "Yes") ? artistPrices : retailPrices
 let base = table[size.value][sides.value]
 
 let total = base * qty.value
+if(document.getElementById("shipCheck").checked) total += 20
 // limit double sided 12" orders
 const limitNotice = document.getElementById("twelveLimitNotice")
 
