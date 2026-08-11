@@ -353,7 +353,7 @@ You’ll receive your private upload link immediately after submitting your orde
 <!-- Hidden legacy fields (kept for Make compatibility) -->
 <div style="display:none">
 
-<input type="text" name="Side A Length">
+<input type="text" name="Side A Length" id="sideALength">
 <input type="text" name="Side B Length">
 
 </div>
@@ -511,7 +511,7 @@ const runtimeGuide=document.getElementById("runtimeGuide")
 const sideBContainer=document.getElementById("sideBContainer")
 const artistOrder=document.getElementById("artistOrder")
 const fathersDayCheck=document.getElementById("fathersDayCheck")
-
+const sideALength=document.getElementById("sideALength")
 function updatePrice(){
 
 let table = (artistOrder.value === "Yes") ? artistPrices : retailPrices
@@ -605,13 +605,20 @@ size.value="12"
 sides.value="Double"
 qty.value=1
 
+sideALength.value="FATHERS DAY SPECIAL - 1x CLEAR 12IN + PRINTED JACKET + LABELS"
+
+}else{
+
+sideALength.value=""
+
+}
+
 updateRuntime()
 updateTracklistGuide()
 updatePrice()
 
-}
-
 })
+
 const artistCheck=document.getElementById("artistCheck")
 const artistBox=document.getElementById("artistBox")
 const artistCode=document.getElementById("artistCode")
