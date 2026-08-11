@@ -569,8 +569,16 @@ function updateTracklistGuide(){
 document.getElementById("tracklistGuide").innerHTML =
 `Keep each side under <strong>${limits[size.value][rpm.value]}</strong> for best results`
 }
+function cancelFathersDaySpecial(){
 
+if(fathersDayCheck.checked){
+fathersDayCheck.checked=false
+sideALength.value=""
+}
+
+}
 size.addEventListener("change",()=>{
+cancelFathersDaySpecial();
 updateRuntime();
 updatePrice();
 updateTracklistGuide();
@@ -579,12 +587,14 @@ rpm.addEventListener("change",()=>{
 updateRuntime();
 updateTracklistGuide();
 })
-qty.addEventListener("input",updatePrice)
+qty.addEventListener("input",()=>{
+cancelFathersDaySpecial();
+updatePrice();
+})
 rush.addEventListener("change",updatePrice)
 document.getElementById("shipCheck").addEventListener("change", updatePrice)
-
 sides.addEventListener("change",()=>{
-
+cancelFathersDaySpecial();
 updatePrice()
 
 if(sides.value==="Single"){
