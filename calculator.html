@@ -294,7 +294,7 @@ box-sizing:border-box;
   line-height:1.45;
   margin-bottom:4px;
   ">
-    <strong>Custom double-sided 12-inch record + printed centre labels + printed jacket</strong>
+  <strong>1 × custom double-sided 12-inch record on clear vinyl + printed centre labels + printed jacket</strong>
   </div>
 
   <div style="
@@ -510,6 +510,7 @@ const priceBox=document.getElementById("priceBox")
 const runtimeGuide=document.getElementById("runtimeGuide")
 const sideBContainer=document.getElementById("sideBContainer")
 const artistOrder=document.getElementById("artistOrder")
+const fathersDayCheck=document.getElementById("fathersDayCheck")
 
 function updatePrice(){
 
@@ -589,7 +590,21 @@ sideBContainer.style.display="block"
 
 updateRuntime()
 updatePrice()
+fathersDayCheck.addEventListener("change",()=>{
 
+if(fathersDayCheck.checked){
+
+size.value="12"
+sides.value="Double"
+qty.value=1
+
+updateRuntime()
+updateTracklistGuide()
+updatePrice()
+
+}
+
+})
 const artistCheck=document.getElementById("artistCheck")
 const artistBox=document.getElementById("artistBox")
 const artistCode=document.getElementById("artistCode")
