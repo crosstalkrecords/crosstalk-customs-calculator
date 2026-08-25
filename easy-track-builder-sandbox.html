@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Crosstalk Customs</title>
 
 <style>
@@ -209,6 +210,9 @@ line-height:1.4;
 <label>Email</label>
 <input type="email" name="Email" required>
 
+<label>Mobile Number (optional)</label>
+<input type="text" name="Custom Field 1" placeholder="e.g. 0412 345 678">
+
 <div class="checkbox-row">
 <input type="checkbox" id="artistCheck">
 <label for="artistCheck">I am a local / independent artist and this is my own work</label>
@@ -397,14 +401,6 @@ line-height:1.4;
 "></div>
   
 <div style="display:none;">
-  <label>Custom Field 1</label>
-  <input type="text" name="Custom Field 1">
-</div>
-  
-<div style="display:none;">
-
-<label>Mobile Number (optional)</label>
-<input type="text" name="Custom Field 1">
 
 <label>Instagram (optional)</label>
 <input type="text" name="Custom Field 2">
@@ -461,7 +457,7 @@ Crosstalk Records provides a custom lathe-cut duplication service. We do not ver
 </p>
 
 <p>
-Under the <strong>Copyright Act 1968 (Australia)</strong>, reproduction of copyrighted sound recordings without permission from the rights holder may constitute copyright infringement.
+Under the <strong>Copyright Act 1968 (Australia)</strong>, reproduction of copyrighted sound recordings without permission from the copyright holder may constitute copyright infringement.
 Customers are solely responsible for ensuring they have the legal right to reproduce any material submitted for cutting.
 </p>
 
@@ -511,7 +507,7 @@ const artistPrices={
 }
 
 const limits={
-"7":{"45 RPM":"3:45"},
+"7":{"45 RPM":"5:00"},
 "10":{"33 RPM":"14:00","45 RPM":"11:50"},
 "12":{"33 RPM":"18:30","45 RPM":"15:10"}
 }
