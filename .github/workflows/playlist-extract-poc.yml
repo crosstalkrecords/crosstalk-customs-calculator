@@ -1,0 +1,36 @@
+name: Playlist extraction POC
+
+on:
+  workflow_dispatch:
+    inputs:
+      playlist_url:
+        description: Public Spotify playlist URL
+        required: false
+        default: https://open.spotify.com/playlist/5TNGJeYkQvZBzuj2LiDxlP?si=b2ca90eae7894418
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install playwright
+          npx playwright install --with-deps chromium
+      - name: Extract rendered Spotify playlist
+        env:
+          PLAYLIST_URL: ${{ inputs.playlist_url }}
+        run: node playlist-extract-poc.js
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playlist-extract-poc
+          path: playlist-extract-poc.png
+          if-no-files-found: ignore
