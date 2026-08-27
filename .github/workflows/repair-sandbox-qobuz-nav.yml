@@ -1,0 +1,22 @@
+name: Repair sandbox Qobuz and navigation
+on:
+  push:
+    paths:
+      - 'scripts/repair_sandbox_qobuz_nav.py'
+      - '.github/workflows/repair-sandbox-qobuz-nav.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: python scripts/repair_sandbox_qobuz_nav.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add easy-track-builder-sandbox.html
+          git commit -m "Repair sandbox navigation and add Qobuz sourcing"
+          git push origin main
