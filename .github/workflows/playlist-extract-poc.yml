@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       playlist_url:
-        description: Public Spotify playlist URL
+        description: Public Spotify or Apple Music playlist URL
         required: false
-        default: https://open.spotify.com/playlist/5TNGJeYkQvZBzuj2LiDxlP?si=b2ca90eae7894418
+        default: https://music.apple.com/au/playlist/dolly-parton-essentials/pl.bca7ed31389842108896524e2edbd956
   push:
     paths:
       - '.github/workflows/playlist-extract-poc.yml'
@@ -26,9 +26,9 @@ jobs:
           npm init -y
           npm install playwright
           npx playwright install --with-deps chromium
-      - name: Extract rendered Spotify playlist
+      - name: Extract rendered public playlist
         env:
-          PLAYLIST_URL: ${{ inputs.playlist_url || 'https://open.spotify.com/playlist/5TNGJeYkQvZBzuj2LiDxlP?si=b2ca90eae7894418' }}
+          PLAYLIST_URL: ${{ inputs.playlist_url || 'https://music.apple.com/au/playlist/dolly-parton-essentials/pl.bca7ed31389842108896524e2edbd956' }}
         run: node playlist-extract-poc.js
       - name: Upload screenshot
         if: always()
