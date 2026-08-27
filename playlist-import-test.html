@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crosstalk Playlist Import Test</title>
+<style>
+:root{--r:#c9302c;--ink:#222;--mut:#6c6c6c;--line:#ddd;--blue:#f1f7fb;--bl:#c8dce8;--ok:#2f8f3a;--bad:#a52320}
+*{box-sizing:border-box}body{margin:0;background:#f4f4f4;font-family:system-ui,-apple-system,"Segoe UI",Roboto;color:var(--ink)}.wrap{max-width:780px;margin:36px auto;padding:0 16px}.card{background:#fff;border-radius:18px;border-top:4px solid var(--r);padding:28px;box-shadow:0 8px 30px rgba(0,0,0,.05)}h1{margin:0 0 8px;font-size:28px}.lede{margin:0 0 22px;color:#555;line-height:1.55}.field{display:flex;gap:9px}.field input{flex:1;padding:12px 13px;border:1px solid var(--line);border-radius:10px;font:inherit}.btn{border:0;border-radius:999px;padding:0 20px;min-height:46px;background:var(--r);color:#fff;font:inherit;font-weight:800;cursor:pointer}.btn.secondary{background:#eee;color:#333}.status{margin-top:18px;padding:14px;border-radius:11px;background:#fafafa;border:1px solid #e5e5e5;font-size:13px;line-height:1.55}.status.ok{background:#f4faf5;border-color:#cae3ce}.status.warn{background:#fff8f1;border-color:#ead9c6}.status.bad{background:#fff4f3;border-color:#e8c7c5}.k{font-weight:800}.meta{display:grid;grid-template-columns:100px 1fr;gap:14px;margin-top:18px;align-items:start}.cover{width:100px;height:100px;border-radius:10px;object-fit:cover;background:#eee}.tracks{margin-top:20px}.track{display:grid;grid-template-columns:34px 1fr 90px;gap:8px;padding:9px 0;border-bottom:1px solid #eee;font-size:13px}.track small{color:#666}.debug{margin-top:20px}.debug pre{white-space:pre-wrap;word-break:break-word;background:#111;color:#ddd;padding:12px;border-radius:9px;max-height:220px;overflow:auto;font-size:11px}.embed{margin-top:20px}.embed iframe{width:100%;height:420px;border:0;border-radius:12px}.muted{font-size:12px;color:#777;line-height:1.5;margin-top:12px}.hidden{display:none}@media(max-width:620px){.field{flex-direction:column}.field .btn{width:100%}.meta{grid-template-columns:72px 1fr}.cover{width:72px;height:72px}.track{grid-template-columns:26px 1fr}}
+</style>
+</head>
+<body><div class="wrap"><div class="card">
+<h1>Public Playlist Import Test</h1>
+<p class="lede">Disposable proof-of-concept only. Paste a public playlist URL and this page will test what metadata we can retrieve directly in a normal customer browser.</p>
+<div class="field"><input id="url" value="https://open.spotify.com/playlist/5TNGJeYkQvZBzuj2LiDxlP?si=b2ca90eae7894418" placeholder="Paste public playlist URL"><button class="btn" id="test">Test playlist</button></div>
+<div id="status" class="status">Ready.</div>
+<div id="meta" class="meta hidden"><img id="cover" class="cover" alt="Playlist cover"><div><div><span class="k">Service:</span> <span id="service"></span></div><div><span class="k">Playlist ID:</span> <span id="pid"></span></div><div><span class="k">Title:</span> <span id="title"></span></div><div><span class="k">Track rows found:</span> <span id="count">0</span></div></div></div>
+<div id="tracks" class="tracks hidden"></div>
+<div id="embed" class="embed hidden"></div>
+<div class="debug"><details><summary>Technical diagnostics</summary><pre id="debug">No test run yet.</pre></details></div>
+<p class="muted">This page does not download audio, log into Spotify, or touch the Crosstalk order form. It only tests whether public playlist metadata can be read reliably enough to populate the Easy Track Builder.</p>
+</div></div>
+<script>
+const $=id=>document.getElementById(id);
+function log(obj){$('debug').textContent=typeof obj==='string'?obj:JSON.stringify(obj,null,2)}
+function setStatus(text,type=''){$('status').className='status'+(type?' '+type:'');$('status').innerHTML=text}
+function detect(raw){let u;try{u=new URL(raw)}catch{return null}const host=u.hostname.replace(/^www\./,'');if(host==='open.spotify.com'){const m=u.pathname.match(/^\/(playlist)\/([A-Za-z0-9]+)/);if(m)return{service:'Spotify',type:m[1],id:m[2],url:`https://open.spotify.com/playlist/${m[2]}`}}if(host==='music.apple.com'){return{service:'Apple Music',type:'playlist',id:u.searchParams.get('i')||u.pathname.split('/').filter(Boolean).pop(),url:raw}}return{service:'Unsupported / unknown',type:'unknown',id:'',url:raw}}
+function extractTracksFromText(text){const results=[];const seen=new Set();
+  // Spotify embed/server HTML has changed formats over time. These patterns deliberately look for common track-shaped JSON.
+  const patterns=[
+    /"name"\s*:\s*"([^"]+)"[^{}]{0,700}?"artists"\s*:\s*\[(.*?)\][^{}]{0,700}?"duration_ms"\s*:\s*(\d+)/gs,
+    /"title"\s*:\s*"([^"]+)"[^{}]{0,500}?"subtitle"\s*:\s*"([^"]+)"[^{}]{0,500}?"duration"\s*:\s*(\d+)/gs
+  ];
+  for(const re of patterns){let m;while((m=re.exec(text))){let title=m[1];let artist='';let ms=Number(m[3]||0);if(re===patterns[0]){const am=[...m[2].matchAll(/"name"\s*:\s*"([^"]+)"/g)];artist=am.map(x=>x[1]).join(', ')}else artist=m[2];const key=title+'|'+artist;if(!seen.has(key)){seen.add(key);results.push({title,artist,duration_ms:ms})}}}
+  return results;
+}
+function fmt(ms){if(!ms)return'';const s=Math.round(ms/1000);return`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
+function renderTracks(list){$('count').textContent=list.length;$('tracks').innerHTML='';if(!list.length){$('tracks').classList.add('hidden');return}$('tracks').classList.remove('hidden');list.forEach((t,i)=>{const d=document.createElement('div');d.className='track';d.innerHTML=`<span>${i+1}</span><div><strong>${escapeHtml(t.title)}</strong><br><small>${escapeHtml(t.artist||'')}</small></div><span>${fmt(t.duration_ms)}</span>`;$('tracks').appendChild(d)})}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function testSpotify(info){$('embed').classList.remove('hidden');$('embed').innerHTML=`<iframe src="https://open.spotify.com/embed/playlist/${encodeURIComponent(info.id)}?utm_source=generator" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+  const diag={service:'Spotify',playlist_id:info.id,attempts:[]};
+  let oembed=null;
+  try{const r=await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(info.url)}`);diag.attempts.push({method:'Spotify oEmbed',status:r.status,cors_readable:true});if(r.ok)oembed=await r.json()}catch(e){diag.attempts.push({method:'Spotify oEmbed',error:String(e),cors_readable:false})}
+  if(oembed){$('title').textContent=oembed.title||'(no title returned)';if(oembed.thumbnail_url){$('cover').src=oembed.thumbnail_url;$('cover').style.visibility='visible'}diag.oembed={title:oembed.title,provider_name:oembed.provider_name,thumbnail_url:oembed.thumbnail_url}}
+  let html='';let tracks=[];
+  try{const r=await fetch(`https://open.spotify.com/embed/playlist/${encodeURIComponent(info.id)}`);diag.attempts.push({method:'Embed HTML fetch',status:r.status,cors_readable:true});html=await r.text();tracks=extractTracksFromText(html);diag.embed_html_length=html.length;diag.track_candidates=tracks.length}catch(e){diag.attempts.push({method:'Embed HTML fetch',error:String(e),cors_readable:false})}
+  renderTracks(tracks);log(diag);
+  if(tracks.length){setStatus(`<span class="k">Success:</span> the browser extracted ${tracks.length} track row${tracks.length===1?'':'s'} from the public Spotify playlist. Next we test completeness, order and durations.`, 'ok')}
+  else if(oembed){setStatus(`<span class="k">Partial success:</span> Spotify gave us the public playlist identity/title, but the browser could not extract the track rows directly. The embedded playlist is shown below so we can confirm the playlist itself is accessible. This tells us a tiny server-side/rendered-page helper may be needed for track extraction.`, 'warn')}
+  else{setStatus(`<span class="k">Browser-only route failed:</span> the public Spotify page can still be embedded below, but cross-origin restrictions prevented us from reading useful playlist data directly.`, 'bad')}
+}
+$('test').onclick=async()=>{const info=detect($('url').value.trim());$('meta').classList.add('hidden');$('tracks').classList.add('hidden');$('embed').classList.add('hidden');$('cover').style.visibility='hidden';if(!info){setStatus('That does not look like a valid URL.','bad');return}$('meta').classList.remove('hidden');$('service').textContent=info.service;$('pid').textContent=info.id||'(not parsed)';$('title').textContent='Testing…';$('count').textContent='0';setStatus(`Detected <span class="k">${info.service}</span>. Testing public metadata…`);if(info.service==='Spotify')await testSpotify(info);else{log(info);setStatus(`<span class="k">${info.service}</span> detection works, but this proof-of-concept currently implements Spotify extraction only.`, 'warn')}};
+</script></body></html>
