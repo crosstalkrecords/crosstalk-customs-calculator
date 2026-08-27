@@ -1,0 +1,42 @@
+name: Patch sandbox track numbers
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-sandbox-track-numbers.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Add automatic A/B track numbers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('easy-track-builder-sandbox.html')
+          s=p.read_text()
+          old='.track{display:grid;grid-template-columns:1fr 82px 32px;gap:6px;margin-top:7px}'
+          new='.side{counter-reset:tracknum}.track{display:grid;grid-template-columns:30px 1fr 82px 32px;gap:6px;margin-top:7px;align-items:center}.track::before{counter-increment:tracknum;font-size:12px;font-weight:850;color:#596b76;text-align:center}#tracksA .track::before{content:"A" counter(tracknum)}#tracksB .track::before{content:"B" counter(tracknum)}'
+          if old not in s:
+              raise SystemExit('Expected desktop track CSS not found; refusing to patch.')
+          s=s.replace(old,new,1)
+          oldm='.track{grid-template-columns:1fr 76px 32px}'
+          newm='.track{grid-template-columns:28px 1fr 76px 32px}'
+          if oldm not in s:
+              raise SystemExit('Expected mobile track CSS not found; refusing to patch.')
+          s=s.replace(oldm,newm,1)
+          p.write_text(s)
+          PY
+      - name: Commit sandbox track numbering
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add easy-track-builder-sandbox.html
+          git commit -m "Show automatic A/B track numbers in sandbox builder"
+          git push origin main
