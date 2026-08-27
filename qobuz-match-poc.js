@@ -10,61 +10,90 @@ const tests = [
 (async()=>{
   const browser=await chromium.launch({headless:true});
   const page=await browser.newPage({viewport:{width:1280,height:1000}});
+  const seenScripts=new Set();
 
   page.on('request', req => {
     const u=req.url();
-    if (/qobuz|search|catalog|api/i.test(u) && !/\.(png|jpg|jpeg|svg|woff|css)(\?|$)/i.test(u)) {
-      console.log('NET_REQUEST', req.method(), u, req.postData() || '');
+    if (/algolia|qobuz|search|catalog|api/i.test(u) && !/\.(png|jpg|jpeg|svg|woff|css)(\?|$)/i.test(u)) {
+      console.log('NET_REQUEST', req.method(), u, (req.postData() || '').slice(0,12000));
+      const h=req.headers();
+      for (const k of Object.keys(h)) if (/algolia|application|api-key/i.test(k)) console.log('REQ_HEADER',k,h[k]);
     }
   });
   page.on('response', async res => {
     const u=res.url();
     const ct=(res.headers()['content-type']||'');
-    if (/qobuz|search|catalog|api/i.test(u) && (/json|javascript|text/i.test(ct) || /search|api/i.test(u))) {
+    if (/algolia|qobuz|search|catalog|api/i.test(u) && (/json|javascript|text/i.test(ct) || /search|api|algolia/i.test(u))) {
       console.log('NET_RESPONSE', res.status(), ct, u);
-      if (/json/i.test(ct)) {
-        try { console.log('NET_JSON', (await res.text()).slice(0,20000)); } catch (_) {}
-      }
+      if (/json/i.test(ct)) try { console.log('NET_JSON', (await res.text()).slice(0,20000)); } catch (_) {}
     }
   });
 
-  await page.goto('https://www.qobuz.com/au-en/search',{waitUntil:'domcontentloaded',timeout:90000});
-  await page.waitForTimeout(4000);
+  await page.goto('https://www.qobuz.com/au-en/search',{waitUntil:'networkidle',timeout:90000}).catch(async()=>{
+    await page.waitForLoadState('domcontentloaded');
+  });
+  await page.waitForTimeout(5000);
+  console.log('FINAL_URL',page.url());
+  console.log('TITLE',await page.title());
 
-  for (let n=0;n<tests.length;n++) {
-    const input=tests[n];
-    const query=`${input.artist} ${input.title}`;
-    console.log(`\n=== LIVE SEARCH ${n+1}: ${query} ===`);
+  // Dump inline configuration/state looking specifically for Algolia/index credentials.
+  const html=await page.content();
+  for (const re of [
+    /.{0,180}algolia.{0,500}/ig,
+    /.{0,180}(?:app(?:lication)?[_-]?id|api[_-]?key|index[_-]?name).{0,500}/ig
+  ]) {
+    const matches=html.match(re)||[];
+    for (const m of matches.slice(0,30)) console.log('HTML_CONFIG',m.replace(/\s+/g,' ').slice(0,1200));
+  }
+
+  // Fetch loaded JS ourselves and grep it. This works even when the UI has no search box.
+  const scripts=await page.locator('script[src]').evaluateAll(xs=>xs.map(x=>x.src));
+  console.log('SCRIPT_COUNT',scripts.length);
+  for (const src of scripts) {
+    if (seenScripts.has(src)) continue;
+    seenScripts.add(src);
     try {
-      const candidates = [
-        'input[type="search"]',
-        'input[placeholder*="Search" i]',
-        'input[aria-label*="Search" i]',
-        'input[name*="search" i]',
-        'input'
-      ];
-      let box=null;
-      for (const sel of candidates) {
-        const loc=page.locator(sel).first();
-        if (await loc.count()) {
-          try { if (await loc.isVisible()) { box=loc; console.log('SEARCH_BOX', sel); break; } } catch (_) {}
+      const r=await page.request.get(src,{timeout:30000});
+      if (!r.ok()) continue;
+      const txt=await r.text();
+      if (/algolia|algoliasearch|indexName|applicationId|apiKey/i.test(txt)) {
+        console.log('\nSCRIPT_HIT',src,'bytes',txt.length);
+        const patterns=[
+          /.{0,250}algoliasearch.{0,700}/ig,
+          /.{0,250}indexName.{0,700}/ig,
+          /.{0,250}applicationId.{0,700}/ig,
+          /.{0,250}apiKey.{0,700}/ig
+        ];
+        for (const re of patterns) {
+          const ms=txt.match(re)||[];
+          for (const m of ms.slice(0,12)) console.log('JS_CONFIG',m.replace(/\s+/g,' ').slice(0,1500));
         }
       }
-      if (!box) throw new Error('No visible search input found');
-      await box.fill(query);
-      await page.waitForTimeout(500);
-      await box.press('Enter');
-      await page.waitForTimeout(6000);
-      console.log('FINAL_URL', page.url());
-      console.log('TITLE', await page.title());
-      const body=(await page.locator('body').innerText()).replace(/\s+$/g,'');
-      console.log('BODY_START');
-      console.log(body.slice(0,12000));
-      console.log('BODY_END');
-      await page.screenshot({path:`qobuz-live-${n+1}.png`,fullPage:true});
-    } catch(e) {
-      console.log('ERROR', e && e.stack || e);
-    }
+    } catch(e) { console.log('SCRIPT_ERR',src,e.message); }
   }
+
+  // Try likely shop search URLs directly; network listeners above will reveal any Algolia call.
+  const base=new URL(page.url()).origin;
+  for (const input of tests) {
+    const query=`${input.artist} ${input.title}`;
+    console.log(`\n=== URL PROBES: ${query} ===`);
+    const urls=[
+      `${base}/search?q=${encodeURIComponent(query)}`,
+      `${base}/search?query=${encodeURIComponent(query)}`,
+      `${base}/search/${encodeURIComponent(query)}`
+    ];
+    for (const url of urls) {
+      try {
+        console.log('PROBE',url);
+        await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+        await page.waitForTimeout(3500);
+        console.log('PROBE_FINAL',page.url());
+        const body=(await page.locator('body').innerText()).replace(/\s+$/g,'');
+        console.log('BODY',body.slice(0,4000));
+      } catch(e) { console.log('PROBE_ERR',e.message); }
+    }
+    break; // one query is enough to expose the transport/config
+  }
+
   await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
