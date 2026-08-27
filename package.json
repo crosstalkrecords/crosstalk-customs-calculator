@@ -1,0 +1,10 @@
+{
+  "name": "crosstalk-playlist-importer",
+  "version": "0.1.0",
+  "private": true,
+  "engines": { "node": "22.x" },
+  "dependencies": {
+    "@sparticuz/chromium-min": "^141.0.0",
+    "puppeteer-core": "^24.23.1"
+  }
+}
