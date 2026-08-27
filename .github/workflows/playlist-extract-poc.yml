@@ -9,6 +9,7 @@ on:
         default: https://music.apple.com/au/playlist/dolly-parton-essentials/pl.bca7ed31389842108896524e2edbd956
   push:
     paths:
+      - 'playlist-extract-poc.js'
       - '.github/workflows/playlist-extract-poc.yml'
 
 jobs:
