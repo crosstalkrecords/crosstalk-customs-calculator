@@ -7,6 +7,9 @@ on:
         description: Public Spotify playlist URL
         required: false
         default: https://open.spotify.com/playlist/5TNGJeYkQvZBzuj2LiDxlP?si=b2ca90eae7894418
+  push:
+    paths:
+      - '.github/workflows/playlist-extract-poc.yml'
 
 jobs:
   extract:
@@ -25,7 +28,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Extract rendered Spotify playlist
         env:
-          PLAYLIST_URL: ${{ inputs.playlist_url }}
+          PLAYLIST_URL: ${{ inputs.playlist_url || 'https://open.spotify.com/playlist/5TNGJeYkQvZBzuj2LiDxlP?si=b2ca90eae7894418' }}
         run: node playlist-extract-poc.js
       - name: Upload screenshot
         if: always()
