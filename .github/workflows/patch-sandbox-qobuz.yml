@@ -1,0 +1,52 @@
+name: Patch sandbox Qobuz enrichment
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-sandbox-qobuz.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Add quiet Qobuz sourcing to guided sandbox
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('easy-track-builder-sandbox.html')
+          s=p.read_text()
+
+          css_old='.remove{border:0;border-radius:7px;background:#eee;font-size:17px;cursor:pointer}.add{border:0;border-radius:8px;background:#e8f0f5;padding:8px 11px;margin-top:9px;font-weight:700;cursor:pointer}'
+          css_new='''.remove{border:0;border-radius:7px;background:#eee;font-size:17px;cursor:pointer}.qsource{grid-column:2/-1;min-height:18px;margin:-1px 0 3px;font-size:10.5px;line-height:1.4;color:#7b7b7b}.qsource.checking{opacity:.72}.qsource a{color:#3f6d8b;font-weight:800;text-decoration:none}.qsource a:hover{text-decoration:underline}.qsource details{margin:0}.qsource summary{font-size:10.5px;color:#6b6b6b}.qcandidates{padding:7px 0 1px}.qcandidates a{display:block;margin:4px 0;font-weight:700}.add{border:0;border-radius:8px;background:#e8f0f5;padding:8px 11px;margin-top:9px;font-weight:700;cursor:pointer}'''
+          if css_old not in s: raise SystemExit('CSS anchor not found')
+          s=s.replace(css_old,css_new,1)
+
+          func_anchor="function sideTotal(s){return all(`#tracks${s} .td`).reduce((n,i)=>n+dur(i.value),0)}"
+          qfunc=r'''function qobuzRows(){return [...all('#tracksA .track'),...all('#tracksB .track')]}
+function qobuzEscape(v){return String(v||'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function qobuzStatus(row,result){let box=row.querySelector('.qsource');if(!box){box=document.createElement('div');box.className='qsource';row.appendChild(box)}box.classList.remove('checking');if(!result||result.status==='none'){box.textContent='No clear Qobuz download match found.';return}if(result.status==='high'&&result.best?.url){box.innerHTML=`Available as a legal download on Qobuz · <a href="${qobuzEscape(result.best.url)}" target="_blank" rel="noopener">Buy / download ↗</a>`;return}const cs=(result.candidates||[]).filter(x=>x.url).slice(0,3);if(!cs.length){box.textContent='A possible Qobuz match was found — please check the version.';return}box.innerHTML=`<details><summary>A few Qobuz versions found — check the right one</summary><div class="qcandidates">${cs.map(c=>`<a href="${qobuzEscape(c.url)}" target="_blank" rel="noopener">${qobuzEscape(c.title)} · ${qobuzEscape(c.album||c.artist)} ↗</a>`).join('')}</div></details>`}
+async function enrichQobuz(imported){const rows=qobuzRows();if(!imported?.length||rows.length!==imported.length)return;rows.forEach(r=>{let box=r.querySelector('.qsource');if(!box){box=document.createElement('div');box.className='qsource checking';r.appendChild(box)}box.textContent='Checking legal download options…'});try{const res=await fetch('https://crosstalk-playlist-importer.vercel.app/api/qobuz',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tracks:imported.map(t=>({title:t.title||'',artist:t.artist||'',duration:t.duration||''}))})});const data=await res.json();if(!res.ok||!data.ok)throw new Error('match failed');(data.results||[]).forEach((r,i)=>rows[i]&&qobuzStatus(rows[i],r));rows.slice((data.results||[]).length).forEach(r=>qobuzStatus(r,null))}catch(_){rows.forEach(r=>{const box=r.querySelector('.qsource');if(box){box.classList.remove('checking');box.textContent='Legal download lookup unavailable — you can still supply your own files.'}})}}
+'''
+          if func_anchor not in s: raise SystemExit('Function anchor not found')
+          s=s.replace(func_anchor,qfunc+func_anchor,1)
+
+          old="""$('playlistMsg').innerHTML=`<strong>${tracks.length} tracks imported from ${provider}.</strong> We've split them roughly evenly across Side A and Side B.${tooLong?' <span style=\"color:#a52320;font-weight:800\">This playlist is longer than the selected record can hold, so trim tracks until both runtime bars fit.</span>':' You can move, remove or edit tracks from here.'}`"""
+          new=old+";enrichQobuz(tracks)"
+          if old not in s: raise SystemExit('Playlist success anchor not found')
+          s=s.replace(old,new,1)
+
+          p.write_text(s)
+          PY
+      - name: Commit guided sandbox enrichment
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add easy-track-builder-sandbox.html
+          git commit -m "Add background Qobuz sourcing to guided sandbox"
+          git push origin main
