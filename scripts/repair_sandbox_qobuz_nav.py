@@ -1,61 +1,58 @@
 from pathlib import Path
-p=Path('easy-track-builder-sandbox.html')
-s=p.read_text()
+p=Path('easy-track-builder-sandbox.html');s=p.read_text()
 
-# --- Styles ---
-style_anchor='.qsource details[open] summary{display:inline}.qcandidates{padding-top:3px}.qcandidates a{display:block;margin:2px 0}'
-extra_css='.builderhead{display:flex;align-items:center;justify-content:space-between;gap:10px}.buildertools{display:flex;gap:6px}.buildertools button{border:1px solid #d8e2e8;background:#fff;border-radius:8px;padding:6px 9px;font:inherit;font-size:10.5px;font-weight:750;color:#5c6a72;cursor:pointer}.buildertools button:hover{background:#f7fafc}.doublelp-hint{margin-top:8px;font-size:10.5px;color:#667680}.suggestions{grid-column:2/4;margin-top:-2px;border:1px solid #d7e4ec;border-radius:8px;background:#fff;box-shadow:0 5px 16px rgba(0,0,0,.06);overflow:hidden;z-index:2}.suggestion{display:block;width:100%;border:0;border-bottom:1px solid #edf1f3;background:#fff;padding:8px 9px;text-align:left;font:inherit;cursor:pointer}.suggestion:last-child{border-bottom:0}.suggestion:hover,.suggestion.active{background:#f1f7fb}.suggestion strong{display:block;font-size:11px}.suggestion small{display:block;font-size:10px;color:#777;margin-top:2px}.searching{grid-column:2/4;font-size:10px;color:#888;margin-top:-2px}'
-if '.builderhead{' not in s:
-    if style_anchor not in s: raise SystemExit('style anchor missing')
-    s=s.replace(style_anchor,style_anchor+extra_css,1)
+# --- Put the 2xLP decision where the runtime problem is visible ---
+# Remove the offer box from the playlist import helper and move it directly above the side cards.
+s=s.replace('<div id="doubleLPBox" class="doublelp"></div>','',1)
+marker='<div class="help"><div class="builderhead"><strong>Easy Track Builder</strong><div class="buildertools"><button type="button" id="clearTracks">Clear tracklist</button></div></div>'
+if marker in s and '<div id="doubleLPBox" class="doublelp"></div>' not in s:
+    s=s.replace(marker,marker+'<div id="doubleLPBox" class="doublelp"></div>',1)
 
-# --- Persistent 2LP hint under playlist import ---
-old='<div id="playlistMsg" class="muted" style="margin-top:7px">A playlist is a handy starting point for planning your record. We\'ll still need the actual audio files before we can make it.</div><div id="doubleLPBox" class="doublelp"></div>'
-new='<div id="playlistMsg" class="muted" style="margin-top:7px">A playlist is a handy starting point for planning your record. We\'ll still need the actual audio files before we can make it.</div><div class="doublelp-hint">Long playlist? If it fits across four sides, we’ll offer a 2×LP automatically.</div><div id="doubleLPBox" class="doublelp"></div>'
-if old in s:s=s.replace(old,new,1)
+# Make the persistent hint clearer that this is an actual available path.
+s=s.replace('Long playlist? If it fits across four sides, we’ll offer a 2×LP automatically.','Long playlist? No problem — if it fits across four sides, we can turn it into a 2×LP without making you start again.')
 
-# --- Clear Tracklist control in builder heading ---
-old='<div class="help"><strong>Easy Track Builder</strong><div class="side">'
-new='<div class="help"><div class="builderhead"><strong>Easy Track Builder</strong><div class="buildertools"><button type="button" id="clearTracks">Clear tracklist</button></div></div><div class="side">'
-if old in s:s=s.replace(old,new,1)
+# --- Mobile is essential ---
+s=s.replace('<label>Mobile Number (optional)</label><input name="Custom Field 1">','<label>Mobile Number</label><input name="Custom Field 1" required>')
 
-# --- Helper functions before addTrack ---
-anchor='function addTrack(side){'
-if 'function clearTracklist' not in s:
-    helpers=r'''function clearTracklist(){['A','B','C','D'].forEach(x=>{$(`tracks${x}`).innerHTML=''});$('sideC').classList.add('hidden');$('sideD').classList.add('hidden');state.doubleLP=false;lastImportedTracks=[];$('manual').value='';$('playlistUrl').value='';$('doubleLPBox').classList.remove('show');$('doubleLPBox').innerHTML='';$('playlistMsg').textContent="A playlist is a handy starting point for planning your record. We'll still need the actual audio files before we can make it.";addTrack('A');addTrack('B');priceUI();totals();clearValidation('validate2')}
-function closeSuggestions(row){const old=row.querySelector('.suggestions'),wait=row.querySelector('.searching');if(old)old.remove();if(wait)wait.remove()}
-async function enrichOneRow(row,track){try{const res=await fetch('https://crosstalk-playlist-importer.vercel.app/api/qobuz',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tracks:[track]})});const data=await res.json();if(res.ok&&data.ok&&data.results?.[0])renderQ(row,data.results[0])}catch(_){}}
-function chooseSuggestion(row,item){row.querySelector('.tn').value=`${item.artist} — ${item.title}`;row.querySelector('.td').value=item.duration?fmt(item.duration):'';closeSuggestions(row);totals();clearValidation('validate2');enrichOneRow(row,{title:item.title,artist:item.artist,duration:item.duration?fmt(item.duration):''})}
-async function searchSuggestions(row,input,token){const q=input.value.trim();closeSuggestions(row);if(q.length<3)return;const wait=document.createElement('div');wait.className='searching';wait.textContent='Finding track…';row.appendChild(wait);try{const res=await fetch('https://crosstalk-playlist-importer.vercel.app/api/track-search?q='+encodeURIComponent(q));const data=await res.json();if(input._searchToken!==token)return;closeSuggestions(row);if(!res.ok||!data.ok||!data.results?.length)return;const box=document.createElement('div');box.className='suggestions';data.results.slice(0,5).forEach(item=>{const b=document.createElement('button');b.type='button';b.className='suggestion';b.innerHTML=`<strong>${esc(item.artist)} — ${esc(item.title)}</strong><small>${esc(item.album||'')}${item.duration?' · '+fmt(item.duration):''}</small>`;b.onmousedown=e=>{e.preventDefault();chooseSuggestion(row,item)};box.appendChild(b)});row.appendChild(box)}catch(_){closeSuggestions(row)}}
-function wireAutocomplete(row){const input=row.querySelector('.tn');let timer;input.addEventListener('input',()=>{clearTimeout(timer);closeSuggestions(row);input._searchToken=(input._searchToken||0)+1;const token=input._searchToken;if(input.value.trim().length>=3)timer=setTimeout(()=>searchSuggestions(row,input,token),350)});input.addEventListener('blur',()=>setTimeout(()=>closeSuggestions(row),180))}
-'''
-    if anchor not in s: raise SystemExit('addTrack anchor missing')
-    s=s.replace(anchor,helpers+anchor,1)
+# --- Playlist/audio legal guidance ---
+s=s.replace("A playlist is a handy starting point for planning your record. We'll still need the actual audio files before we can make it.","Playlists are used only as a planning guide — they are not legal download sources and we cannot cut from them. You must still supply the actual audio files yourself.")
 
-# Wire autocomplete whenever a track row is created.
-old="r.querySelector('.remove').onclick=()=>{r.remove();totals()};$(`tracks${side}`).appendChild(r);totals()}"
-new="r.querySelector('.remove').onclick=()=>{r.remove();totals()};wireAutocomplete(r);$(`tracks${side}`).appendChild(r);totals()}"
-if old in s:s=s.replace(old,new,1)
+old_audio='<div class="help"><strong>Your playlist gets us started — your audio files are what we actually cut.</strong><br>You\'ll need to upload files you\'ve legally purchased, music you\'ve made yourself, or audio you otherwise have permission to reproduce. Don\'t have them yet? No problem — we can point you to straightforward legal download options.</div>'
+new_audio='<div class="help"><strong>Your playlist is only a guide — it does not supply the audio.</strong><br>Every audio file must be provided manually by you before we cut anything. Suitable sources can include files you have legally purchased, music you created yourself, audio you otherwise have permission to reproduce, or audio ripped from CDs you own where you are legally entitled to make and use that copy.<br><br>Our Qobuz links are simply a helping hand to locate possible legal downloads. Crosstalk does not purchase, download or transfer the music on your behalf.</div>'
+if old_audio in s:s=s.replace(old_audio,new_audio,1)
 
-# --- 2LP offer: always visible after a viable overlength import, including promo builds ---
+s=s.replace('<div id="audioHelp" class="help hidden"><strong>Need downloadable copies?</strong><br>We recommend buying DRM-free downloadable audio from Qobuz where available. Purchased iTunes Store downloads can also be suitable.</div>', '<div id="audioHelp" class="help hidden"><strong>Need downloadable copies?</strong><br>We can help you find likely matches on Qobuz where available. You must purchase/download the files yourself and then upload them to Crosstalk. A playlist link by itself is never treated as supplied audio.</div>')
+
+# --- 2xLP pricing: $225 base, with $60 printed artwork/packaging upgrade instead of the normal $40 ---
+start=s.find('function productPrice(){')
+end=s.find('function totalPrice(){',start)
+if start<0 or end<0: raise SystemExit('productPrice function not found')
+product=r'''function productPrice(){if(state.promo)return CONFIG.promo.price;if(!state.size)return 0;const c=CONFIG[state.mode];let t;if(state.doubleLP&&state.mode==='regular'&&state.size==='12'&&state.qty===1)t=225;else t=c.base[state.size].Double*state.qty;if(state.pack==='Custom Finish Pack')t+=c.up.custom;else{if(state.colour!=='Clear')t+=c.up.colour;if(state.pack==='Printed Jacket + Labels')t+=state.doubleLP&&state.mode==='regular'?60:c.up.printed}return t}'''
+s=s[:start]+product+s[end:]
+
+# Make the visible packaging option accurately describe the 2xLP artwork charge once selected.
+if 'function updatePrintedPrice' not in s:
+    anchor='function priceUI(){'
+    helper="function updatePrintedPrice(){const el=$('printedP');if(el)el.textContent=state.doubleLP&&state.mode==='regular'?'+$60 · artwork/printing for both LPs':'+$'+CONFIG[state.mode].up.printed}\n"
+    if anchor in s:s=s.replace(anchor,helper+anchor,1)
+# Call it from priceUI before sync.
+s=s.replace("['priceLabel1','priceLabel2','priceLabel3'].forEach(id=>$(id).textContent=state.promo?'Father\\'s Day Special':'Current estimate');sync()}","['priceLabel1','priceLabel2','priceLabel3'].forEach(id=>$(id).textContent=state.promo?'Father\\'s Day Special':'Current estimate');updatePrintedPrice();sync()}")
+
+# --- 2xLP offer: precise runtime + stronger placement/copy ---
 start=s.find('function doubleLPOffer(tracks,grand){')
 end=s.find('function review(){',start)
-if start<0 or end<0: raise SystemExit('doubleLP function not found')
-new_func=r'''function doubleLPOffer(tracks,grand){const box=$('doubleLPBox'),one=dur(lim())*2,two=dur(lim())*4;box.classList.remove('show');box.innerHTML='';if(grand<=one)return;if(grand<=two){const promoNote=state.promo?' This switches you out of the single-LP Father\'s Day Special.':'';box.innerHTML=`<strong>Want to keep the whole playlist?</strong><br>This runtime is a natural fit for a <strong>2×LP set</strong> — we can spread it across four sides for <strong>$225</strong>.${promoNote}<br><button type="button" class="btn" id="chooseDoubleLP">Make it a 2×LP</button>`;box.classList.add('show');$('chooseDoubleLP').onclick=()=>{state.promo=false;state.mode='regular';repartitionDoubleLP(tracks);renderBadges();updateModeScreens()}}else{box.innerHTML='<strong>This playlist is much longer than a vinyl set can hold.</strong><br>Even a 2×LP would still need substantial trimming. Clear the list or pick the must-have tracks first and we’ll keep the runtime clear as you go.';box.classList.add('show')}}
+if start<0 or end<0: raise SystemExit('doubleLPOffer not found')
+new_func=r'''function doubleLPOffer(tracks,grand){const box=$('doubleLPBox'),one=dur(lim())*2,two=dur(lim())*4;box.classList.remove('show');box.innerHTML='';if(grand<=one)return;if(grand<=two){const over=grand-one,promoNote=state.promo?' This switches you out of the single-LP Father\'s Day Special.':'';box.innerHTML=`<strong>Your tracklist is ${fmt(grand)} — ${fmt(over)} over one LP.</strong><br><span>You can trim it down, or keep everything and spread it automatically across four sides.</span><br><button type="button" class="btn" id="chooseDoubleLP">Keep everything — make it a 2×LP for $225</button>${promoNote?`<div class="muted" style="margin-top:6px">${promoNote.trim()}</div>`:''}`;box.classList.add('show');$('chooseDoubleLP').onclick=()=>{state.promo=false;state.mode='regular';repartitionDoubleLP(tracks);renderBadges();updateModeScreens();priceUI()}}else{box.innerHTML=`<strong>Your tracklist is ${fmt(grand)}.</strong><br>Even a 2×LP can hold about ${fmt(two)} at this setup, so this one needs some trimming first. You can use <strong>Clear tracklist</strong> and start again, or remove the less-essential tracks.`;box.classList.add('show')}}
 '''
 s=s[:start]+new_func+s[end:]
 
-# Clear button event.
-wire_anchor="all('.add').forEach(b=>b.onclick=()=>addTrack(b.dataset.side));"
-if "$('clearTracks').onclick" not in s:
-    if wire_anchor not in s: raise SystemExit('wire anchor missing')
-    s=s.replace(wire_anchor,wire_anchor+"$('clearTracks').onclick=clearTracklist;",1)
+# After converting to 2LP, keep the offer area as a reassuring confirmation rather than disappearing completely.
+old="$('doubleLPBox').classList.remove('show');priceUI();totals()}"
+new="$('doubleLPBox').innerHTML='<strong>2×LP selected.</strong><br>Your tracks have been redistributed across Sides A–D. Printed Jacket + Labels is +$60 for the two-LP artwork/printing package.';$('doubleLPBox').classList.add('show');priceUI();totals()}"
+if old in s:s=s.replace(old,new,1)
 
-# Keep acknowledgement and sourcing on successful import.
-if 'doubleLPOffer(tracks,grand);enrichQobuz(tracks)' in s:
-    s=s.replace('doubleLPOffer(tracks,grand);enrichQobuz(tracks)','doubleLPOffer(tracks,grand);acknowledgeImport();enrichQobuz(tracks)',1)
-elif 'doubleLPOffer(tracks,grand)}catch(err)' in s:
-    s=s.replace('doubleLPOffer(tracks,grand)}catch(err)','doubleLPOffer(tracks,grand);acknowledgeImport();enrichQobuz(tracks)}catch(err)',1)
+# Ensure clearTracklist restores the explicit playlist warning copy.
+s=s.replace("$('playlistMsg').textContent=\"A playlist is a handy starting point for planning your record. We'll still need the actual audio files before we can make it.\"","$('playlistMsg').textContent=\"Playlists are used only as a planning guide — they are not legal download sources and we cannot cut from them. You must still supply the actual audio files yourself.\"")
 
 p.write_text(s)
-print('Added clear tracklist, manual autocomplete, Qobuz enrichment, and visible 2LP path')
+print('Foregrounded 2xLP, required mobile, clarified source-audio rules, and added 2xLP artwork pricing')
