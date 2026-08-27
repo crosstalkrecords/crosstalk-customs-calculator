@@ -7,12 +7,17 @@ s=p.read_text()
 s=s.replace("function showValidation(id,msg){const el=$(id);if(msg)el.textContent=msg;el.classList.add('show')}function clearValidation(id){$(id).classList.remove('show')}",
             "function showValidation(id,msg){const el=$(id);if(!el)return;if(msg)el.textContent=msg;el.classList.add('show')}function clearValidation(id){const el=$(id);if(el)el.classList.remove('show')}")
 
-# Add quiet Qobuz styling if not already present.
+# Add quiet Qobuz styling plus a one-shot acknowledgement flash for successfully populated sides.
 anchor='.doublelp .btn{margin-top:9px;min-height:38px;padding:0 15px;font-size:12px}.packgrid'
 if '.qsource{' not in s:
     repl='.doublelp .btn{margin-top:9px;min-height:38px;padding:0 15px;font-size:12px}.qsource{grid-column:2/-1;min-height:0;margin:-2px 0 2px;font-size:10.5px;line-height:1.35;color:#777}.qsource a{color:#3f6d8b;font-weight:800;text-decoration:none}.qsource a:hover{text-decoration:underline}.qsource details{margin:0}.qsource summary{font-size:10.5px;color:#666}.qcandidates a{display:block;margin:3px 0}.packgrid'
     if anchor not in s: raise SystemExit('qobuz css anchor missing')
     s=s.replace(anchor,repl,1)
+flash_css='.side{transition:background-color .65s ease}.side.import-ack{background:var(--blue)}'
+if '.side.import-ack{' not in s:
+    style_anchor='.side{background:#fff;border:1px solid #d7e4ec;border-radius:10px;padding:12px;margin-top:11px}'
+    if style_anchor not in s: raise SystemExit('side style anchor missing')
+    s=s.replace(style_anchor,style_anchor+flash_css,1)
 
 # Add row matching/render helpers before sideTotal.
 func_anchor='function sideTotal(s){return all(`#tracks${s} .td`).reduce((n,i)=>n+dur(i.value),0)}'
@@ -25,10 +30,18 @@ async function enrichQobuz(tracks){const rows=qRows().slice(0,tracks.length);if(
     if func_anchor not in s: raise SystemExit('qobuz function anchor missing')
     s=s.replace(func_anchor,qfunc+func_anchor,1)
 
-# Trigger Qobuz enrichment after every successful playlist import.
+if 'function acknowledgeImport' not in s:
+    ack="function acknowledgeImport(){const sides=activeSides().map(x=>$('side'+x)||$('tracks'+x)?.closest('.side')).filter(Boolean);sides.forEach(el=>el.classList.remove('import-ack'));requestAnimationFrame(()=>requestAnimationFrame(()=>{sides.forEach(el=>el.classList.add('import-ack'));setTimeout(()=>sides.forEach(el=>el.classList.remove('import-ack')),650)}))}\n"
+    if func_anchor not in s: raise SystemExit('ack function anchor missing')
+    s=s.replace(func_anchor,ack+func_anchor,1)
+
+# Trigger Qobuz enrichment and acknowledgement after every successful playlist import.
 needle="if(state.size&&state.rpm)doubleLPOffer(tracks,grand)}catch(err)"
-if needle in s and 'doubleLPOffer(tracks,grand);enrichQobuz(tracks)' not in s:
-    s=s.replace(needle,"if(state.size&&state.rpm)doubleLPOffer(tracks,grand);enrichQobuz(tracks)}catch(err)",1)
+if needle in s:
+    s=s.replace(needle,"if(state.size&&state.rpm)doubleLPOffer(tracks,grand);acknowledgeImport();enrichQobuz(tracks)}catch(err)",1)
+elif 'acknowledgeImport();enrichQobuz(tracks)' not in s:
+    needle2="if(state.size&&state.rpm)doubleLPOffer(tracks,grand);enrichQobuz(tracks)}catch(err)"
+    if needle2 in s:s=s.replace(needle2,"if(state.size&&state.rpm)doubleLPOffer(tracks,grand);acknowledgeImport();enrichQobuz(tracks)}catch(err)",1)
 
 # Replace navigation wiring with a defensive version.
 old="all('[data-back]').forEach(b=>b.onclick=()=>go(+b.dataset.back));all('[data-next]').forEach(b=>b.onclick=()=>{const from=state.step;if(canAdvance(from)){clearValidation('validate'+from);go(+b.dataset.next)}});"
@@ -36,4 +49,4 @@ new="all('[data-back]').forEach(b=>b.onclick=()=>go(+b.dataset.back));all('[data
 if old in s:s=s.replace(old,new,1)
 
 p.write_text(s)
-print('sandbox repair applied')
+print('sandbox repair + import acknowledgement applied')
