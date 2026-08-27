@@ -64,7 +64,7 @@ async function algoliaSearch(query) {
     body:JSON.stringify({params:`query=${encodeURIComponent(query)}&hitsPerPage=20`})
   });
   const text=await res.text();
-  if(!res.ok()) throw new Error(`Algolia ${res.status}: ${text.slice(0,500)}`);
+  if(!res.ok) throw new Error(`Algolia ${res.status}: ${text.slice(0,500)}`);
   return JSON.parse(text);
 }
 
