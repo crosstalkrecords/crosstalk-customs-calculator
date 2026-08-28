@@ -8,6 +8,13 @@ if marker in s and '<div id="doubleLPBox" class="doublelp"></div>' not in s:
     s=s.replace(marker,marker+'<div id="doubleLPBox" class="doublelp"></div>',1)
 s=s.replace('Long playlist? If it fits across four sides, we’ll offer a 2×LP automatically.','Long playlist? No problem — if it fits across four sides, we can turn it into a 2×LP without making you start again.')
 
+# --- Runtime guidance: playlist times help plan the record, supplied files decide the final fit ---
+runtime_note='<div id="runtimeGuide" class="muted" style="margin-top:8px"><strong>Track times are a guide.</strong> Final running time is confirmed from your supplied audio files.</div><p class="muted" style="margin:8px 0 0">Durations are based on the playlist versions we can identify. Your final audio files may be slightly different — for example, a different edit, remaster or version. <strong>The files you supply are what ultimately determine whether your record fits.</strong> If they run over the available time, we’ll contact you before cutting anything.</p>'
+if 'id="runtimeGuide"' not in s:
+    target=marker+'<div id="doubleLPBox" class="doublelp"></div>'
+    if target in s:
+        s=s.replace(target,marker+runtime_note+'<div id="doubleLPBox" class="doublelp"></div>',1)
+
 # --- Mobile is essential ---
 s=s.replace('<label>Mobile Number (optional)</label><input name="Custom Field 1">','<label>Mobile Number</label><input name="Custom Field 1" required>')
 
@@ -15,7 +22,9 @@ s=s.replace('<label>Mobile Number (optional)</label><input name="Custom Field 1"
 s=s.replace("A playlist is a handy starting point for planning your record. We'll still need the actual audio files before we can make it.","Playlists are used only as a planning guide — they are not legal download sources and we cannot cut from them. You must still supply the actual audio files yourself.")
 old_audio='<div class="help"><strong>Your playlist gets us started — your audio files are what we actually cut.</strong><br>You\'ll need to upload files you\'ve legally purchased, music you\'ve made yourself, or audio you otherwise have permission to reproduce. Don\'t have them yet? No problem — we can point you to straightforward legal download options.</div>'
 new_audio='<div class="help"><strong>Your playlist is only a guide — it does not supply the audio.</strong><br>Every audio file must be provided manually by you before we cut anything. Suitable sources can include files you have legally purchased, music you created yourself, audio you otherwise have permission to reproduce, or audio ripped from CDs you own where you are legally entitled to make and use that copy.<br><br>Our Qobuz links are simply a helping hand to locate possible legal downloads. Crosstalk does not purchase, download or transfer the music on your behalf.</div>'
-if old_audio in s:s=s.replace(old_audio,new_audio,1)
+updated_audio='<div class="help"><strong>Your playlist is only a guide — it does not supply the audio.</strong><br>Every audio file must be provided manually by you before we cut anything. Suitable sources can include files you have legally purchased, music you created yourself, audio you otherwise have permission to reproduce, or audio ripped from CDs you own where you are legally entitled to make and use that copy.<br><br><strong>Your supplied files are the final word on running time.</strong> Playlist durations are used to help plan your record, but we’ll check the actual audio before cutting. If anything no longer fits, we’ll get in touch.<br><br>Our Qobuz links are simply a helping hand to locate possible legal downloads. Crosstalk does not purchase, download or transfer the music on your behalf.</div>'
+if old_audio in s:s=s.replace(old_audio,updated_audio,1)
+elif new_audio in s:s=s.replace(new_audio,updated_audio,1)
 s=s.replace('<div id="audioHelp" class="help hidden"><strong>Need downloadable copies?</strong><br>We recommend buying DRM-free downloadable audio from Qobuz where available. Purchased iTunes Store downloads can also be suitable.</div>', '<div id="audioHelp" class="help hidden"><strong>Need downloadable copies?</strong><br>We can help you find likely matches on Qobuz where available. You must purchase/download the files yourself and then upload them to Crosstalk. A playlist link by itself is never treated as supplied audio.</div>')
 
 # --- 2xLP pricing ---
@@ -60,4 +69,4 @@ if 'doubleLPOffer(tracks,grand);acknowledgeImport();enrichQobuz(tracks)' not in 
 s=s.replace("$('playlistMsg').textContent=\"A playlist is a handy starting point for planning your record. We'll still need the actual audio files before we can make it.\"","$('playlistMsg').textContent=\"Playlists are used only as a planning guide — they are not legal download sources and we cannot cut from them. You must still supply the actual audio files yourself.\"")
 
 p.write_text(s)
-print('Made 2xLP dynamic, visible for all overlength tracklists, preserved legal/pricing changes, and restored Qobuz after repartition')
+print('Preserved 2xLP/Qobuz fixes and added clear runtime guidance for supplied audio')
