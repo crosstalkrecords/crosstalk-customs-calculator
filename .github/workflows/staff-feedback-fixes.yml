@@ -1,0 +1,54 @@
+name: Staff feedback fixes
+on:
+  push:
+    paths: ['.github/workflows/staff-feedback-fixes.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main}
+      - name: Apply targeted fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('easy-track-builder-sandbox.html')
+          s=p.read_text()
+          def rep(a,b,label):
+            global s
+            if a not in s: raise SystemExit(label+' anchor missing')
+            s=s.replace(a,b,1)
+          rep("r.querySelector('.remove').onclick=()=>{r.remove();totals();refreshDoubleLPOffer()}",
+              "r.querySelector('.remove').onclick=()=>{r.remove();totals();refreshDoubleLPOffer();if(tracklist()&&!overRuntime()&&!invalidDurations())clearValidation('validate2')}",
+              'remove validation')
+          rep("<button type=\"button\" class=\"choice audio\" data-audio=\"help\"><strong>Help me get the files legally</strong><small>Show me the easiest options.</small></button>",
+              "<button type=\"button\" class=\"choice audio\" data-audio=\"help\"><strong>Help me get the files legally</strong><small>Show me where to start.</small></button>",
+              'audio button copy')
+          rep("<div id=\"audioHelp\" class=\"help hidden\"><strong>Need downloadable copies?</strong><br>We can help you find likely matches on Qobuz where available. You must purchase/download the files yourself and then upload them to Crosstalk. A playlist link by itself is never treated as supplied audio.</div>",
+              "<div id=\"audioHelp\" class=\"help hidden\"><strong>Need downloadable copies?</strong><br>Qobuz is a good first place to search for purchasable, downloadable audio. Use the track-specific Qobuz links on your tracklist where available, or search the Qobuz download store directly.<br><br><a class=\"examples\" href=\"https://www.qobuz.com/au-en/shop\" target=\"_blank\" rel=\"noopener\">Open the Qobuz download store →</a><br><br>You must purchase/download the files yourself and then upload them to Crosstalk. A playlist link by itself is never treated as supplied audio.</div>",
+              'audio help')
+          p.write_text(s)
+          PY
+      - name: QA gates
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          s=Path('easy-track-builder-sandbox.html').read_text()
+          scripts=re.findall(r'<script\b[^>]*>(.*?)</script>',s,re.S)
+          Path('/tmp/sandbox.js').write_text('\n'.join(scripts))
+          assert "https://www.qobuz.com/au-en/shop" in s
+          assert "if(tracklist()&&!overRuntime()&&!invalidDurations())clearValidation('validate2')" in s
+          print('Targeted staff fixes present')
+          PY
+          node --check /tmp/sandbox.js
+          git diff --check
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add easy-track-builder-sandbox.html
+          git commit -m 'Fix stale runtime warning and improve Qobuz help'
+          git push origin main
