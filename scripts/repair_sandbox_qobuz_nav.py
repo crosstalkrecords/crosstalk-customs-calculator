@@ -40,16 +40,13 @@ s=s.replace("['priceLabel1','priceLabel2','priceLabel3'].forEach(id=>$(id).textC
 # Helpers to derive live builder runtime/tracks, so 2LP isn't tied only to playlist import.
 anchor='function sideTotal(s){return all(`#tracks${s} .td`).reduce((n,i)=>n+dur(i.value),0)}'
 if 'function builderTracks()' not in s:
-    helpers=r'''function builderTracks(){const out=[];['A','B'].forEach(side=>all(`#tracks${side} .track`).forEach(r=>{const raw=r.querySelector('.tn').value.trim(),d=r.querySelector('.td').value.trim();if(!raw)return;let artist='',title=raw;if(raw.includes(' — ')){const parts=raw.split(' — ');artist=parts.shift();title=parts.join(' — ')}out.push({artist,title,duration:d})}));return out}
-function refreshDoubleLPOffer(){if(!state.size||!state.rpm||state.doubleLP)return;const tracks=builderTracks(),grand=tracks.reduce((n,t)=>n+dur(t.duration),0);doubleLPOffer(tracks,grand)}
-'''
+    helpers=r'''function builderTracks(){const out=[];['A','B'].forEach(side=>all(`#tracks${side} .track`).forEach(r=>{const raw=r.querySelector('.tn').value.trim(),d=r.querySelector('.td').value.trim();if(!raw)return;let artist='',title=raw;if(raw.includes(' — ')){const parts=raw.split(' — ');artist=parts.shift();title=parts.join(' — ')}out.push({artist,title,duration:d})}));return out}\nfunction refreshDoubleLPOffer(){if(!state.size||!state.rpm||state.doubleLP)return;const tracks=builderTracks(),grand=tracks.reduce((n,t)=>n+dur(t.duration),0);doubleLPOffer(tracks,grand)}\n'''
     s=s.replace(anchor,helpers+anchor,1)
 
 # 2LP offer: show even if the tracklist is TOO LONG for 2LP, with a useful switch-anyway option.
 start=s.find('function doubleLPOffer(tracks,grand){');end=s.find('function review(){',start)
 if start<0 or end<0: raise SystemExit('doubleLPOffer not found')
-new_func=r'''function doubleLPOffer(tracks,grand){const box=$('doubleLPBox'),one=dur(lim())*2,two=dur(lim())*4;box.classList.remove('show');box.innerHTML='';if(!grand||grand<=one)return;const over=grand-one,promoNote=state.promo?' This switches you out of the single-LP Father\'s Day Special.':'';if(grand<=two){box.innerHTML=`<strong>Your tracklist is ${fmt(grand)} — ${fmt(over)} over one LP.</strong><br><span>You can trim it down, or keep everything and spread it automatically across four sides.</span><br><button type="button" class="btn" id="chooseDoubleLP">Keep everything — make it a 2×LP for $225</button>${promoNote?`<div class="muted" style="margin-top:6px">${promoNote.trim()}</div>`:''}`;box.classList.add('show');$('chooseDoubleLP').onclick=()=>{state.promo=false;state.mode='regular';repartitionDoubleLP(tracks);renderBadges();updateModeScreens();priceUI()}}else{const overTwo=grand-two;box.innerHTML=`<strong>Your tracklist is ${fmt(grand)} — too long for one LP, and ${fmt(overTwo)} over a 2×LP.</strong><br><span>A 2×LP still gets you much closer. Switch to four sides now, then trim the remaining runtime.</span><br><button type="button" class="btn" id="chooseDoubleLP">Switch to 2×LP — $225</button>`;box.classList.add('show');$('chooseDoubleLP').onclick=()=>{state.promo=false;state.mode='regular';repartitionDoubleLP(tracks);renderBadges();updateModeScreens();priceUI()}}}
-'''
+new_func=r'''function doubleLPOffer(tracks,grand){const box=$('doubleLPBox'),one=dur(lim())*2,two=dur(lim())*4;box.classList.remove('show');box.innerHTML='';if(!grand||grand<=one)return;const over=grand-one,promoNote=state.promo?' This switches you out of the single-LP Father\'s Day Special.':'';if(grand<=two){box.innerHTML=`<strong>Your tracklist is ${fmt(grand)} — ${fmt(over)} over one LP.</strong><br><span>You can trim it down, or keep everything and spread it automatically across four sides.</span><br><button type="button" class="btn" id="chooseDoubleLP">Keep everything — make it a 2×LP for $225</button>${promoNote?`<div class="muted" style="margin-top:6px">${promoNote.trim()}</div>`:''}`;box.classList.add('show');$('chooseDoubleLP').onclick=()=>{state.promo=false;state.mode='regular';repartitionDoubleLP(tracks);renderBadges();updateModeScreens();priceUI()}}else{const overTwo=grand-two;box.innerHTML=`<strong>Your tracklist is ${fmt(grand)} — too long for one LP, and ${fmt(overTwo)} over a 2×LP.</strong><br><span>A 2×LP still gets you much closer. Switch to four sides now, then trim the remaining runtime.</span><br><button type="button" class="btn" id="chooseDoubleLP">Switch to 2×LP — $225</button>`;box.classList.add('show');$('chooseDoubleLP').onclick=()=>{state.promo=false;state.mode='regular';repartitionDoubleLP(tracks);renderBadges();updateModeScreens();priceUI()}}}\n'''
 s=s[:start]+new_func+s[end:]
 
 # After converting to 2LP, show confirmation and re-run Qobuz against the rebuilt A-D rows.
@@ -68,5 +65,37 @@ if 'doubleLPOffer(tracks,grand);acknowledgeImport();enrichQobuz(tracks)' not in 
 # Clear Tracklist resets copy.
 s=s.replace("$('playlistMsg').textContent=\"A playlist is a handy starting point for planning your record. We'll still need the actual audio files before we can make it.\"","$('playlistMsg').textContent=\"Playlists are used only as a planning guide — they are not legal download sources and we cannot cut from them. You must still supply the actual audio files yourself.\"")
 
+# --- FINAL HARDENING PASS ---
+# Authoritative production rule: 7-inch is 5:00/side at 45 RPM.
+s=s.replace('"7":{"45 RPM":"3:45"}','"7":{"45 RPM":"5:00"}')
+
+# Artist path: once the code unlocks, provide a real way forward without resetting to retail.
+artist_target='<div id="artistMsg" class="muted"></div></div>'
+if artist_target in s and 'id="artistContinue"' not in s:
+    s=s.replace(artist_target,'<div id="artistMsg" class="muted"></div><button type="button" class="btn hidden" id="artistContinue" style="margin-top:10px">Continue with artist pricing</button></div>',1)
+s=s.replace("$('artistMsg').innerHTML='<span style=\"color:#2f8f3a;font-weight:800\">Artist pricing unlocked ✓</span>';renderBadges();priceUI()}else $('artistMsg').textContent=$('artistCode').value?'That code hasn\\'t unlocked artist pricing yet.':'';",
+            "$('artistMsg').innerHTML='<span style=\"color:#2f8f3a;font-weight:800\">Artist pricing unlocked ✓</span>';$('artistContinue').classList.remove('hidden');renderBadges();priceUI()}else{$('artistContinue').classList.add('hidden');$('artistMsg').textContent=$('artistCode').value?'That code hasn\\'t unlocked artist pricing yet.':''}};")
+if "$('artistContinue').onclick" not in s:
+    s=s.replace("all('[data-back]').forEach", "$('artistContinue').onclick=()=>{state.promo=false;state.size=null;state.rpm=null;go(1);recordUI()};all('[data-back]').forEach",1)
+
+# Clamp quantity immediately when 12-inch is selected; don't wait for another quantity edit.
+s=s.replace("state.size=b.dataset.size;state.promo=false;clearValidation('validate1');recordUI()",
+            "state.size=b.dataset.size;if(state.size==='12'&&state.qty>5){state.qty=5;$('qty').value=5}state.promo=false;clearValidation('validate1');recordUI()")
+
+# 2xLP is a 12-inch/33 RPM four-side product. Determine fit by actually packing indivisible tracks.
+fit_helper=r'''function doubleLPFit(tracks){const per=18*60+30;let side=0,used=0;for(const t of tracks){const sec=dur(String(t.duration||''));if(sec>per)return false;if(used&&used+sec>per){side++;used=0}if(side>3)return false;used+=sec}return true}\n'''
+if 'function doubleLPFit(' not in s:
+    pos=s.find('function doubleLPOffer(tracks,grand){')
+    s=s[:pos]+fit_helper+s[pos:]
+start=s.find('function doubleLPOffer(tracks,grand){');end=s.find('function review(){',start)
+new_double=r'''function doubleLPOffer(tracks,grand){const box=$('doubleLPBox'),one=37*60;box.classList.remove('show');box.innerHTML='';if(!grand||grand<=one)return;const fits=doubleLPFit(tracks),promoNote=state.promo?' This switches you out of the single-LP Father\'s Day Special.':'';if(state.qty!==1){box.innerHTML=`<strong>This tracklist needs more than one LP.</strong><br><span>2×LP online pricing is for one set only. For multiple 2×LP copies, contact us and we’ll quote the run for you.</span>`;box.classList.add('show');return}if(fits){box.innerHTML=`<strong>Your tracklist is ${fmt(grand)} — longer than one LP.</strong><br><span>It fits cleanly across four 18:30 sides, so you can keep everything without starting again.</span><br><button type="button" class="btn" id="chooseDoubleLP">Keep everything — make it a 2×LP for $225</button>${promoNote?`<div class="muted" style="margin-top:6px">${promoNote.trim()}</div>`:''}`;box.classList.add('show')}else{box.innerHTML=`<strong>Your tracklist is too long to fit cleanly across four 18:30 sides.</strong><br><span>A 2×LP still gets you much closer. Switch to four sides now, then trim anything that remains over.</span><br><button type="button" class="btn" id="chooseDoubleLP">Switch to 2×LP — $225</button>`;box.classList.add('show')}$('chooseDoubleLP').onclick=()=>{state.promo=false;state.mode='regular';repartitionDoubleLP(tracks);renderBadges();updateModeScreens();priceUI()}}\n'''
+s=s[:start]+new_double+s[end:]
+
+# Subtle mobile polish and a tiny bit of visual cohesion.
+if '/* final-mobile-polish */' not in s:
+    polish='''<style>/* final-mobile-polish */\n.shell{box-shadow:0 10px 34px rgba(0,0,0,.055)}\n.choice{transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}.choice:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.04)}\n@media(max-width:560px){input,select,textarea{font-size:16px}.audio-grid{grid-template-columns:1fr!important}.qsource a,.qsource summary{display:inline-block;min-height:28px;padding:5px 0}.nav{position:sticky;bottom:0;background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 28%);padding-top:18px;padding-bottom:4px;margin-top:18px}}\n</style>'''
+    s=s.replace('</head>',polish+'</head>',1)
+s=s.replace('<div class="choicegrid" style="grid-template-columns:1fr 1fr;margin-top:14px">','<div class="choicegrid audio-grid" style="grid-template-columns:1fr 1fr;margin-top:14px">')
+
 p.write_text(s)
-print('Preserved 2xLP/Qobuz fixes and added clear runtime guidance for supplied audio')
+print('Final hardening applied: artist path, 2xLP rules/fit, quantity clamp, 7-inch timing and mobile polish')
