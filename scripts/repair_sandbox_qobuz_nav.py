@@ -44,9 +44,9 @@ new_func=r'''function doubleLPOffer(tracks,grand){const box=$('doubleLPBox'),one
 s=s[:start]+new_func+s[end:]
 
 # After converting to 2LP, show confirmation and re-run Qobuz against the rebuilt A-D rows.
-old="$('doubleLPBox').classList.remove('show');priceUI();totals()}"
-new="$('doubleLPBox').innerHTML='<strong>2×LP selected.</strong><br>Your tracks have been redistributed across Sides A–D. Printed Jacket + Labels is +$60 for the two-LP artwork/printing package.';$('doubleLPBox').classList.add('show');priceUI();totals();enrichQobuz(tracks)}"
-if old in s:s=s.replace(old,new,1)
+current="$('doubleLPBox').innerHTML='<strong>2×LP selected.</strong><br>Your tracks have been redistributed across Sides A–D. Printed Jacket + Labels is +$60 for the two-LP artwork/printing package.';$('doubleLPBox').classList.add('show');priceUI();totals()}"
+patched="$('doubleLPBox').innerHTML='<strong>2×LP selected.</strong><br>Your tracks have been redistributed across Sides A–D. Printed Jacket + Labels is +$60 for the two-LP artwork/printing package.';$('doubleLPBox').classList.add('show');priceUI();totals();enrichQobuz(tracks)}"
+if current in s:s=s.replace(current,patched,1)
 
 # Make live edits/removals/additions update the 2LP prompt automatically.
 s=s.replace("r.querySelectorAll('input').forEach(i=>i.oninput=()=>{clearValidation('validate2');totals()})","r.querySelectorAll('input').forEach(i=>i.oninput=()=>{clearValidation('validate2');totals();refreshDoubleLPOffer()})")
