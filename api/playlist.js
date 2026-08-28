@@ -3,6 +3,8 @@ const puppeteer = require('puppeteer-core');
 
 const ALLOWED_ORIGINS = new Set([
   'https://crosstalkrecords.github.io',
+  'https://crosstalkrecords.com',
+  'https://www.crosstalkrecords.com',
   'http://localhost:3000',
   'http://127.0.0.1:3000'
 ]);
