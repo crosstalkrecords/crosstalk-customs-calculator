@@ -1,0 +1,32 @@
+name: Add label artwork template
+on:
+  push:
+    paths: ['.github/workflows/add-label-template.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main}
+      - name: Add artwork guidance
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('easy-track-builder-sandbox.html')
+          s=p.read_text()
+          old='<div id="artHelp" class="help hidden">Artwork should be at least 1500×1500px; higher resolution is preferred. You\'ll upload it after submitting.</div>'
+          new='<div id="artHelp" class="help hidden"><strong>Artwork files</strong><br>For the jacket front/back, supply square artwork at least 1500×1500px; 3000×3000px or higher is preferred. No jacket template is required.<br><br>For full-colour centre labels, use our Photoshop template so the centre hole and safe area are positioned correctly.<br><br><a class="examples" href="https://drive.google.com/file/d/1G5I1feDkNOYiKCiIKVwtsG6TQzFxffz_/view?usp=sharing" target="_blank" rel="noopener">Download the full-colour label Photoshop template →</a><br><br>You\'ll upload your finished artwork after submitting.</div>'
+          if old not in s: raise SystemExit('artHelp anchor missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+          git diff --check
+          grep -F '1G5I1feDkNOYiKCiIKVwtsG6TQzFxffz_' easy-track-builder-sandbox.html
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add easy-track-builder-sandbox.html
+          git commit -m 'Add Photoshop label artwork template link'
+          git push origin main
