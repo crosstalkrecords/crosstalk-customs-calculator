@@ -53,8 +53,8 @@ current print-resolution PNG.
 - Made the phone properties sheet optional behind an Edit button instead of
   opening automatically whenever an item is selected.
 - Enlarged the phone resize corner and corrected diagonal drag resizing.
-- Let cover artwork and its resize handle extend visibly beyond the print edge
-  while keeping exported artwork cropped to the final square.
+- Let cover and label artwork, including the resize handle, extend visibly beyond
+  the print edge while keeping exports cropped to their final shapes.
 - Made the copy action contextual: front-cover duplication is labelled for the
   back cover, while Side A-to-B copying appears only in the label workflow.
 
