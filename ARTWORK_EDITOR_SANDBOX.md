@@ -87,6 +87,19 @@ current print-resolution PNG.
 - Increased mobile touch targets and simplified the bottom toolbar while keeping
   Finish visible in the header.
 
+## Desktop preview and type pass
+
+- Changed the desktop live-project cards so one click opens a large finished
+  product preview with the kraft sleeve or translucent clear-vinyl treatment.
+- Added a separate "Edit this design" action inside the large preview so preview
+  and navigation are no longer conflated.
+- Added restrained mouse-wheel zoom while the pointer is over the design canvas.
+- Expanded the built-in font list using browser/system fonts only, avoiding
+  third-party font loading and keeping the editor functional offline.
+- Reviewed third-party "33 / STEREO" graphics and deliberately did not bundle a
+  commercial or trademarked design. Original editable record-mark presets are
+  the recommended next step.
+
 ## Deliberate omissions
 
 - No drawing tools.
