@@ -126,6 +126,35 @@ current print-resolution PNG.
 - Stacked modal actions on narrow screens, tightened empty-canvas copy and moved
   transient messages above the fixed mobile toolbar.
 
+## Phone escape and editing-logic pass
+
+- Isolated oversized artwork inside the canvas stacking context so an expanded
+  photo can no longer cover or disable the fixed phone controls.
+- Added a small persistent phone control pill for Back, Undo and closing the
+  current selection or panel, including while artwork extends beyond the canvas.
+- Kept the phone header and surface tabs visible while scrolling and raised the
+  fixed toolbar above artwork layers.
+- Added touch double-tap editing for existing text while retaining the optional
+  Edit button and long-press shortcut.
+- Made corner dragging and two-finger resizing scale text and its bounding box
+  together.
+- Added simple non-destructive photo controls for crop zoom, horizontal and
+  vertical crop position, brightness, contrast, colour saturation and hue.
+- Applied the same photo crop and adjustment settings to previews and exported
+  artwork, not just the editor display.
+- Added thin alignment guides and gentle snapping to the canvas and other layers'
+  edges and centres, with a short vibration tick where the phone supports it.
+- Added persistent minus, Fit photo and plus controls whenever a photo is selected,
+  so oversized artwork can be recovered even when its drag handle is off-screen.
+
+## Captured creative-tool feedback
+
+- Add simple background colours and restrained gradient fills.
+- Add basic editable shapes such as squares, circles, triangles, hearts and stars.
+- Consider a small curated public-domain/original sticker library. Do not use
+  AI-generated art, copied label graphics, trademarks or unverified third-party
+  artwork.
+
 ## Deliberate omissions
 
 - No drawing tools.
