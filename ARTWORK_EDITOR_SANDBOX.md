@@ -22,15 +22,32 @@ The prototype supports four design surfaces:
 4. Label B (97 mm at 300 DPI)
 
 Customers can upload PNG, JPEG and WebP images, add text, move, resize and rotate
-items, adjust basic styling and layer order, preview completion, download the
-current print-resolution PNG, and download a versioned layered Crosstalk project
-JSON file.
+items, adjust basic styling and layer order, preview completion, and download the
+current print-resolution PNG.
+
+## Feedback iteration 1
+
+- Added double-click photo upload from an empty canvas.
+- Replaced the ambiguous fill control with a reliable "Use photo as background"
+  action.
+- Added automatic light/dark first-text colour and remembered text styling.
+- Added Side A to Side B label copying.
+- Added clear-current and confirmed clear-all controls.
+- Added persistent browser recovery using IndexedDB.
+- Added high-contrast safe-area guides and warnings for text outside them.
+- Added a transparent centre hole to label PNG exports.
+- Added explicit per-surface download names.
+- Removed customer-facing JSON download and unnecessary production measurements.
+- Added kraft-sleeve and record-label previews.
+- Added a finish-and-return state ready for later calculator messaging.
+- Added mobile bottom controls, larger touch handles and a mobile edit sheet.
 
 ## Deliberate omissions
 
 - No drawing tools.
 - No automatic popups or `window.open()` calls.
-- No calculator button or Common Ground embed yet.
+- No calculator button, Common Ground embed, tracklist transfer or return-message
+  listener yet.
 - No direct Dropbox or Make upload yet.
 - No PSD generation yet. PSD export will be added only after the editor workflow
   and exact cover/label print templates are validated.
@@ -39,9 +56,9 @@ JSON file.
 
 1. Validate the four-surface workflow, wording and mobile behavior.
 2. Confirm exact front/back cover print dimensions and bleed.
-3. Add project reopening and durable browser recovery.
-4. Add a tested layered PSD export pipeline while retaining PNG + project JSON.
-5. Add an optional, normal hyperlink from the calculator after sandbox approval.
+3. Add a tested layered PSD/export package pipeline for staff use.
+4. Add the optional calculator link, tracklist transfer and return-to-order bridge
+   after sandbox approval.
 
 The normal link will be user-initiated and will not depend on scripted popup
 behavior. The existing order form will remain usable when the editor is disabled.
