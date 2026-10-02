@@ -57,6 +57,13 @@ current print-resolution PNG.
   the print edge while keeping exports cropped to their final shapes.
 - Made the copy action contextual: front-cover duplication is labelled for the
   back cover, while Side A-to-B copying appears only in the label workflow.
+- Moved the Side A-to-B duplication action onto the Side A screen and simplified
+  its wording.
+- Added a lightweight visual-system pass for typography, spacing, button weight
+  and panel hierarchy.
+- Added a live four-surface preview to the desktop right panel using only the
+  artwork already supplied by the customer.
+- Changed record mockups to translucent clear vinyl with subtle groove lines.
 
 ## Deliberate omissions
 
