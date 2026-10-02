@@ -50,6 +50,9 @@ current print-resolution PNG.
 - Increased the kraft reveal in the finished-cover preview slightly.
 - Changed phone guidance to "Tap to add a photo" and enabled a single tap on an
   empty touch canvas; desktop retains double-click behavior.
+- Made the phone properties sheet optional behind an Edit button instead of
+  opening automatically whenever an item is selected.
+- Enlarged the phone resize corner and corrected diagonal drag resizing.
 
 ## Deliberate omissions
 
