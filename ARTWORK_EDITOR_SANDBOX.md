@@ -191,6 +191,17 @@ current print-resolution PNG.
 
 ## Captured creative-tool feedback
 
+## Phone header and deselection clarification
+
+- Shortened the narrow-phone header to `Crosstalk Customs` while retaining the
+  full `Crosstalk Customs Artwork Designer` title on larger screens.
+- Kept the safety warning banner visible whenever text crosses the safe line,
+  but now show an orange layer outline only for the currently selected unsafe
+  item. Tapping away therefore removes every apparent selection box.
+- Made a press-and-hold on any finalising-screen preview temporarily enlarge
+  that finished-product preview on touch or mouse. Releasing returns to the
+  four-up preview grid without opening the editor; a normal tap still edits it.
+
 - Consider true resizable vector shapes such as squares, circles and triangles
   after testing the lighter symbol-based approach.
 - Consider later additions to the original sticker library only after customer
