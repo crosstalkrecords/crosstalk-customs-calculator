@@ -166,10 +166,33 @@ current print-resolution PNG.
 - Made the sticker chooser a scrollable, two-column touch layout on narrow phones
   while keeping larger previews on desktop.
 
+## Backgrounds, symbols and phone text pass
+
+- Expanded the original library to 34 editable items, including music notes,
+  stars, sparks, a flower, heart, smile, sun, moon, cloud, lightning, geometric
+  marks, arrows and dividers.
+- Restyled the speed, stereo and mono presets with original condensed and
+  wide-spaced system-font treatments inspired by vintage record typography,
+  without copying a label logo or proprietary artwork.
+- Added ten solid background presets, six restrained gradients and a custom
+  two-colour gradient builder with horizontal, vertical and diagonal directions.
+- Applied backgrounds consistently to the canvas, live previews, finished-product
+  previews, recovered projects and final rendered artwork.
+- Included backgrounds when duplicating Front to Back or Label A to Label B and
+  when determining whether a design is complete.
+- Added automatic light text on dark selected backgrounds when adding the first
+  text layer.
+- Added a live text-style preview inside the phone editor, kept it visible while
+  the sheet scrolls, reduced the text field height and moved opacity/layer-order
+  controls behind optional More text options.
+- Removed the floating phone Back/Undo/Close pill. Undo and Redo remain in the
+  bottom toolbar, the Edit action becomes Done while open, blank-space taps
+  deselect, and each sheet or modal retains its own close control.
+
 ## Captured creative-tool feedback
 
-- Add simple background colours and restrained gradient fills.
-- Add basic editable shapes such as squares, circles, triangles, hearts and stars.
+- Consider true resizable vector shapes such as squares, circles and triangles
+  after testing the lighter symbol-based approach.
 - Consider later additions to the original sticker library only after customer
   feedback. Continue to exclude AI-generated art, copied label graphics,
   trademarks and unverified third-party artwork.
