@@ -111,6 +111,21 @@ current print-resolution PNG.
 - Refined the clear-vinyl previews with lighter transparent tones, reflected
   highlights, subtler grooves and a visible backdrop in the large preview.
 
+## Dedicated phone layout pass
+
+- Kept the canvas and its large corner controls inside 320–430 px phone widths,
+  preventing horizontal page drift while preserving artwork beyond the print edge.
+- Added dynamic-viewport and safe-area handling for mobile browser chrome and
+  notched devices.
+- Turned the selected-item editor into a contained bottom sheet with a visual
+  handle, keyboard-safe height and internal scrolling.
+- Set form controls to a phone-safe 16 px size to avoid unintended iOS zoom and
+  increased close, action and surface-tab targets to at least 44 px.
+- Combined record-mark and duplicate-design actions into a compact responsive row
+  so they use less vertical space without becoming difficult to tap.
+- Stacked modal actions on narrow screens, tightened empty-canvas copy and moved
+  transient messages above the fixed mobile toolbar.
+
 ## Deliberate omissions
 
 - No drawing tools.
