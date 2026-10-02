@@ -64,6 +64,10 @@ current print-resolution PNG.
 - Added a live four-surface preview to the desktop right panel using only the
   artwork already supplied by the customer.
 - Changed record mockups to translucent clear vinyl with subtle groove lines.
+- Made both the right-panel and finish-screen previews navigable: double-clicking
+  a surface returns to its full-size design screen.
+- Removed the active-surface PNG download from the finish panel so completion is
+  treated as one artwork project rather than four unrelated files.
 
 ## Deliberate omissions
 
