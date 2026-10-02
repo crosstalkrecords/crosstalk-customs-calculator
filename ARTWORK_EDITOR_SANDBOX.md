@@ -69,6 +69,24 @@ current print-resolution PNG.
 - Removed the active-surface PNG download from the finish panel so completion is
   treated as one artwork project rather than four unrelated files.
 
+## Mobile interaction and polish pass
+
+- Added two-finger pinch resizing for the selected artwork as an alternative to
+  the large corner handle.
+- Made Add Text open the text controls immediately on touch devices, with the
+  placeholder selected and ready to replace.
+- Added a visible delete handle on selected items plus a persistent mobile
+  Delete control.
+- Added mobile Redo alongside Undo.
+- Changed browser recovery so every visit opens on a clean design. If previous
+  work exists, the customer can explicitly restore it from a small recovery
+  prompt or discard it and start fresh.
+- Added Side A-to-B and Side B-to-A label duplication controls on mobile.
+- Made finished previews single-tap navigation targets. On touch devices, a
+  press-and-hold temporarily enlarges the preview until the customer lets go.
+- Increased mobile touch targets and simplified the bottom toolbar while keeping
+  Finish visible in the header.
+
 ## Deliberate omissions
 
 - No drawing tools.
