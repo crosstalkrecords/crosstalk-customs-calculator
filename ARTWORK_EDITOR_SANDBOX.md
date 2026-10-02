@@ -147,13 +147,32 @@ current print-resolution PNG.
 - Added persistent minus, Fit photo and plus controls whenever a photo is selected,
   so oversized artwork can be recovered even when its drag handle is off-screen.
 
+## Sticker library and interface-cleanliness pass
+
+- Expanded the original preset chooser into a compact Stickers & record marks
+  library, grouped into Record basics, Label details and Decorative items.
+- Added editable `MADE IN AUSTRALIA`, `LIMITED EDITION`, `CATALOGUE NO.`, star,
+  spark, dot and divider presets alongside the existing speed, format and side
+  marks.
+- Kept every preset as editable browser-rendered type or a simple symbol. No AI
+  imagery, copied logos, trademarks or third-party artwork is bundled.
+- Simplified the desktop left rail to three creation choices: Photo, Text and
+  Stickers & marks. Contextual actions now appear only when useful, and clear
+  controls sit behind More options.
+- Simplified the right-panel heading and tightened panel/button spacing and
+  visual hierarchy without changing the four-surface workflow.
+- Made tapping or clicking any blank point on the design or surrounding grey
+  workspace deselect every layer type and close its phone edit sheet.
+- Made the sticker chooser a scrollable, two-column touch layout on narrow phones
+  while keeping larger previews on desktop.
+
 ## Captured creative-tool feedback
 
 - Add simple background colours and restrained gradient fills.
 - Add basic editable shapes such as squares, circles, triangles, hearts and stars.
-- Consider a small curated public-domain/original sticker library. Do not use
-  AI-generated art, copied label graphics, trademarks or unverified third-party
-  artwork.
+- Consider later additions to the original sticker library only after customer
+  feedback. Continue to exclude AI-generated art, copied label graphics,
+  trademarks and unverified third-party artwork.
 
 ## Deliberate omissions
 
