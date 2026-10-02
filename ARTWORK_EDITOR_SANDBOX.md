@@ -100,6 +100,17 @@ current print-resolution PNG.
   commercial or trademarked design. Original editable record-mark presets are
   the recommended next step.
 
+## Record marks and editing pass
+
+- Added an original record-mark chooser on desktop and mobile with editable
+  `33⅓ RPM`, `45 RPM`, `STEREO`, `MONO`, `LONG PLAY`, `SIDE A` and `SIDE B`
+  presets.
+- Implemented every mark as a normal text layer, so customers can change its
+  wording, font, colour, size, position and layer order without external assets.
+- Added direct double-click text editing on the design canvas.
+- Refined the clear-vinyl previews with lighter transparent tones, reflected
+  highlights, subtler grooves and a visible backdrop in the large preview.
+
 ## Deliberate omissions
 
 - No drawing tools.
