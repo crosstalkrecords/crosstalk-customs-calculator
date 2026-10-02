@@ -42,6 +42,15 @@ current print-resolution PNG.
 - Added a finish-and-return state ready for later calculator messaging.
 - Added mobile bottom controls, larger touch handles and a mobile edit sheet.
 
+## Feedback iteration 2
+
+- Simplified the desktop add-tools panel and removed repeated guidance.
+- Added deselection when the customer clicks the grey workspace outside the design.
+- Moved empty-label instructions clear of the centre-hole guide.
+- Increased the kraft reveal in the finished-cover preview slightly.
+- Changed phone guidance to "Tap to add a photo" and enabled a single tap on an
+  empty touch canvas; desktop retains double-click behavior.
+
 ## Deliberate omissions
 
 - No drawing tools.
