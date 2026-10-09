@@ -151,7 +151,7 @@ current print-resolution PNG.
 
 - Expanded the original preset chooser into a compact Stickers & record marks
   library, grouped into Record basics, Label details and Decorative items.
-- Added editable `MADE IN AUSTRALIA`, `LIMITED EDITION`, `CATALOGUE NO.`, star,
+- Added editable `MADE IN EORA`, `LIMITED EDITION`, `CATALOGUE NO.`, star,
   spark, dot and divider presets alongside the existing speed, format and side
   marks.
 - Kept every preset as editable browser-rendered type or a simple symbol. No AI
@@ -208,9 +208,34 @@ current print-resolution PNG.
   feedback. Continue to exclude AI-generated art, copied label graphics,
   trademarks and unverified third-party artwork.
 
+## Crop, vector and experimental pencil pass
+
+- Corrected text and editable record-mark resizing so the visible type and its
+  selection box scale together at the same rate.
+- Added three photo-frame choices: Original, Square and Free crop. Customers can
+  change the crop frame independently, zoom the photo inside it and move the
+  visible crop horizontally or vertically.
+- Added genuine editable vector layers for rectangles, circles, triangles,
+  stars and hearts, plus original record, cassette, headphones, microphone and
+  music-note symbols.
+- Added solid, transparent and two-colour gradient fills, optional outlines and
+  independent width/height resizing when Keep proportions is turned off.
+- Replaced the label-origin preset with `MADE IN EORA`.
+- Added the approved Crosstalk Records logo extracted from the supplied artwork
+  template. It is bundled locally and does not depend on a third-party service.
+- Added an experimental pencil mode available only when the sandbox URL includes
+  `?labs=doodle`. The normal URL contains no visible pencil control. Strokes are
+  selectable, editable, undoable and included in previews and exports.
+- Kept every new tool browser-local and isolated from the calculator, Airtable,
+  Make, Dropbox, pricing and order-submission code.
+- Tightened the desktop creation controls, added a visual preview for the
+  official logo sticker and retained the existing touch-sized phone controls.
+
 ## Deliberate omissions
 
-- No drawing tools.
+- No drawing tool is exposed in the normal customer interface. A deliberately
+  unlinked pencil experiment exists only behind `?labs=doodle`; this is obscurity,
+  not access control.
 - No automatic popups or `window.open()` calls.
 - No calculator button, Common Ground embed, tracklist transfer or return-message
   listener yet.
