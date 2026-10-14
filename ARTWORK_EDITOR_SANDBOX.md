@@ -314,6 +314,9 @@ current print-resolution PNG.
   blank workspace taps from silently ending the crop session.
 - Preserved non-destructive hidden image pixels, reversible eraser masks,
   Undo/Redo, browser recovery, previews, print PNGs and layered ZIP output.
+- Constrained every crop edge and corner to the actual underlying photo bounds,
+  including rotated and circular crops. The crop frame can reveal hidden photo
+  pixels but can no longer be dragged into blank space beyond the uploaded image.
 
 ## Planned feedback-driven phases
 
