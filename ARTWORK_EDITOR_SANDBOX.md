@@ -300,6 +300,21 @@ current print-resolution PNG.
 - Made text-layer bounds derive from the rendered wording and font size so the
   selection box remains close to the text instead of ballooning during resizing.
 
+## Persistent non-destructive crop correction
+
+- Fixed crop mode ending after the first edge or corner adjustment. It now stays
+  active across repeated gestures until the customer explicitly chooses Done,
+  Back, Escape or the phone close control.
+- Decoupled the crop frame from the underlying photo transform. Moving a crop
+  edge now trims the visible window while the photo itself remains fixed in size
+  and position.
+- Disabled accidental photo movement and pinch zoom while crop mode is active;
+  ordinary two-finger photo resizing remains available outside crop mode.
+- Kept all eight crop handles available after every adjustment and prevented
+  blank workspace taps from silently ending the crop session.
+- Preserved non-destructive hidden image pixels, reversible eraser masks,
+  Undo/Redo, browser recovery, previews, print PNGs and layered ZIP output.
+
 ## Planned feedback-driven phases
 
 1. Validate the four-surface workflow, wording and mobile behavior.
