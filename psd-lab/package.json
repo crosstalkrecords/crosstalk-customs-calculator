@@ -1,0 +1,10 @@
+{
+  "name": "crosstalk-psd-export-lab",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Isolated PSD compatibility experiments; not loaded by the order form",
+  "dependencies": {
+    "ag-psd": "31.0.3",
+    "@napi-rs/canvas": "0.1.80"
+  }
+}
