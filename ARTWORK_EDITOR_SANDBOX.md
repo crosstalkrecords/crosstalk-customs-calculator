@@ -318,6 +318,24 @@ current print-resolution PNG.
   including rotated and circular crops. The crop frame can reveal hidden photo
   pixels but can no longer be dragged into blank space beyond the uploaded image.
 
+## Tester creative-controls pass
+
+- Renamed the persistent photo actions to `Add photo` and added an explicit
+  `Add another photo` action inside the selected-photo editor. The existing file
+  input still resets after every upload, so customers can add several copies of
+  the same source image as separate layers.
+- Added four shape-gradient directions: diagonal, left to right, top to bottom
+  and circular from the centre. The selected direction is used consistently by
+  the editor, previews, print rendering and layered export.
+- Made the browser's full native colour picker an explicit `Custom colour…`
+  control alongside the expanded one-tap palette, including custom backgrounds.
+- Added optional text outlines with an independent colour and thickness. The
+  outline is retained by remembered text styling and appears in final renders
+  and exported layers.
+- Raised the editable shape-outline range from 14 to 40 while retaining
+  non-scaling vector strokes, so the chosen outline width does not change merely
+  because a shape is resized.
+
 ## Planned feedback-driven phases
 
 1. Validate the four-surface workflow, wording and mobile behavior.
