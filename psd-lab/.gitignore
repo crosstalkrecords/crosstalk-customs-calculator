@@ -1,0 +1,8 @@
+node_modules/
+generated/DejaVuSans.ttf
+generated/*-reference.png
+generated/generation-results.json
+generated/editor-*.psd
+generated/editor-*.png
+generated/editor-conversion*.json
+generated/typography-comparison.png
