@@ -351,6 +351,10 @@ current print-resolution PNG.
 - Added left, centre and right text alignment plus adjustable letter spacing.
   Both settings are remembered when the customer adds another text box and are
   retained in preview and print rendering.
+- Applied layer opacity only to the artwork content. Selection outlines, resize,
+  rotate and delete handles now remain fully visible at every opacity level.
+- Decoupled text-outline thickness from selection-box geometry. Turning an
+  outline on or changing its thickness no longer moves or enlarges the box.
 - Kept this entire pass in the artwork-editor sandbox file. No calculator,
   webhook, Make, Airtable, pricing or live order-form code was changed.
 
