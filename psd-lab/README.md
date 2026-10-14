@@ -107,3 +107,19 @@ outstanding; do not infer reliability from these small six-layer fixtures.
 Repository comparison against the approved baseline confirmed that all lab
 changes are confined to `psd-lab/`; the approved editor and production files
 are unchanged.
+
+## Stage 2: actual editor state, typography, parity and stress
+
+The next check set is complete. See [STAGE2_RESULTS.md](STAGE2_RESULTS.md) and
+`stage2-evidence.json` for the stronger current evidence: real approved-renderer
+references, four exact fonts, forced native text redraw, reversible crop/eraser
+masks, raster fallback, cover/label roundtrips and a forty-layer design. The
+stage-one "one font" and "real-editor mapping unverified" limits above describe
+that earlier synthetic-fixture stage, not the new bounded adapter.
+
+The approved editor and live order workflow still have no PSD export integration.
+The lab pipeline is for staff/remote computers, not customer phones. Current
+limitations include explicit line breaks rather than paragraph reflow, raster
+shapes/gradients, an unfinished font catalogue and project handoff, and no Adobe
+Photoshop acceptance. Do not advertise this experiment as production-ready.
+

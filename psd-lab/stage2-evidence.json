@@ -1,0 +1,211 @@
+{
+  "approvedCommit": "d5b75f9e6ffd98ff134a576657f88c0d53b717c2",
+  "approvedBlob": "d38ee5689fa164ac1cc9c2f0c239ec1b3dac03cf",
+  "labCodeCommit": "f8b86b975ebe330d9ebe11b361de00b77aba67a6",
+  "fixtureKind": "synthetic artwork through actual approved editor print renderer",
+  "cases": [
+    {
+      "kind": "cover",
+      "sourcePsdSHA256": "05894524b648fc5b0f029eae2f27bc38f746b577f136c241dc2634837cd70197",
+      "photopeaPsdSHA256": "fff189db8a7563acf2022da16fc90a3c322ae71815b8dd5e1bfd4dec6b242e15",
+      "referencePngSHA256": "93e1c65e9bbcd2653d6df1f1b5d2f5ce7444415df25db153ec369eff993529c4",
+      "photopeaPngSHA256": "e3ed7486ef846279088ae1293806e72568cddb127819b9204fc03c5f5aee90df",
+      "roundtrip": {
+        "result": "PASS",
+        "size": 3000,
+        "layers": 17,
+        "editableTexts": 5,
+        "hidden": 7,
+        "checks": [
+          "native wording edit",
+          "exact font names",
+          "alignment",
+          "tracking",
+          "leading",
+          "rotation/placement",
+          "outline width",
+          "layer order and visibility",
+          "raster pixels exact",
+          "mask pixels and rectangle exact",
+          "300 PPI"
+        ]
+      },
+      "renderComparison": {
+        "size": [
+          3000,
+          3000
+        ],
+        "maeRGBA": 0.2828374166666667,
+        "p99ChannelDifference": 1.0,
+        "fractionPixelsOver16": 0.0031253333333333333,
+        "alphaMAE": 0.0,
+        "textBands": {
+          "left": 0.1613691919191919,
+          "centre": 0.164285,
+          "right": 0.15739833333333333,
+          "rotated": 1.030183148148148,
+          "wrap": 0.2600146296296296
+        }
+      }
+    },
+    {
+      "kind": "label",
+      "sourcePsdSHA256": "9e71d78cff53445793053274a8c7e4baf7e7317ace25db9dcc82a77dbbd0f69b",
+      "photopeaPsdSHA256": "480858f5c5c7dc6cd110af9b11faa7ba47574e673e6b083f194a874fbbfc08b4",
+      "referencePngSHA256": "a8b24cbe031d7125911ed8188dbefd3347c20fa4f1ccc9bc3deeee4b53311134",
+      "photopeaPngSHA256": "91f467bd25b0d10c4e78eab3993b52d21afd7f1d63a58e212a40d7835e7b3b60",
+      "roundtrip": {
+        "result": "PASS",
+        "size": 1146,
+        "layers": 12,
+        "editableTexts": 3,
+        "hidden": 5,
+        "checks": [
+          "native wording edit",
+          "exact font names",
+          "alignment",
+          "tracking",
+          "leading",
+          "rotation/placement",
+          "layer order and visibility",
+          "raster pixels exact",
+          "mask pixels and rectangle exact",
+          "300 PPI"
+        ]
+      },
+      "renderComparison": {
+        "size": [
+          1146,
+          1146
+        ],
+        "maeRGBA": 0.215408934331113,
+        "p99ChannelDifference": 1.0,
+        "fractionPixelsOver16": 0.003880254257162785,
+        "alphaMAE": 0.0006456938010349375
+      }
+    },
+    {
+      "kind": "stress",
+      "sourcePsdSHA256": "27941362e2056e4ec7463cdda2ae8dd91d2d882ed76d1135856bc0d7d83e5ebb",
+      "photopeaPsdSHA256": "c7a68f69065c4553fe4dc5ea4818e95f23adb34d3b9e30527a47d96ee66e1c44",
+      "referencePngSHA256": "8f212de492e5a2cc1792741f317a794f3cf5ced2f214afd0f89b9ed2a909b2a6",
+      "photopeaPngSHA256": "839d9cc8506ac7093ac6f563877352b06d5a133d5f689fe09f2ed44a7c540564",
+      "roundtrip": {
+        "result": "PASS",
+        "size": 3000,
+        "layers": 41,
+        "editableTexts": 0,
+        "hidden": 4,
+        "checks": [
+          "layer order and visibility",
+          "raster pixels exact",
+          "300 PPI"
+        ]
+      },
+      "renderComparison": {
+        "size": [
+          3000,
+          3000
+        ],
+        "maeRGBA": 0.13661519444444445,
+        "p99ChannelDifference": 1.0,
+        "fractionPixelsOver16": 0.0,
+        "alphaMAE": 0.0
+      }
+    }
+  ],
+  "baselineConversion": {
+    "fixtureSource": "d38ee5689fa164ac1cc9c2f0c239ec1b3dac03cf",
+    "fontBoundary": "Lab-only exact subsets; legacy fonts use raster fallback",
+    "stats": [
+      {
+        "kind": "cover",
+        "size": 3000,
+        "editorLayers": 10,
+        "psdLayers": 17,
+        "editableText": 5,
+        "fallbacks": [
+          {
+            "id": "legacy",
+            "originalText": "Legacy system font",
+            "font": "Arial, Helvetica, sans-serif",
+            "reason": "font/version not verified"
+          }
+        ],
+        "bytes": 35099778,
+        "conversionMs": 27383,
+        "rssMB": 610
+      },
+      {
+        "kind": "label",
+        "size": 1146,
+        "editorLayers": 7,
+        "psdLayers": 12,
+        "editableText": 3,
+        "fallbacks": [],
+        "bytes": 6325359,
+        "conversionMs": 2736,
+        "rssMB": 439
+      },
+      {
+        "kind": "stress",
+        "size": 3000,
+        "editorLayers": 40,
+        "psdLayers": 41,
+        "editableText": 0,
+        "fallbacks": [],
+        "bytes": 38585948,
+        "conversionMs": 68867,
+        "rssMB": 850
+      }
+    ],
+    "maxRssMB": 850
+  },
+  "fonts": [
+    {
+      "file": "DejaVuSans-Bold.ttf",
+      "sha256": "4e8b01215df40572787641f3ba73cb122788d4a52865568b00980434371da411",
+      "postscriptName": "DejaVuSans-Bold",
+      "version": "Version 2.37",
+      "cmapCodepoints": 197
+    },
+    {
+      "file": "DejaVuSans.ttf",
+      "sha256": "c367f065b56788ce4cd6a7dd4817ea8a96a0183c33c0a2e80ca932cba821bda7",
+      "postscriptName": "DejaVuSans",
+      "version": "Version 2.37",
+      "cmapCodepoints": 197
+    },
+    {
+      "file": "DejaVuSansMono-Oblique.ttf",
+      "sha256": "b71daf9d4e05f0ee592419424ae28d5bc7c3e28d83813a696e6a956f3728e83c",
+      "postscriptName": "DejaVuSansMono-Oblique",
+      "version": "Version 2.37",
+      "cmapCodepoints": 197
+    },
+    {
+      "file": "DejaVuSerif.ttf",
+      "sha256": "1b202dff132d2a6495ba67b61f866ba2de3a48a38413988bb5a369f46e63a2f9",
+      "postscriptName": "DejaVuSerif",
+      "version": "Version 2.37",
+      "cmapCodepoints": 197
+    }
+  ],
+  "rasterTextFallback": {
+    "size": [
+      3000,
+      3000
+    ],
+    "maeRGBA": 0.043027305555555555,
+    "p99ChannelDifference": 1.0,
+    "fractionPixelsOver16": 0.0,
+    "alphaMAE": 0.0,
+    "textBands": {
+      "left": 0.0012275252525252526,
+      "centre": 0.001213611111111111,
+      "right": 0.00142,
+      "rotated": 0.011797407407407407,
+      "wrap": 0.009803333333333334
+    }
+  }
+}
