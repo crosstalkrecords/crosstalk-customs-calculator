@@ -87,3 +87,23 @@ Decision: continue with direct PSD export experiments. Native editable text and
 reversible masks are demonstrated at the current print pixel sizes without user
 manual testing; integration remains gated on the real-editor conversion and
 broader typography/visual-fidelity checks. Keep the approved designer unchanged.
+
+## Fresh-session recheck after interrupted response
+
+Repeated both integer-outline fixtures in a fresh cloud-browser session on
+14 October 2026. The 3000 x 3000 cover and 1146 x 1146 label each completed
+native text/opacity editing, PSD export and reopen. New downloads independently
+passed `verify-photopea.cjs`: original photo and eraser-mask pixels exact,
+label circle/hole mask exact, native outline retained, six layers in order,
+two hidden layers, edited text, 40% opacity and 300 PPI.
+
+One browser iframe renderer crashed after accumulating the small cover, full
+cover and reopened cover while moving to the label test. Reloading the lab
+and testing the label in a clean session succeeded. This is a reproducible
+test-session observation, not an established diagnosis of memory exhaustion
+or a demonstrated PSD defect. Large layer-count/memory stress testing remains
+outstanding; do not infer reliability from these small six-layer fixtures.
+
+Repository comparison against the approved baseline confirmed that all lab
+changes are confined to `psd-lab/`; the approved editor and production files
+are unchanged.
