@@ -5,7 +5,7 @@
 <script>
 'use strict';
 const pea=document.getElementById('pea'),log=document.getElementById('log'),status=document.getElementById('status');
-const source='https://raw.githubusercontent.com/crosstalkrecords/crosstalk-customs-calculator/6c29206ab9130b1da09dea35a91855533becf95e/psd-lab/generated/';
+const source='https://raw.githubusercontent.com/crosstalkrecords/crosstalk-customs-calculator/c56d44b0beecc1bb30ffe88cc6cc867378fa1f25/psd-lab/generated/';
 let ready=false,busy=false,expectPSD=false,reopening=false,lastURL=null;
 function note(v){log.textContent+=(typeof v==='string'?v:JSON.stringify(v,null,2))+'\n';log.scrollTop=log.scrollHeight}
 function controls(){for(const id of ['inspect','edit','export'])document.getElementById(id).disabled=!ready||busy;document.getElementById('open').disabled=!ready||busy}
@@ -21,6 +21,6 @@ document.getElementById('open').onclick=()=>{note('Opening '+document.getElement
 document.getElementById('inspect').onclick=()=>send(audit());
 document.getElementById('edit').onclick=()=>send('var d=app.activeDocument;var ls='+layerExpression()+';ls.getByName("Editable title - DejaVu Sans").textItem.contents="EDITABLE SUCCESS\\rSIDE A";ls.getByName("Opacity 25 percent").opacity=40;app.echoToOE("Changed native text and opacity to 40%; no raster replacement.");');
 document.getElementById('export').onclick=()=>{expectPSD=true;send('app.activeDocument.saveToOE("psd");')};
-for(const name of ['cover-print-no-outline','label-print-no-outline']){const o=document.createElement('option');o.value=name;o.textContent=name;document.getElementById('fixture').appendChild(o)}
+for(const name of ['cover-print-no-outline','label-print-no-outline','cover-print-integer-outline','label-print-integer-outline']){const o=document.createElement('option');o.value=name;o.textContent=name;document.getElementById('fixture').appendChild(o)}
 pea.src='https://www.photopea.com/#'+encodeURIComponent(JSON.stringify({files:[source+'cover-small.psd']}));
 </script></body></html>
