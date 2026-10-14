@@ -234,10 +234,9 @@ current print-resolution PNG.
 
 ## Tester interaction correction pass
 
-- Replaced the single photo resize corner with a conventional crop frame that
-  can be adjusted from all four edges and all four corners on mouse or touch,
-  with Original, Square, Round and Free crop choices. Round crops stay circular
-  while their frame is resized.
+- Added a conventional crop frame that can be adjusted from all four edges and
+  all four corners on mouse or touch, with Original, Square, Round and Free crop
+  choices. The follow-up below separates this from ordinary photo resizing.
 - Kept alignment lines and their small haptic cue, but removed magnetic snapping
   so customers retain exact control over where an object is placed.
 - Split layer ordering into four explicit actions: Move forward and Move
@@ -258,18 +257,116 @@ current print-resolution PNG.
 - No automatic popups or `window.open()` calls.
 - No calculator button, Common Ground embed, tracklist transfer or return-message
   listener yet.
-- No image eraser yet. Tester feedback is captured for a non-destructive brush
-  mask with adjustable size, Restore/unerase, Undo/Redo and identical preview
-  and export rendering; a destructive first version will not be shipped.
 - No direct Dropbox or Make upload yet.
-- No PSD generation yet. PSD export will be added only after the editor workflow
-  and exact cover/label print templates are validated.
+- No browser-generated `.psd` file yet. The advanced export now creates a
+  Photoshop-ready layered ZIP instead: full-size, identically aligned transparent
+  PNG layers, flattened print PNGs, untouched source photos, a compact manifest
+  and a plain-English Photoshop import guide. This avoids shipping a misleading
+  JSON-only “layered project” or an unverified PSD writer.
+
+## Non-destructive photo eraser and layered export
+
+- Added an Erase part of this photo action for customer-uploaded images.
+- Added Erase and Restore brush modes with an adjustable round brush, touch and
+  mouse support, Clear erasing, Done and Escape handling.
+- Erasing is stored as reversible mask strokes; the original uploaded image is
+  never rewritten. Each stroke participates in the existing Undo/Redo and device
+  recovery history.
+- Applied the mask consistently to the design canvas, live previews, finished
+  previews, flattened print artwork and isolated layer exports.
+- Added an Advanced / staff export section to the finish screen so production
+  tooling does not clutter the ordinary customer completion path.
+- Added a local-only layered ZIP generator with one same-size transparent PNG per
+  layer. Files are numbered from back to front and include a background layer,
+  flattened reference, untouched uploaded photos and Photoshop import directions.
+- Kept export entirely in the browser: no artwork, PII or project data is sent to
+  a new endpoint.
+
+## Explicit crop, colour and selection-box correction
+
+- Restored ordinary photo behavior: selecting a photo now shows one corner handle
+  that resizes the entire image proportionally. It no longer silently crops.
+- Moved the eight edge/corner crop handles behind a clearly labelled `Crop photo`
+  action. Crop mode has its own Done control and Original, Square, Round and Free
+  frame choices.
+- In crop mode, dragging inside the frame repositions the photo and a two-finger
+  gesture changes the crop zoom, following the familiar phone-photo-editor model.
+- Rebuilt the original headphones vector as a cleaner over-ear icon and kept its
+  screen and exported forms consistent.
+- Added a visible reusable colour palette—black, white, red, orange, yellow,
+  greens, blues, purple, pink, brown and grey—to text, shapes, outlines, drawings
+  and custom backgrounds while retaining the full native colour picker.
+- Added Orange to the one-tap solid background presets.
+- Made text-layer bounds derive from the rendered wording and font size so the
+  selection box remains close to the text instead of ballooning during resizing.
+
+## Persistent non-destructive crop correction
+
+- Fixed crop mode ending after the first edge or corner adjustment. It now stays
+  active across repeated gestures until the customer explicitly chooses Done,
+  Back, Escape or the phone close control.
+- Decoupled the crop frame from the underlying photo transform. Moving a crop
+  edge now trims the visible window while the photo itself remains fixed in size
+  and position.
+- Disabled accidental photo movement and pinch zoom while crop mode is active;
+  ordinary two-finger photo resizing remains available outside crop mode.
+- Kept all eight crop handles available after every adjustment and prevented
+  blank workspace taps from silently ending the crop session.
+- Preserved non-destructive hidden image pixels, reversible eraser masks,
+  Undo/Redo, browser recovery, previews, print PNGs and layered ZIP output.
+- Constrained every crop edge and corner to the actual underlying photo bounds,
+  including rotated and circular crops. The crop frame can reveal hidden photo
+  pixels but can no longer be dragged into blank space beyond the uploaded image.
+
+## Tester creative-controls pass
+
+- Renamed the persistent photo actions to `Add photo` and added an explicit
+  `Add another photo` action inside the selected-photo editor. The existing file
+  input still resets after every upload, so customers can add several copies of
+  the same source image as separate layers.
+- Added four shape-gradient directions: diagonal, left to right, top to bottom
+  and circular from the centre. The selected direction is used consistently by
+  the editor, previews, print rendering and layered export.
+- Made the browser's full native colour picker an explicit `Custom colour…`
+  control alongside the expanded one-tap palette, including custom backgrounds.
+- Added optional text outlines with an independent colour and thickness. The
+  outline is retained by remembered text styling and appears in final renders
+  and exported layers.
+- Raised the editable shape-outline range from 14 to 40 while retaining
+  non-scaling vector strokes, so the chosen outline width does not change merely
+  because a shape is resized.
+
+## Layers, direct colour and text-layout pass
+
+- Replaced the operating system colour input with a direct in-editor HSL picker.
+  This avoids Android's extra preset-colour screen: `Custom colour…` now opens
+  Crosstalk's hue, saturation and lightness controls immediately.
+- Added a responsive Layers drawer on desktop and phone. It lists the active
+  design from front to back so an obscured item can be selected without moving
+  anything else.
+- Added per-layer show/hide and opacity controls plus one-step Move up / Move
+  down and full To front / To back actions. Hidden layers are excluded from the
+  artwork canvas, live previews and flattened print output, but remain in the
+  saved project and isolated layered export files.
+- Added left, centre and right text alignment plus adjustable letter spacing.
+  Both settings are remembered when the customer adds another text box and are
+  retained in preview and print rendering.
+- Applied layer opacity only to the artwork content. Selection outlines, resize,
+  rotate and delete handles now remain fully visible at every opacity level.
+- Moved the phone Layers entry out of the hidden legacy floating controls and
+  into the visible, labelled mobile design-action grid below the canvas. It is
+  available even before an item is selected.
+- Decoupled text-outline thickness from selection-box geometry. Turning an
+  outline on or changing its thickness no longer moves or enlarges the box.
+- Kept this entire pass in the artwork-editor sandbox file. No calculator,
+  webhook, Make, Airtable, pricing or live order-form code was changed.
 
 ## Planned feedback-driven phases
 
 1. Validate the four-surface workflow, wording and mobile behavior.
 2. Confirm exact front/back cover print dimensions and bleed.
-3. Add a tested layered PSD/export package pipeline for staff use.
+3. Validate the layered ZIP with staff in Photoshop, then add direct `.psd`
+   generation only if the PNG-stack handoff is materially insufficient.
 4. Add the optional calculator link, tracklist transfer and return-to-order bridge
    after sandbox approval.
 
