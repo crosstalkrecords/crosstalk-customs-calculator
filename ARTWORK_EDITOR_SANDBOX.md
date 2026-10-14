@@ -234,10 +234,9 @@ current print-resolution PNG.
 
 ## Tester interaction correction pass
 
-- Replaced the single photo resize corner with a conventional crop frame that
-  can be adjusted from all four edges and all four corners on mouse or touch,
-  with Original, Square, Round and Free crop choices. Round crops stay circular
-  while their frame is resized.
+- Added a conventional crop frame that can be adjusted from all four edges and
+  all four corners on mouse or touch, with Original, Square, Round and Free crop
+  choices. The follow-up below separates this from ordinary photo resizing.
 - Kept alignment lines and their small haptic cue, but removed magnetic snapping
   so customers retain exact control over where an object is placed.
 - Split layer ordering into four explicit actions: Move forward and Move
@@ -282,6 +281,24 @@ current print-resolution PNG.
   flattened reference, untouched uploaded photos and Photoshop import directions.
 - Kept export entirely in the browser: no artwork, PII or project data is sent to
   a new endpoint.
+
+## Explicit crop, colour and selection-box correction
+
+- Restored ordinary photo behavior: selecting a photo now shows one corner handle
+  that resizes the entire image proportionally. It no longer silently crops.
+- Moved the eight edge/corner crop handles behind a clearly labelled `Crop photo`
+  action. Crop mode has its own Done control and Original, Square, Round and Free
+  frame choices.
+- In crop mode, dragging inside the frame repositions the photo and a two-finger
+  gesture changes the crop zoom, following the familiar phone-photo-editor model.
+- Rebuilt the original headphones vector as a cleaner over-ear icon and kept its
+  screen and exported forms consistent.
+- Added a visible reusable colour palette—black, white, red, orange, yellow,
+  greens, blues, purple, pink, brown and grey—to text, shapes, outlines, drawings
+  and custom backgrounds while retaining the full native colour picker.
+- Added Orange to the one-tap solid background presets.
+- Made text-layer bounds derive from the rendered wording and font size so the
+  selection box remains close to the text instead of ballooning during resizing.
 
 ## Planned feedback-driven phases
 
