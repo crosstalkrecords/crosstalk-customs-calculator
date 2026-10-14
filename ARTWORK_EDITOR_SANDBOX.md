@@ -336,6 +336,24 @@ current print-resolution PNG.
   non-scaling vector strokes, so the chosen outline width does not change merely
   because a shape is resized.
 
+## Layers, direct colour and text-layout pass
+
+- Replaced the operating system colour input with a direct in-editor HSL picker.
+  This avoids Android's extra preset-colour screen: `Custom colour…` now opens
+  Crosstalk's hue, saturation and lightness controls immediately.
+- Added a responsive Layers drawer on desktop and phone. It lists the active
+  design from front to back so an obscured item can be selected without moving
+  anything else.
+- Added per-layer show/hide and opacity controls plus one-step Move up / Move
+  down and full To front / To back actions. Hidden layers are excluded from the
+  artwork canvas, live previews and flattened print output, but remain in the
+  saved project and isolated layered export files.
+- Added left, centre and right text alignment plus adjustable letter spacing.
+  Both settings are remembered when the customer adds another text box and are
+  retained in preview and print rendering.
+- Kept this entire pass in the artwork-editor sandbox file. No calculator,
+  webhook, Make, Airtable, pricing or live order-form code was changed.
+
 ## Planned feedback-driven phases
 
 1. Validate the four-surface workflow, wording and mobile behavior.
