@@ -353,6 +353,9 @@ current print-resolution PNG.
   retained in preview and print rendering.
 - Applied layer opacity only to the artwork content. Selection outlines, resize,
   rotate and delete handles now remain fully visible at every opacity level.
+- Moved the phone Layers entry out of the hidden legacy floating controls and
+  into the visible, labelled mobile design-action grid below the canvas. It is
+  available even before an item is selected.
 - Decoupled text-outline thickness from selection-box geometry. Turning an
   outline on or changing its thickness no longer moves or enlarges the box.
 - Kept this entire pass in the artwork-editor sandbox file. No calculator,
