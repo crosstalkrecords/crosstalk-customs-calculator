@@ -234,7 +234,9 @@ current print-resolution PNG.
 ## Tester interaction correction pass
 
 - Replaced the single photo resize corner with a conventional crop frame that
-  can be adjusted from all four edges and all four corners on mouse or touch.
+  can be adjusted from all four edges and all four corners on mouse or touch,
+  with Original, Square, Round and Free crop choices. Round crops stay circular
+  while their frame is resized.
 - Kept alignment lines and their small haptic cue, but removed magnetic snapping
   so customers retain exact control over where an object is placed.
 - Split layer ordering into four explicit actions: Move forward and Move
@@ -258,6 +260,9 @@ current print-resolution PNG.
 - No automatic popups or `window.open()` calls.
 - No calculator button, Common Ground embed, tracklist transfer or return-message
   listener yet.
+- No image eraser yet. Tester feedback is captured for a non-destructive brush
+  mask with adjustable size, Restore/unerase, Undo/Redo and identical preview
+  and export rendering; a destructive first version will not be shipped.
 - No direct Dropbox or Make upload yet.
 - No PSD generation yet. PSD export will be added only after the editor workflow
   and exact cover/label print templates are validated.
