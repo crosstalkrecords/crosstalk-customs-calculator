@@ -223,22 +223,44 @@ current print-resolution PNG.
 - Replaced the label-origin preset with `MADE IN EORA`.
 - Added the approved Crosstalk Records logo extracted from the supplied artwork
   template. It is bundled locally and does not depend on a third-party service.
-- Added an experimental pencil mode available only when the sandbox URL includes
-  `?labs=doodle`. The normal URL contains no visible pencil control. Strokes are
-  selectable, editable, undoable and included in previews and exports.
+- Added the Draw tool to the normal sandbox interface on desktop and phone.
+  Customers can choose a colour and width, draw directly on any artwork surface,
+  then select, move, resize, rotate, duplicate, reorder or delete the stroke.
+  Drawings participate in Undo/Redo and are included in previews and exports.
 - Kept every new tool browser-local and isolated from the calculator, Airtable,
   Make, Dropbox, pricing and order-submission code.
 - Tightened the desktop creation controls, added a visual preview for the
   official logo sticker and retained the existing touch-sized phone controls.
 
+## Tester interaction correction pass
+
+- Replaced the single photo resize corner with a conventional crop frame that
+  can be adjusted from all four edges and all four corners on mouse or touch,
+  with Original, Square, Round and Free crop choices. Round crops stay circular
+  while their frame is resized.
+- Kept alignment lines and their small haptic cue, but removed magnetic snapping
+  so customers retain exact control over where an object is placed.
+- Split layer ordering into four explicit actions: Move forward and Move
+  backward change one layer at a time; Bring to front and Send to back move to
+  the two extremes.
+- Made pencil strokes retain round caps and a consistent round line when their
+  selection box is scaled.
+- Replaced device-dependent font names with visibly distinct, mobile-safe font
+  families while preserving existing project text styles.
+- Locked the original headphones, music note, microphone and cassette artwork
+  to its intended proportions, and made vector outline widths independent of
+  shape stretching in both the editor and rendered artwork.
+- Added a circular, centre-out background gradient for record labels and changed
+  the vague “restrained gradient” wording to “simple two-colour gradient.”
+
 ## Deliberate omissions
 
-- No drawing tool is exposed in the normal customer interface. A deliberately
-  unlinked pencil experiment exists only behind `?labs=doodle`; this is obscurity,
-  not access control.
 - No automatic popups or `window.open()` calls.
 - No calculator button, Common Ground embed, tracklist transfer or return-message
   listener yet.
+- No image eraser yet. Tester feedback is captured for a non-destructive brush
+  mask with adjustable size, Restore/unerase, Undo/Redo and identical preview
+  and export rendering; a destructive first version will not be shipped.
 - No direct Dropbox or Make upload yet.
 - No PSD generation yet. PSD export will be added only after the editor workflow
   and exact cover/label print templates are validated.
