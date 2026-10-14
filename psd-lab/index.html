@@ -5,12 +5,12 @@
 <script>
 'use strict';
 const pea=document.getElementById('pea'),log=document.getElementById('log'),status=document.getElementById('status');
-const source='https://raw.githubusercontent.com/crosstalkrecords/crosstalk-customs-calculator/1ef44fe88eafc6cfb2a5d4effe78eb936fd464ce/psd-lab/generated/';
+const source='https://raw.githubusercontent.com/crosstalkrecords/crosstalk-customs-calculator/6c29206ab9130b1da09dea35a91855533becf95e/psd-lab/generated/';
 let ready=false,busy=false,expectPSD=false,reopening=false,lastURL=null;
 function note(v){log.textContent+=(typeof v==='string'?v:JSON.stringify(v,null,2))+'\n';log.scrollTop=log.scrollHeight}
 function controls(){for(const id of ['inspect','edit','export'])document.getElementById(id).disabled=!ready||busy;document.getElementById('open').disabled=!ready||busy}
 function send(script){if(!ready||busy)return;busy=true;status.textContent='Photopea processing…';controls();pea.contentWindow.postMessage(script,'https://www.photopea.com')}
-function layerExpression(){return document.getElementById('fixture').value==='label-print'?'d.layers[0].layers':'d.layers'}
+function layerExpression(){return document.getElementById('fixture').value.startsWith('label-print')?'d.layers[0].layers':'d.layers'}
 function audit(){return 'var d=app.activeDocument;var ls='+layerExpression()+';var a=[];for(var i=0;i<ls.length;i++){var l=ls[i];a.push({name:l.name,visible:l.visible,opacity:l.opacity});}var t=ls.getByName("Editable title - DejaVu Sans");app.echoToOE(JSON.stringify({width:d.width,height:d.height,layers:a,text:t.textItem.contents,font:t.textItem.font}));'}
 window.addEventListener('message',e=>{if(e.origin!=='https://www.photopea.com'||e.source!==pea.contentWindow)return;
  if(e.data==='done'){ready=true;busy=false;status.textContent='Ready';controls();if(reopening){reopening=false;send(audit())}return}
@@ -21,5 +21,6 @@ document.getElementById('open').onclick=()=>{note('Opening '+document.getElement
 document.getElementById('inspect').onclick=()=>send(audit());
 document.getElementById('edit').onclick=()=>send('var d=app.activeDocument;var ls='+layerExpression()+';ls.getByName("Editable title - DejaVu Sans").textItem.contents="EDITABLE SUCCESS\\rSIDE A";ls.getByName("Opacity 25 percent").opacity=40;app.echoToOE("Changed native text and opacity to 40%; no raster replacement.");');
 document.getElementById('export').onclick=()=>{expectPSD=true;send('app.activeDocument.saveToOE("psd");')};
+for(const name of ['cover-print-no-outline','label-print-no-outline']){const o=document.createElement('option');o.value=name;o.textContent=name;document.getElementById('fixture').appendChild(o)}
 pea.src='https://www.photopea.com/#'+encodeURIComponent(JSON.stringify({files:[source+'cover-small.psd']}));
 </script></body></html>
