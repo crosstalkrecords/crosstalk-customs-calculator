@@ -11,7 +11,7 @@ let ready=false,busy=false,expectPSD=false,reopening=false,lastURL=null;
 function note(v){log.textContent+=(typeof v==='string'?v:JSON.stringify(v,null,2))+'\n';log.scrollTop=log.scrollHeight}
 function controls(){for(const id of ['inspect','edit','export'])document.getElementById(id).disabled=!ready||busy;document.getElementById('open').disabled=!ready||busy}
 function send(script){if(!ready||busy)return;busy=true;status.textContent='Photopea processing…';controls();pea.contentWindow.postMessage(script,'https://www.photopea.com')}
-const audit='var d=app.activeDocument;function walk(ls){var a=[];for(var i=0;i<ls.length;i++){var l=ls[i];var o={name:l.name,visible:l.visible,opacity:l.opacity};try{o.text=l.textItem.contents;o.font=l.textItem.font;}catch(e){}try{if(l.layers)o.children=walk(l.layers);}catch(e){}a.push(o);}return a;}app.echoToOE(JSON.stringify({document:d.name,width:d.width,height:d.height,layers:walk(d.layers)}));';
+const audit='var d=app.activeDocument;var ls=d.layers;if(ls.length===1)ls=ls[0].layers;var a=[];for(var i=0;i<ls.length;i++){var l=ls[i];a.push({name:l.name,visible:l.visible,opacity:l.opacity});}var t=ls.getByName("Editable title - DejaVu Sans");app.echoToOE(JSON.stringify({document:d.name,width:d.width,height:d.height,layers:a,text:t.textItem.contents,font:t.textItem.font}));';
 window.addEventListener('message',e=>{if(e.origin!=='https://www.photopea.com'||e.source!==pea.contentWindow)return;
  if(e.data==='done'){ready=true;busy=false;status.textContent='Ready';controls();if(reopening){reopening=false;send(audit)}return}
  if(typeof e.data==='string'){note(e.data);return}
