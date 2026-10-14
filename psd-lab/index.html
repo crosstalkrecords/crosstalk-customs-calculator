@@ -5,7 +5,7 @@
 <script>
 'use strict';
 const pea=document.getElementById('pea'),log=document.getElementById('log'),status=document.getElementById('status');
-const source='https://raw.githubusercontent.com/crosstalkrecords/crosstalk-customs-calculator/aee8b56b3ee52f0ba75b0094b3b395c2a5ab7200/psd-lab/generated/';
+const source='https://raw.githubusercontent.com/crosstalkrecords/crosstalk-customs-calculator/1ef44fe88eafc6cfb2a5d4effe78eb936fd464ce/psd-lab/generated/';
 let ready=false,busy=false,expectPSD=false,reopening=false,lastURL=null;
 function note(v){log.textContent+=(typeof v==='string'?v:JSON.stringify(v,null,2))+'\n';log.scrollTop=log.scrollHeight}
 function controls(){for(const id of ['inspect','edit','export'])document.getElementById(id).disabled=!ready||busy;document.getElementById('open').disabled=!ready||busy}
