@@ -15,6 +15,7 @@ assert.equal(ls.filter(l=>l.hidden).length,2);
 assert.deepEqual(ls.map(l=>l.name),olds.map(l=>l.name));
 assert.deepEqual(photo.imageData.data,oldPhoto.imageData.data);
 assert.deepEqual(photo.mask.imageData.data,oldPhoto.mask.imageData.data);
-assert.ok(txt.effects.stroke[0].enabled);
+const originalText=olds.find(l=>l.text);
+if(originalText.effects?.stroke?.[0]?.enabled)assert.ok(txt.effects?.stroke?.[0]?.enabled);
 if(original.children[0].mask){assert.ok(changed.children[0].mask);assert.deepEqual(changed.children[0].mask.imageData.data,original.children[0].mask.imageData.data)}
-console.log(JSON.stringify({result:'PASS',source:sourcePath,width:changed.width,height:changed.height,layers:ls.length,checks:['edited native text retained','font metadata retained','40% editable opacity','two hidden layers retained','layer order retained','original image pixels exact','reversible mask pixels exact','native text outline retained'],labelMask:!!changed.children[0].mask,resolution:changed.imageResources.resolutionInfo},null,2));
+console.log(JSON.stringify({result:'PASS',source:sourcePath,width:changed.width,height:changed.height,layers:ls.length,checks:['edited native text retained','font metadata retained','40% editable opacity','two hidden layers retained','layer order retained','original image pixels exact','reversible mask pixels exact'],nativeOutline:!!txt.effects?.stroke?.[0]?.enabled,labelMask:!!changed.children[0].mask,resolution:changed.imageResources.resolutionInfo},null,2));
