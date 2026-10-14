@@ -223,9 +223,10 @@ current print-resolution PNG.
 - Replaced the label-origin preset with `MADE IN EORA`.
 - Added the approved Crosstalk Records logo extracted from the supplied artwork
   template. It is bundled locally and does not depend on a third-party service.
-- Added an experimental pencil mode available only when the sandbox URL includes
-  `?labs=doodle`. The normal URL contains no visible pencil control. Strokes are
-  selectable, editable, undoable and included in previews and exports.
+- Added the Draw tool to the normal sandbox interface on desktop and phone.
+  Customers can choose a colour and width, draw directly on any artwork surface,
+  then select, move, resize, rotate, duplicate, reorder or delete the stroke.
+  Drawings participate in Undo/Redo and are included in previews and exports.
 - Kept every new tool browser-local and isolated from the calculator, Airtable,
   Make, Dropbox, pricing and order-submission code.
 - Tightened the desktop creation controls, added a visual preview for the
@@ -254,9 +255,6 @@ current print-resolution PNG.
 
 ## Deliberate omissions
 
-- No drawing tool is exposed in the normal customer interface. A deliberately
-  unlinked pencil experiment exists only behind `?labs=doodle`; this is obscurity,
-  not access control.
 - No automatic popups or `window.open()` calls.
 - No calculator button, Common Ground embed, tracklist transfer or return-message
   listener yet.
