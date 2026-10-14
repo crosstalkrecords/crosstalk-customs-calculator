@@ -1,0 +1,4 @@
+node_modules/
+generated/DejaVuSans.ttf
+generated/*-reference.png
+generated/generation-results.json
