@@ -258,18 +258,37 @@ current print-resolution PNG.
 - No automatic popups or `window.open()` calls.
 - No calculator button, Common Ground embed, tracklist transfer or return-message
   listener yet.
-- No image eraser yet. Tester feedback is captured for a non-destructive brush
-  mask with adjustable size, Restore/unerase, Undo/Redo and identical preview
-  and export rendering; a destructive first version will not be shipped.
 - No direct Dropbox or Make upload yet.
-- No PSD generation yet. PSD export will be added only after the editor workflow
-  and exact cover/label print templates are validated.
+- No browser-generated `.psd` file yet. The advanced export now creates a
+  Photoshop-ready layered ZIP instead: full-size, identically aligned transparent
+  PNG layers, flattened print PNGs, untouched source photos, a compact manifest
+  and a plain-English Photoshop import guide. This avoids shipping a misleading
+  JSON-only “layered project” or an unverified PSD writer.
+
+## Non-destructive photo eraser and layered export
+
+- Added an Erase part of this photo action for customer-uploaded images.
+- Added Erase and Restore brush modes with an adjustable round brush, touch and
+  mouse support, Clear erasing, Done and Escape handling.
+- Erasing is stored as reversible mask strokes; the original uploaded image is
+  never rewritten. Each stroke participates in the existing Undo/Redo and device
+  recovery history.
+- Applied the mask consistently to the design canvas, live previews, finished
+  previews, flattened print artwork and isolated layer exports.
+- Added an Advanced / staff export section to the finish screen so production
+  tooling does not clutter the ordinary customer completion path.
+- Added a local-only layered ZIP generator with one same-size transparent PNG per
+  layer. Files are numbered from back to front and include a background layer,
+  flattened reference, untouched uploaded photos and Photoshop import directions.
+- Kept export entirely in the browser: no artwork, PII or project data is sent to
+  a new endpoint.
 
 ## Planned feedback-driven phases
 
 1. Validate the four-surface workflow, wording and mobile behavior.
 2. Confirm exact front/back cover print dimensions and bleed.
-3. Add a tested layered PSD/export package pipeline for staff use.
+3. Validate the layered ZIP with staff in Photoshop, then add direct `.psd`
+   generation only if the PNG-stack handoff is materially insufficient.
 4. Add the optional calculator link, tracklist transfer and return-to-order bridge
    after sandbox approval.
 
