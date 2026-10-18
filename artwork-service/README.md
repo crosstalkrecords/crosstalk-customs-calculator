@@ -138,3 +138,24 @@ accidentally prevent its webhook response. Current Make permissions are read-onl
 
 The separate file-request/shared-link discrepancy and credential rotation found
 in the audit are not silently changed as part of this integration.
+
+## Private Dropbox authorization setup
+
+Set DROPBOX_CLIENT_ID and sealed DROPBOX_CLIENT_SECRET through Railway.
+ARTWORK_PUBLIC_ORIGIN must be the exact HTTPS origin with no trailing slash.
+ARTWORK_DROPBOX_SETUP=enabled and a separate random
+ARTWORK_DROPBOX_SETUP_SECRET enable the administrator-only setup endpoints.
+Register <origin>/oauth/dropbox/callback in the Dropbox App Console.
+
+POST /internal/dropbox/connect using the setup secret returns a ten-minute,
+one-use setup URL. Opening it sets a secure HttpOnly SameSite cookie and
+redirects to Dropbox. Callback state and cookie must match before exchanging
+the authorization code. Only files.content.write and files.metadata.read are
+requested. The refresh token is never returned to the browser or API client;
+it is encrypted with AES-256-GCM in /data/dropbox-credential.enc, using a key
+derived from ARTWORK_BIND_SECRET. Preserve that secret across restarts; rotating
+it requires reauthorizing Dropbox. An environment DROPBOX_REFRESH_TOKEN takes
+precedence over the stored token. Setup does not enable delivery.
+
+GET /internal/dropbox/status requires the setup secret and reports booleans only.
+Disable setup after authorization by setting ARTWORK_DROPBOX_SETUP=disabled.

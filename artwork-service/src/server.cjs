@@ -6,11 +6,13 @@ const {validate,LIMITS,digest}=require('./project.cjs');
 const {validateBinding}=require('./delivery.cjs');
 const {startWorker}=require('./worker.cjs');
 const {prune}=require('./retention.cjs');
+const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
 function secureEqual(a,b){return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));}
 function makeApp(config,options={}){
  if(!config.bindSecret||config.bindSecret.length<32)throw Error('A separate 32-character or longer binding secret is required');
  if(config.mode==='synthetic'&&process.env.NODE_ENV==='production')throw Error('Synthetic delivery is disabled in production');
+ if(!config.refreshToken)config.refreshToken=loadCredential(config);
  if(config.mode==='dropbox'&&(!config.refreshToken||!config.clientId||!config.clientSecret))throw Error('Dropbox delivery credentials are not configured');
  const store=openStore(config.dataDir),app=express(),worker=startWorker(store,config,options.worker);const rates=new Map();let uploads=0;
  let pruning=Promise.resolve();const cleanup=()=>{pruning=pruning.then(()=>prune(store)).catch(()=>{});};cleanup();const cleanupTimer=setInterval(cleanup,3600000);cleanupTimer.unref();
@@ -21,6 +23,7 @@ function makeApp(config,options={}){
   if(origin){if(!config.origins.includes(origin))return next(error(403,'Origin is not allowed'));res.set({'Access-Control-Allow-Origin':origin,Vary:'Origin','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, PUT, OPTIONS'});}
   if(req.method==='OPTIONS')return res.sendStatus(204);next();
  });
+ installDropboxAuth(app,config,{authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');},fetchImpl:options.dropboxFetch,now:options.now});
  app.get('/health',(_,res)=>res.json({service:'crosstalk-artwork',deliveryMode:config.mode,configured:['synthetic','dropbox'].includes(config.mode)}));
  function browserOrigin(req){if(!req.get('Origin')||!config.origins.includes(req.get('Origin')))throw error(403,'An allowed browser origin is required');}
  function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}
@@ -79,6 +82,6 @@ function makeApp(config,options={}){
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
  return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await worker.close();store.close();}};
 }
-function environment(){return {testLabel:process.env.ARTWORK_TEST_LABEL,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
+function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
 if(require.main===module){const service=makeApp(environment());const server=service.app.listen(Number(process.env.PORT||4310),process.env.HOST||'127.0.0.1',()=>console.log('Artwork service listening'));for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close();service.close().then(()=>process.exit(0));});}
 module.exports={makeApp,environment};
