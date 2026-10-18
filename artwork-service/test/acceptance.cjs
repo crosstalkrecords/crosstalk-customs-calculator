@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {createCanvas,readPsd}=require('../src/psd.cjs');
 const {makeApp}=require('../src/server.cjs'),{digest}=require('../src/project.cjs');
-const root=path.resolve(__dirname,'../test-output');
+const root=process.env.ARTWORK_ACCEPTANCE_DIR?path.resolve(process.env.ARTWORK_ACCEPTANCE_DIR):path.resolve(__dirname,'../test-output');
 function text(id,words,y,extra={}){return {id,type:'text',text:words,font:'Crosstalk Sans',fontSize:4,color:'#ffffff',align:'center',rotation:0,letterSpacing:0,opacity:1,x:.1,y,w:.8,h:.12,z:10,...extra};}
 function fixture(hash,labelOnly=false){
  const photo={id:'photo',type:'image',name:'Photo with reversible crop and eraser',src:'asset:'+hash,aspect:1.5,x:.12,y:.37,w:.65,h:.45,rotation:11,fit:'cover',photoX:-.18,photoY:-.08,photoW:1.25,photoH:1.25,cropPreset:'free',opacity:.7,z:1,brightness:100,contrast:100,saturation:100,hue:0,maskStrokes:[{mode:'erase',width:.14,points:[{x:.1,y:.5},{x:.85,y:.5}]},{mode:'restore',width:.05,points:[{x:.45,y:.5},{x:.6,y:.5}]}]};
