@@ -12,14 +12,14 @@ async function runRenderer(dir){
   child.on('error',e=>{clearTimeout(timer);reject(e);});child.on('exit',code=>{clearTimeout(timer);code===0?resolve():reject(Error('Conversion failed'));});
  });
 }
-async function archiveJob(store,job){
+async function archiveJob(store,job,config={}){
  const dir=store.dir(job.id),zip=new yazl.ZipFile(),output=path.join(dir,'artwork.zip');
  zip.addFile(path.join(dir,'project.json'),'Recovery/project.json');
  zip.addBuffer(Buffer.from(JSON.stringify(store.assets(job.id),null,2)),'Recovery/assets.json');
  for(const asset of store.assets(job.id))zip.addFile(path.join(dir,'assets',asset.hash),'Recovery/assets/'+asset.hash);
  for(const filename of await fsp.readdir(path.join(dir,'output')))zip.addFile(path.join(dir,'output',filename),filename);
  for(const filename of await fsp.readdir(path.join(ROOT,'public/fonts')))zip.addFile(path.join(ROOT,'public/fonts',filename),'Fonts/'+filename);
- zip.addBuffer(Buffer.from('CROSSTALK CUSTOMS ARTWORK\n\nOpen one PSD at a time in Photoshop. The matching reference PNG shows the intended print appearance. Hidden Preview backup layers are recovery images: leave them hidden while native text is visible. System/unsupported fonts use named raster text layers; editable wording remains in Recovery/project.json. Photo crop/eraser masks are separate from photo pixels. Original uploads are preserved by hash in Recovery/assets; assets.json records their MIME types. Shapes, gradients and drawings are raster layers. Fonts includes optional exact native-text fonts and their licence. PSD resolution is 300 PPI; physical cut dimensions need staff approval.\n'),'README.txt');
+ zip.addBuffer(Buffer.from((config.testLabel==='JOSH TEST'?'JOSH TEST\n\n':'')+'CROSSTALK CUSTOMS ARTWORK\n\nOpen one PSD at a time in Photoshop. The matching reference PNG shows the intended print appearance. Hidden Preview backup layers are recovery images: leave them hidden while native text is visible. System/unsupported fonts use named raster text layers; editable wording remains in Recovery/project.json. Photo crop/eraser masks are separate from photo pixels. Original uploads are preserved by hash in Recovery/assets; assets.json records their MIME types. Shapes, gradients and drawings are raster layers. Fonts includes optional exact native-text fonts and their licence. PSD resolution is 300 PPI; physical cut dimensions need staff approval.\n'),'README.txt');
  const done=pipeline(zip.outputStream,fs.createWriteStream(output+'.tmp',{mode:0o600}));zip.end();await done;await fsp.rename(output+'.tmp',output);return output;
 }
 function startWorker(store,config,{render=runRenderer,delivery=deliver,interval=1000}={}){
@@ -30,7 +30,7 @@ function startWorker(store,config,{render=runRenderer,delivery=deliver,interval=
   try{
    const dir=store.dir(job.id);await fsp.writeFile(path.join(dir,'project.json'),job.project,{mode:0o600});
    const archive=path.join(dir,'artwork.zip');
-   if(!fs.existsSync(archive)){await render(dir);await archiveJob(store,job);}
+   if(!fs.existsSync(archive)){await render(dir);await archiveJob(store,job,config);}
    await delivery({archive,id:job.id,binding:JSON.parse(job.binding),config});
    store.db.prepare("UPDATE jobs SET state='delivered',error=NULL WHERE id=?").run(job.id);
   }catch(_){

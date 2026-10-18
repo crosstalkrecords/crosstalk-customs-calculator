@@ -29,7 +29,14 @@ DejaVu fonts. The initial generic browser download failed; the packaged Chromium
 was used instead. A source pin check caught a normalised audit copy; the exact
 Git blob was restored before any reported rendering succeeded.
 
-Unverified: Adobe Photoshop acceptance; actual Dropbox delivery; deployment and
+Photoshop acceptance: Josh opened and edited both supplied PSDs, toggled the
+hidden artwork and photo mask, and saved/reopened the files. Both returned PSDs
+were parsed on 18 October: editable Hello Josh text, original photo pixels,
+enabled masks, hidden-layer pixels, and 70%/45% opacity survived. Independent
+Pillow decoding confirmed label alpha is zero at the corner and centre hole,
+and opaque on the label body. These results cover the supplied synthetic files.
+
+Unverified: actual Dropbox delivery; deployment and
 persistent-volume restore; Docker build; large-photo/repeated-job limits;
 physical print sizing; final legacy-font policy; live Make changes. The generated
 acceptance report explicitly records remoteDropboxVerified=false and
