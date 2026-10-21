@@ -41,3 +41,30 @@ persistent-volume restore; Docker build; large-photo/repeated-job limits;
 physical print sizing; final legacy-font policy; live Make changes. The generated
 acceptance report explicitly records remoteDropboxVerified=false and
 photoshopVerified=false.
+
+## Hosted Dropbox verification — 21 October 2026
+
+Dropbox authorization completed through the private one-time approval flow.
+The encrypted credential survived a service deployment/restart. The isolated
+JOSH TEST service rendered a 3000px cover PSD and 1146px label PSD, archived
+them with reference images, recovery project and bundled fonts, then delivered:
+
+/Crosstalk Customs/JOSH TEST/JOSH TEST/Uploads/
+JOSH TEST-e5142f23b266634645c15681daed239a.zip
+
+ZIP size: 2,134,394 bytes. Dropbox content hash:
+82ed08c26b796c735acb0a305787c0fee57837ad3b5bd7b5d1934abe876df769
+
+The delivery adapter checked both upload-completion metadata and a separate
+get_metadata response against the intended path, local ZIP size and locally
+computed Dropbox content hash. A repeated request reused the same job/archive,
+retained Dropbox file ID id:u2pB8sGhISwAAAAAAAAIiA and retained the same hash.
+Normal delivery mode remained disabled. The test endpoint only permits the
+fixed JOSH TEST root and requires the separate setup secret.
+
+No Airtable order was created, no email was sent, no customer details were read,
+and the live calculator and Make scenarios were unchanged. This verifies the
+hosted renderer-to-Dropbox path for this synthetic test. It does not verify the
+live form/Make order binding, production destination, physical print sizing,
+large-photo memory limits, or system-font redraw policy. Make tools still expose
+no scenario create/update/run actions. Production activation remains pending.
