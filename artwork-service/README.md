@@ -159,3 +159,17 @@ precedence over the stored token. Setup does not enable delivery.
 
 GET /internal/dropbox/status requires the setup secret and reports booleans only.
 Disable setup after authorization by setting ARTWORK_DROPBOX_SETUP=disabled.
+
+## Restricted JOSH TEST remote delivery probe
+
+POST /internal/dropbox/test-delivery uses the separate setup secret. It is
+rejected unless ARTWORK_TEST_LABEL is exactly JOSH TEST, the configured Dropbox
+root is exactly /Crosstalk Customs/JOSH TEST and authorization is present.
+It creates/verifies only /Crosstalk Customs/JOSH TEST/JOSH TEST/Uploads, renders
+fixed JOSH TEST cover/label artwork, archives it and uploads through the real
+delivery adapter. Global delivery mode remains disabled. Repeating the request
+reuses the same test job and ZIP and overwrites the same destination file.
+GET on the same protected path returns only that test's status/receipt.
+Dropbox file path, byte size and content hash must match the local ZIP before
+the adapter reports success. The probe must be removed or disabled before
+production rollout; it cannot target the production Orders root.

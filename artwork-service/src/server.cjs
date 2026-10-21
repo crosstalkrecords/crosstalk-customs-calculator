@@ -6,6 +6,7 @@ const {validate,LIMITS,digest}=require('./project.cjs');
 const {validateBinding}=require('./delivery.cjs');
 const {startWorker}=require('./worker.cjs');
 const {prune}=require('./retention.cjs');
+const {installTestDelivery}=require('./test-delivery.cjs');
 const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
 function secureEqual(a,b){return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));}
@@ -24,6 +25,7 @@ function makeApp(config,options={}){
   if(req.method==='OPTIONS')return res.sendStatus(204);next();
  });
  installDropboxAuth(app,config,{authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');},fetchImpl:options.dropboxFetch,now:options.now});
+ installTestDelivery(app,store,config,{...options.testDelivery,authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');}});
  app.get('/health',(_,res)=>res.json({service:'crosstalk-artwork',deliveryMode:config.mode,configured:['synthetic','dropbox'].includes(config.mode)}));
  function browserOrigin(req){if(!req.get('Origin')||!config.origins.includes(req.get('Origin')))throw error(403,'An allowed browser origin is required');}
  function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}

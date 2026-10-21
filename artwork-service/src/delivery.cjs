@@ -1,5 +1,6 @@
 'use strict';
 const fs=require('node:fs/promises'),path=require('node:path');
+const {accessToken,rpc,contentHash}=require('./dropbox-api.cjs');
 function apiArg(value){return JSON.stringify(value).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
 function validateBinding(value,root){
  if(!value||typeof value.orderId!=='string'||!value.orderId||value.orderId.length>150)throw Error('Invalid order reference');
@@ -17,10 +18,7 @@ async function deliver({archive,id,binding,config}){
   await fs.mkdir(dest,{recursive:true});await fs.copyFile(archive,path.join(dest,filename));return;
  }
  if(config.mode!=='dropbox')throw Error('Delivery is not configured');
- const auth=new URLSearchParams({grant_type:'refresh_token',refresh_token:config.refreshToken,client_id:config.clientId,client_secret:config.clientSecret});
- const tokenResponse=await fetch('https://api.dropbox.com/oauth2/token',{method:'POST',body:auth,signal:AbortSignal.timeout(30000)});
- if(!tokenResponse.ok)throw Error('Dropbox authentication failed');
- const {access_token}=await tokenResponse.json();if(!access_token)throw Error('Dropbox authentication failed');
+ const access_token=await accessToken(config);
  const handle=await fs.open(archive,'r');
  try{
   // Sessions keep requests bounded and support archives larger than 150 MB.
@@ -34,6 +32,10 @@ async function deliver({archive,id,binding,config}){
   }
   const finish=await fetch('https://content.dropboxapi.com/2/files/upload_session/finish',{method:'POST',headers:{Authorization:'Bearer '+access_token,'Content-Type':'application/octet-stream','Dropbox-API-Arg':apiArg({cursor:{session_id,offset},commit:{path:binding.folder+'/'+filename,mode:'overwrite',autorename:false,mute:true}})},body:Buffer.alloc(0),signal:AbortSignal.timeout(60000)});
   if(!finish.ok)throw Error('Dropbox upload could not finish');
+  const uploaded=await finish.json(),expectedPath=(binding.folder+'/'+filename).toLowerCase(),expectedHash=await contentHash(archive);
+  const metadata=await rpc(access_token,'files/get_metadata',{path:binding.folder+'/'+filename});
+  if(uploaded.path_lower!==expectedPath||metadata.path_lower!==expectedPath||metadata.size!==stat.size||metadata.content_hash!==expectedHash||uploaded.content_hash!==expectedHash)throw Error('Dropbox delivery verification failed');
+  return {dropboxFileId:metadata.id,path:metadata.path_display,bytes:metadata.size,contentHash:expectedHash,verified:true};
  }finally{await handle.close();}
 }
 module.exports={validateBinding,deliver};
