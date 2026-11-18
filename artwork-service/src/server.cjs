@@ -27,6 +27,7 @@ function makeApp(config,options={}){
  installDropboxAuth(app,config,{authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');},fetchImpl:options.dropboxFetch,now:options.now});
  installTestDelivery(app,store,config,{...options.testDelivery,authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');}});
  app.get('/health',(_,res)=>res.json({service:'crosstalk-artwork',deliveryMode:config.mode,configured:['synthetic','dropbox'].includes(config.mode)}));
+ app.get('/v1/client-config',(_,res)=>res.json({returnOrigins:config.origins}));
  function browserOrigin(req){if(!req.get('Origin')||!config.origins.includes(req.get('Origin')))throw error(403,'An allowed browser origin is required');}
  function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}
  app.post('/v1/drafts',(req,res)=>{

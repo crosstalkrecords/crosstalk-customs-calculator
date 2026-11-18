@@ -115,6 +115,18 @@ acceptance. Final user-facing limits must be checked against normal orders.
 8. Move the tested integration into the actual GitHub Pages calculator/editor
    only after checks pass. Do not merge this service as a live form rollout.
 
+The preview now exercises the separate-origin handoff: the form can load
+`calculator-artwork.js` from the artwork service while remaining on GitHub
+Pages. The script opens the service-hosted designer and accepts completion only
+from that window, the exact service origin and its per-order session. The
+designer checks the form's return origin against `/v1/client-config` before
+uploading or returning a reference. Configure `ARTWORK_ORIGINS` with both the
+exact live form origin and the artwork service's own origin. Once the real Make
+submission succeeds, the production calculator must dispatch
+`crosstalk-order-success` to clear the prior order's reference and session.
+The generated preview still cannot submit an order; this is a browser handoff
+test, not a live form integration.
+
 ## Proposed minimal Make change (not applied)
 
 Keep all existing pricing, tracklist, invoice and email field mappings. Add the

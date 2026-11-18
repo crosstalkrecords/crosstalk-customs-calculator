@@ -4,7 +4,8 @@ const root=__dirname;
 let html=fs.readFileSync(path.join(root,'vendor/approved-editor.html'),'utf8');
 const css=[];
 for(const [family,base] of [['Crosstalk Sans','DejaVuSans'],['Crosstalk Serif','DejaVuSerif'],['Crosstalk Mono','DejaVuSansMono']])for(const [suffix,weight,style] of [['',400,'normal'],['-Bold',700,'normal'],['-Oblique',400,'italic'],['-BoldOblique',700,'italic']])if(fs.existsSync(path.join(root,'public/fonts',base+suffix+'.ttf')))css.push(`@font-face{font-family:'${family}';src:url('fonts/${base+suffix}.ttf');font-weight:${weight};font-style:${style};font-display:block}`);
-html=html.replace('</head>','<style>'+css.join('')+'</style><script src="handoff.js"></script></head>');
+html=html.replace('</head>','<style>'+css.join('')+'.handoff-status{font-size:13px;font-weight:650;min-height:20px;color:#5c3322}.handoff-status:not(:empty){margin:12px 0}</style><script src="handoff.js"></script></head>');
+html=html.replace('      <div class="modal-actions">','      <p class="handoff-status" id="handoffStatus" role="status" aria-live="polite"></p>\n      <div class="modal-actions">');
 html=html.replace('const FONTS=[',"const FONTS=[{label:'Crosstalk Sans (PSD text)',value:'Crosstalk Sans'},{label:'Crosstalk Serif (PSD text)',value:'Crosstalk Serif'},{label:'Crosstalk Mono (PSD text)',value:'Crosstalk Mono'},");
 html=html.replace("return{font:'Arial, Helvetica, sans-serif',fontSize:5.8", "return{font:'Crosstalk Sans',fontSize:5.8");
 const hook=`
@@ -12,13 +13,20 @@ const hook=`
 for(const id of ['addTextBtn','mobileTextBtn'])$(id).onclick=async()=>{try{await document.fonts.load('700 32px "Crosstalk Sans"');addText()}catch(_){showToast('The artwork font could not load. Please retry.')}};
 saveNow=async function(){try{const db=await openDB();if(!db)throw Error();const data=JSON.parse(snapshot());data.version=4;data.savedAt=new Date().toISOString();await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data,'current');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});$('saveStatus').textContent='Saved on this device'}catch(_){$('saveStatus').textContent='Saved for this session'}};
 $('completeArtwork').onclick=async()=>{
- const button=$('completeArtwork'),status=$('exportStatus');button.disabled=true;
+ const button=$('completeArtwork'),status=$('handoffStatus');button.disabled=true;
  try{
+  const session=new URLSearchParams(location.search).get('artworkSession');
+  const returnOrigin=new URLSearchParams(location.search).get('returnOrigin');
+  if(window.opener&&session){
+   const response=await fetch('/v1/client-config');
+   if(!response.ok)throw Error('The order handoff is unavailable. Please retry.');
+   const config=await response.json();
+   if(!config.returnOrigins?.includes(returnOrigin))throw Error('This order page is not approved for artwork handoff.');
+  }
   await saveNow();
   const project={format:'crosstalk-project',version:1,rendererVersion:'approved-d5b75f9-v1',surfaces:Object.fromEntries(Object.entries(state.surfaces).map(([id,layers])=>[id,layers.map(l=>({...l}))])),backgrounds:structuredClone(state.backgrounds)};
   const result=await window.CrosstalkHandoff.upload(project,message=>status.textContent=message);
-  const session=new URLSearchParams(location.search).get('artworkSession');
-  if(window.opener&&session)window.opener.postMessage({type:'crosstalk-artwork-complete',reference:result.reference,session},location.origin);
+  if(window.opener&&session)window.opener.postMessage({type:'crosstalk-artwork-complete',reference:result.reference,session},returnOrigin);
   status.textContent='Artwork uploaded. Place your order to queue its PSD delivery.';
   $('finishContent').style.display='none';$('finishSuccess').classList.add('show');
  }catch(error){status.textContent=error.message||'Artwork could not be uploaded. Your draft is still on this device.';}finally{button.disabled=false;}
