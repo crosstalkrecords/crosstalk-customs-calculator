@@ -1,0 +1,6 @@
+.git
+**/node_modules
+artwork-service/data
+artwork-service/test-output
+**/.env
+**/.env.*

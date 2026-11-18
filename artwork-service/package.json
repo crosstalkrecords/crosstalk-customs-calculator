@@ -1,0 +1,22 @@
+{
+  "name": "crosstalk-artwork-service",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node src/server.cjs",
+    "test": "node --test test/*.test.cjs",
+    "acceptance": "node test/acceptance.cjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "0.1.80",
+    "@sparticuz/chromium": "141.0.0",
+    "ag-psd": "31.0.3",
+    "express": "5.1.0",
+    "image-size": "2.0.2",
+    "playwright": "1.62.1",
+    "yazl": "3.3.1"
+  }
+}
