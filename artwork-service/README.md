@@ -127,6 +127,15 @@ submission succeeds, the production calculator must dispatch
 The generated preview still cannot submit an order; this is a browser handoff
 test, not a live form integration.
 
+The proposed form handoff appears in Step 3 only for printed packaging, and the
+order review says whether designer artwork is attached. Switching to Standard
+packaging omits the reference from FormData without discarding the uploaded
+design if the customer switches back. The calculator source now dispatches the
+success event after a successful Make response, but does not load the designer
+script in the live form. Desktop and mobile preview tests intercept the disabled
+order endpoint locally: a failed submission retains the reference, and a
+confirmed submission clears it. No live order is created by those tests.
+
 ## Proposed minimal Make change (not applied)
 
 Keep all existing pricing, tracklist, invoice and email field mappings. Add the
