@@ -44,6 +44,10 @@ async function upload(editor,image,mobile){
  await editor.locator('#imageInput').setInputFiles(image);
  await editor.locator(mobile?'#mobileTextBtn':'#addTextBtn').click();
  if(mobile){const done=editor.getByRole('button',{name:/^(Done|Apply|Save)$/i});if(await done.count())await done.first().click();}
+ if(!mobile){
+  await editor.locator('#surfaceTabs .surface-tab').filter({hasText:'Side A label'}).click();
+  await editor.locator('#addTextBtn').click();
+ }
  await editor.locator('#finishBtn').click();
  await editor.locator('#completeArtwork').click();
  await editor.locator('#finishSuccess.show').waitFor({timeout:60000});
@@ -60,9 +64,11 @@ async function run(){
  try{
   const standard=await browser.newContext({ignoreHTTPSErrors:true});const plain=await standard.newPage();plain.setDefaultTimeout(45000);
   await prepare(plain,'Standard');
-  await customer(plain,async route=>{const data=route.request().postData()||'';assert.equal(data.includes('name="Artwork Reference"'),false);await route.fulfill({status:200,contentType:'application/json',body:'{}'});});
-  await plain.getByRole('button',{name:'Place My Order'}).click();await plain.locator('#success').waitFor({state:'visible'});
-  result.cases.push('Standard without artwork');await standard.close();
+  let standardAttempts=0;
+  await customer(plain,async route=>{standardAttempts++;const data=route.request().postData()||'';assert.equal(data.includes('name="Artwork Reference"'),false);await new Promise(r=>setTimeout(r,350));await route.fulfill({status:200,contentType:'application/json',body:'{}'});});
+  await plain.locator('button[type="submit"]').evaluate(button=>{button.click();button.click()});await plain.locator('#success').waitFor({state:'visible'});
+  assert.equal(standardAttempts,1);
+  result.cases.push('Standard without artwork and duplicate submit suppression');await standard.close();
 
   for(const [mobile,pack] of [[false,'Printed Jacket + Labels'],[true,'Custom Finish Pack']]){
    const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:mobile?{width:390,height:844}:{width:1365,height:900},isMobile:mobile,hasTouch:mobile});
@@ -85,6 +91,7 @@ async function run(){
    await editor.close();editor=await openEditor(page);
    assert.equal(await editor.locator('#restoreRecovery').count(),1);
    await editor.locator('#restoreRecovery').click();
+   await editor.reload();await editor.locator('#restoreRecovery').click();
    await editor.locator('#finishBtn').click();await editor.locator('#completeArtwork').click();
    await editor.locator('#finishSuccess.show').waitFor({timeout:60000});
    const sessions=await editor.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('crosstalk-artwork-upload:')).map(k=>JSON.parse(localStorage.getItem(k))));
@@ -108,9 +115,23 @@ async function run(){
    assert.equal(attempts,2);assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'');
    assert.notEqual(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
    result.cases.push((mobile?'mobile':'desktop')+' failed submission retry and confirmed reset');
+   if(!mobile){
+    await editor.close();await prepare(page,'Printed Jacket + Labels');
+    const next=await openEditor(page);await upload(next,image,false);
+    await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor();
+    const second=await page.locator('input[name="Artwork Reference"]').inputValue();assert.notEqual(second,reference);
+    result.references.push(second);result.cases.push('separate consecutive orders in one browser session');
+    await next.close();
+   }
    await context.close();
   }
   assert.notEqual(result.references[0],result.references[1]);
+  const forgedContext=await browser.newContext({ignoreHTTPSErrors:true});const form=await forgedContext.newPage();await form.goto(base+'/calculator-preview.html');
+  const opened=form.waitForEvent('popup');await form.evaluate(origin=>window.open(origin+'/designer.html?artworkSession=forged&returnOrigin=https%3A%2F%2Fevil.test','forgedArtwork'),base);
+  const forged=await opened;forged.setDefaultTimeout(45000);await forged.locator('#imageInput').setInputFiles(image);
+  await forged.locator('#finishBtn').click();await forged.locator('#completeArtwork').click();
+  await forged.locator('#handoffStatus').filter({hasText:'not approved for artwork handoff'}).waitFor();
+  result.cases.push('forged return origin rejected');await forgedContext.close();
   assert.deepEqual(failures,[]);
   await fs.writeFile(path.join(output,'hosted-result.json'),JSON.stringify({...result,references:result.references.map(r=>r.split('.')[0])},null,2));
   console.log(JSON.stringify({...result,references:result.references.map(r=>r.split('.')[0])},null,2));
