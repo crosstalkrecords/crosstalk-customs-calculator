@@ -18,7 +18,9 @@ async function ensureFolders(config){
 }
 function installTestDelivery(app,store,config,{authenticate,render=runRenderer,delivery=deliver,prepareFolders=ensureFolders}={}){
  let running=false;
- const binding=JSON.stringify({orderId:'JOSH TEST',folder:FOLDER});
+ // Keep the delivery probe separate from ordinary JOSH TEST orders that use
+ // the same fixed Dropbox folder. The probe reuses only its own archive.
+ const binding=JSON.stringify({orderId:'JOSH TEST DELIVERY PROBE',folder:FOLDER});
  const get=()=>store.db.prepare('SELECT * FROM jobs WHERE binding=? ORDER BY created DESC LIMIT 1').get(binding);
  const guard=req=>{authenticate(req);if(config.testLabel!=='JOSH TEST'||config.dropboxRoot!==ROOT||!config.refreshToken){const e=Error('JOSH TEST delivery is not configured');e.status=409;throw e;}};
  app.post('/internal/dropbox/test-delivery',async(req,res)=>{
