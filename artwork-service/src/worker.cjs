@@ -26,7 +26,7 @@ function startWorker(store,config,{render=runRenderer,delivery=deliver,interval=
  let busy=false,closed=false;
  function safeFailure(error){
   const message=error?.message||'';
-  if(/^(Dropbox authentication failed(?: \(HTTP [1-5][0-9]{2}\))?|Dropbox request failed|Dropbox upload could not (?:start|finish)|Dropbox upload interrupted|Dropbox delivery verification failed|Delivery is not configured|Conversion (?:timeout|failed)|Archive read failed)$/.test(message))return message;
+  if(/^(Dropbox authentication failed(?: \(HTTP [1-5][0-9]{2}(?:; (?:invalid_grant|invalid_client))?\))?|Dropbox request failed|Dropbox upload could not (?:start|finish)|Dropbox upload interrupted|Dropbox delivery verification failed|Delivery is not configured|Conversion (?:timeout|failed)|Archive read failed)$/.test(message))return message;
   return 'Unexpected processing error';
  }
  async function tick(){
