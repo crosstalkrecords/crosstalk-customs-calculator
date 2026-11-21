@@ -47,14 +47,16 @@ access. The isolated form URL does not expose the Airtable table.
   delivery mode when the window ends; Dropbox setup stays disabled. After a
   successful isolated Railway redeploy, `/health` returned
   `deliveryMode=disabled` and `configured=false` on 21 November 2026.
-- Railway now reports a successful JOSH TEST deployment on 21 November 2026
-  at 04:05 UTC for review-branch commit
-  `9522fa522641adb81a7a59e7fc3f9f2c415df880`, which includes reviewed code
-  `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`. Its source config pins that
-  reviewed code and has no staged patch. The newer Airtable intake mapping is
-  published on the review branch but remains **unhosted**. A hosted mobile and staff-recovery smoke
-  test of the deployed revision is still required; deployment success alone
-  does not prove those journeys.
+- Railway reports a successful **JOSH TEST only** deployment on 21 November
+  2026 of review commit `1d5c73ccf67ec3428f6f5c402a1999b8f1f9e829`.
+  Its source was staged and inspected as a one-field, non-destructive commit
+  pin change in JOSH TEST. After deploy, `/health` returned
+  `deliveryMode=disabled` and `configured=false`; unauthenticated preview and
+  test-config requests returned 401. The newer Airtable intake mapping and
+  server-only Make API key guard are hosted, but the guarded form's submission
+  route remains closed until a dedicated hook/key and isolated delivery are
+  configured. A hosted authenticated mobile and staff-recovery smoke test is
+  still required; deployment success alone does not prove those journeys.
 
 ## Intended journey and what has been exercised
 
@@ -65,7 +67,7 @@ access. The isolated form URL does not expose the Airtable table.
 | Submit | Test submission reaches only the isolated endpoint and Make; customer sees that the order was accepted separately from completed artwork delivery. | A synthetic `TEST JOSH 21.11` submission was accepted. Duplicate submission returned cached 200. A no-artwork test returned `not_supplied`. The test route does not create a real Airtable record. |
 | Confirmation email | Josh receives a clearly labelled test receipt acknowledgement. | The four-operation Make execution reports the Microsoft email send step succeeded to the fixed address. **Gmail inbox arrival has not been independently verified.** This email is not an artwork delivery notice. |
 | Bind, render and deliver | Trusted processing binds the reference to the actual order's Uploads folder, renders the PSDs/ZIP and verifies the Dropbox upload. | One test job reached `delivered` on its first attempt; the exporter checked Dropbox path, size and content hash against the local archive. Duplicate bind returned `already_bound` through the no-email route. The remote ZIP has not been downloaded, opened and independently inspected in Photoshop. |
-| Staff handling | Staff see an order, audio/assets, delivery or failure status and an actionable recovery path. | The new isolated Airtable staff page shows one **manually seeded fixture**, not a Make-created order; there is still no staff email or audio upload link from the test form. The active intake has staff email, but no invoice module; invoicing is handled elsewhere. Production staff journey and failure alert are **not** end-to-end tested. The review code adds an authenticated failure list/retry route, pending deployment and operational verification. |
+| Staff handling | Staff see an order, audio/assets, delivery or failure status and an actionable recovery path. | The new isolated Airtable staff page shows one **manually seeded fixture**, not a Make-created order; there is still no staff email or audio upload link from the test form. The active intake has staff email, but no invoice module; invoicing is handled elsewhere. Production staff journey and failure alert are **not** end-to-end tested. The review code adds an authenticated failure list/retry route, pending operational verification. |
 
 Test identifiers retained for correlation: order
 `0f7ba405-0239-47fa-b17d-688458e2139a`, Make execution
@@ -88,9 +90,8 @@ that a new custom label interface has been designed or approved.
 The latest review-branch patch maps actual allowlisted Customs form fields into the
 test-only server-side payload, derives pickup/shipping, fixes identity, replaces
 shipping with an explicitly fictional address and fingerprints normalized
-details so the same Submission ID cannot silently change an order. It remains
-unhosted and the existing artwork-only Make scenario ignores the additional
-fields. A full intake copy must still be built and retested with those fields.
+details so the same Submission ID cannot silently change an order. It is now hosted in JOSH TEST, while the existing artwork-only Make scenario
+ignores the additional fields. A full intake copy must still be built and retested with those fields.
 
 The deployed review code also fixes a missing `Origin` on a same-origin mobile
 draft request, prevents playlist error markup from executing, gates the private
@@ -117,9 +118,11 @@ with `spawn ETXTBSY`: concurrent tests extracted Chromium into the same
 GitHub review gate on final code commit `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`
 ([run 44850487239](https://github.com/crosstalkrecords/crosstalk-customs-calculator/actions/runs/44850487239)).
 The final deployed SHA still requires a hosted smoke test.
-The new test-intake allowlist, fictional shipping and changed-details replay
-checks also passed the 15/15 local service suite; this newer patch has not yet
-run on GitHub CI or Railway.
+The new test-intake allowlist, fictional shipping, changed-details replay and
+server-only Make key guard passed the 15/15 local service suite, and the code
+was deployed to JOSH TEST. The new GitHub commit has no Actions run yet. A
+second synthetic acceptance run passed for two local archives, but remote ZIP
+contents and hosted authenticated interaction remain unverified.
 
 ## Prioritized risks and release gates
 
@@ -157,9 +160,9 @@ without it; the key has not been created or configured, and this guard has
 passed local tests only. The existing Dropbox Make connection lacks the file-request
 scope and can access production folders. A custom app-folder Dropbox grant
 would isolate Make, but its paths are relative to that app folder; the JOSH
-TEST exporter must be authorized to the same app and destination, or both
-components must use a dedicated test Dropbox account. A hardcoded path cannot
-bridge two different app folders. Existing scenario 8084300 binds a
+TEST exporter must use the same Dropbox app and destination, or both components
+must use a dedicated test Dropbox account. A hardcoded path cannot bridge two
+different app folders. Existing scenario 8084300 binds a
 static synthetic order/folder and is not a substitute for the real intake
 handoff.
 
@@ -180,7 +183,7 @@ now specifies those recovery paths, but no runnable stage modules exist yet.
 | 2a. Copied invoice action in the test base | Low for form-only tester, high impact if clicked | A seeded test record computed a `Send Invoice` button pointing at an external invoice webhook. | Button was **not clicked**; field renamed with a warning and omitted from published staff interface. Remove the column in Airtable's base editor before broader direct table access. **Contained for form/staff-interface testing; deletion open.** |
 | 2b. Customer audio link overwritten in current intake | Medium / high | Live Make module 30 writes the file-request URL to `Internal Folder Link`; module 5 overwrites it with a share URL and module 29 emails that share URL. | In isolated copy, native file request URL goes to `Audio Upload`, staff share URL to `Internal Folder Link`; verify customer can upload before proposing any live fix. **Open; live unchanged.** |
 | 2c. Secret-bearing Make blueprint and broad Dropbox connection | Medium / high | Live module 38 contains OAuth material in blueprint; existing Make Dropbox connection lacks `file_requests.write` and can access production folders. | Do not clone module 38. Create separate scoped test connections and use native file request; keep credentials out of blueprint and logs. **Open; no test copy created.** |
-| 2f. Different Dropbox app folders cannot share an order path | High / high | Make can accept a custom app-folder OAuth grant, while the currently verified exporter writes to its own existing test root. App-folder paths are relative to the app, so equal path strings do not prove a shared destination. | Authorize both isolated components to the same app-folder grant and migrate the test root, or use one dedicated test Dropbox account; probe folder/file-request visibility from both ends before a customer test. **Open; no new Dropbox grant made.** |
+| 2f. Different Dropbox app folders cannot share an order path | High / high | Make can accept a custom app-folder OAuth grant, while the currently verified exporter writes to its own existing test root. App-folder paths are relative to the app, so equal path strings do not prove a shared destination. | Use a verified test-only Dropbox app for both components (reauthorizing the exporter if the app changes), or one dedicated test Dropbox account; probe folder/file-request visibility from both ends before a customer test. **Open; no new Dropbox grant made.** |
 | 2g. Artist field semantics need confirmation | Medium / low | The current intake maps `Artist Order = Yes` to a boolean-like value in an Airtable single-line `Artist` field, rather than an artist name. | In the isolated record, compare the intended meaning of that field with staff expectations and map it explicitly; preserve the source behavior only if it is deliberately a yes/no flag. **Open; live unchanged.** |
 | 2d. Form values can disagree with the quoted price | Medium / medium | The current form supplies its price and options as browser fields; the isolated allowlist checks type/range but does not independently recalculate the quote. | Compare chosen options, quoted amount and staff-approved price against a server-side price rule or trusted staff review before invoicing; test tampered input in the isolated intake. **Open.** |
 | 3. Failed jobs could be missed or lost | Medium / high | Three delivery attempts previously ended in `failed`, worker tick errors were swallowed, failed data expired after seven days from creation; no staff alert or backup schedule. | Review code retains failures and their files, records failure stage and completed timestamp, lists them under a separate staff secret, and supports authenticated retry. Migration, forced failure, retention, low-space rejection and retry tests pass locally; Railway reports successful deployment of that revision. Repeat operationally on JOSH TEST, add an actual alert and backup/restore procedure. **Code deployed; operational gate open.** |
@@ -189,7 +192,7 @@ now specifies those recovery paths, but no runnable stage modules exist yet.
 | 6. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST; test OAuth is app-folder scoped but the token's provider permissions are wider than the application root check. No production volume, backup, alert or ingress limiter is verified. | Provision a distinct production environment/service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore, monitored failure queue and separate provider authorization. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 7. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
 | 8. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 9. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Code commit `ecfa1547` passed service, UI, acceptance and audit steps on GitHub; Railway reports a successful deployment containing it. The newer form mapping has only local tests. | CI runner and fixture fixes are verified on the review branch. Run a hosted smoke and mobile test, then validate the newer mapping after isolated deployment. **Old CI/deploy resolved; hosted retest open.** |
+| 9. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Code commit `ecfa1547` passed service, UI, acceptance and audit steps on GitHub; Railway reports a successful deployment containing it. The newer form mapping and Make key guard passed 15 local tests and deployed to JOSH TEST, but have no GitHub Actions run. | CI runner and fixture fixes are verified on the review branch. Run a hosted authenticated smoke and mobile test and the full isolated Make intake after credentials are scoped. **Deploy resolved; hosted retest open.** |
 
 ## Live and test configuration comparison
 
@@ -199,14 +202,14 @@ now specifies those recovery paths, but no runnable stage modules exist yet.
 | Make | Scenario 8084300, test webhook, Josh-only receipt; empty intake ledger 267564; no runnable full intake copy or restricted Airtable/Dropbox connections | Customer Intake 4762364 remains active; no integration change applied |
 | Orders and billing | No Airtable, invoice, payment or real audio link | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is a separate downstream process. Changes need inactive-copy tests |
 | Dropbox | Fixed JOSH TEST root, verified test ZIP | Separate production root/authorization and tested environment required |
-| Exporter | JOSH TEST Railway service/volume, one worker; review code deployed, newer intake mapping local | No production exporter in this project yet |
+| Exporter | JOSH TEST Railway service/volume, one worker; review code and intake mapping deployed; delivery disabled | No production exporter in this project yet |
 | Secrets | Server-side test webhook, bind secret, encrypted Dropbox refresh token | New separate production credentials and staff recovery secret to provision securely |
 
 ## Proposed release sequence — approval boundary
 
-1. Finish JOSH TEST checks: verify health and repeat the hosted mobile and
-   no-artwork journeys on the deployed review revision; deploy the newer form
-   field mapping to JOSH TEST only after review. Confirm inbox arrival and
+1. Finish JOSH TEST checks: health and the isolated code deploy have passed;
+   repeat hosted authenticated mobile and no-artwork journeys after the new
+   Make hook and scoped connections exist. Confirm inbox arrival and
    actual ZIP/Photoshop/print acceptance. Force a failed delivery and verify
    staff visibility, recovery and no double delivery.
 2. Snapshot the live form commit and export the active Customer Intake blueprint.
