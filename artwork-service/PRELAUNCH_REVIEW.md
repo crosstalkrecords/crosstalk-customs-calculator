@@ -376,7 +376,7 @@ The actual protected Make route timing still needs a controlled measurement.
 | 6. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST. The replacement Make Dropbox grant is app-folder scoped; separate production credentials, volume, backup, alert and ingress limiter have not been verified. | Provision distinct production service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore and monitored failure queue. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 7. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
 | 8. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 9. Final CI and hosted gate | Low / medium | Railway reports successful JOSH TEST deployment of `43be85b`; its GitHub review gate passed build, service/UI tests, acceptance and audit. Staff summary and fixed-folder diagnostics passed, but hosted authenticated form/phone journey remains untested. | Complete the hosted form and isolated full intake after the upload failure and permitted secure hook configuration are resolved. **Code gate/deploy passed; end-to-end gate open.** |
+| 9. Final CI and hosted gate | Low / medium | Railway reports successful JOSH TEST deployment of `43be85b`; its GitHub review gate passed build, service/UI tests, acceptance and audit. Staff summary and fixed-folder diagnostics passed, but hosted authenticated form/phone journey remains untested. | Complete the hosted form and isolated full intake after the protected hook is configured. **Code gate/deploy passed; end-to-end gate open.** |
 
 ## Live and test configuration comparison
 
@@ -427,8 +427,8 @@ The actual protected Make route timing still needs a controlled measurement.
 3. Remove the copied test-base invoice button in Airtable's editor before
    direct tester table access. Keep broad Dropbox connection 13265327 unused.
    Review and run the saved **inactive 100-module** intake 8715068 in a
-   controlled test only after the upload failure and secure hook handoff are
-   resolved. Verify preflight/fingerprint, early 202 acknowledgement,
+   controlled test only after the secure hook handoff is resolved. Verify
+   preflight/fingerprint, early 202 acknowledgement,
    final callback and manual-stop error handling; establish an **open** request
    actually accepts a harmless audio upload into the
    same isolated Uploads folder. Persist the verified customer URL in Audio
