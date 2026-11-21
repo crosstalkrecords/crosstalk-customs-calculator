@@ -8,13 +8,20 @@ const {createCanvas}=require('../src/psd.cjs');
  const canvas=createCanvas(120,80);const cx=canvas.getContext('2d');cx.fillStyle='#f4b520';cx.fillRect(0,0,120,80);await fs.writeFile(path.join(root,'synthetic-source.png'),canvas.toBuffer('image/png'));
  const service=makeApp({dataDir:path.join(root,'private'),bindSecret:'ui-test-secret-'.repeat(4),origins:['http://127.0.0.1:4311','http://127.0.0.1:4312'],mode:'disabled',dropboxRoot:'/Crosstalk Customs/Testing'},{worker:{interval:999999}});
  const server=service.app.listen(4311,'127.0.0.1');await new Promise(r=>server.once('listening',r));
- const preview=(await fs.readFile(path.resolve(__dirname,'../public/calculator-preview.html'),'utf8')).replace('<script src="calculator-artwork.js"></script>','<script src="http://127.0.0.1:4311/calculator-artwork.js"></script>');
+ // This suite exercises the form/editor handoff and its deliberately mocked
+ // legacy submit path. The guarded JOSH TEST order route has separate tests;
+ // loading its script here would require a configured webhook and disable this
+ // isolated fixture before the handoff assertions run.
+ const preview=(await fs.readFile(path.resolve(__dirname,'../public/calculator-preview.html'),'utf8'))
+  .replace('<script src="calculator-artwork.js"></script>','<script src="http://127.0.0.1:4311/calculator-artwork.js"></script>')
+  .replace('<script src="preview-orders.js"></script>','');
  const formServer=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(preview)}).listen(4312,'127.0.0.1');
  await new Promise(r=>formServer.once('listening',r));
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||await packaged.executablePath(),args:packaged.args.filter(a=>!['--single-process','--disable-web-security','--disable-site-isolation-trials'].includes(a))});
  try{
   for(const mobile of [false,true]){
    const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1365,height:900},isMobile:mobile,hasTouch:mobile});const page=await context.newPage();page.setDefaultTimeout(12000);console.log('Opening '+(mobile?'mobile':'desktop'));page.on('pageerror',e=>console.log('UI error: '+e.message));
+   if(!mobile)await page.route('**/calculator-preview.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
    await page.goto(mobile?'http://127.0.0.1:4312/':'http://127.0.0.1:4311/calculator-preview.html');
    assert.equal(await page.locator('#openArtworkDesigner').count(),1);
    assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
@@ -77,6 +84,7 @@ const {createCanvas}=require('../src/psd.cjs');
   }
   // A standard order completes without an artwork reference or a draft.
   const plainContext=await browser.newContext();const plain=await plainContext.newPage();
+  await plain.route('**/calculator-preview.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
   await plain.goto('http://127.0.0.1:4311/calculator-preview.html');
   const plainJobs=service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n;
   await plain.locator('#regularStart').click();

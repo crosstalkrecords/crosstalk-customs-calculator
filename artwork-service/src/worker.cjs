@@ -38,14 +38,21 @@ function startWorker(store,config,{render=runRenderer,delivery=deliver,interval=
    const archive=path.join(dir,'artwork.zip');
    if(!fs.existsSync(archive)){await render(dir);stage='archive';await archiveJob(store,job,config);}
    stage='delivery';
-   await delivery({archive,id:job.id,binding:JSON.parse(job.binding),config});
-   store.db.prepare("UPDATE jobs SET state='delivered',error=NULL WHERE id=?").run(job.id);
+   const receipt=await delivery({archive,id:job.id,binding:JSON.parse(job.binding),config});
+   // Persist only verified metadata. Provider paths, credentials and arbitrary
+   // response fields must not end up in the staff audit record.
+   let audit=null;
+   if(receipt?.verified===true&&Number.isSafeInteger(receipt.bytes)&&receipt.bytes>=0&&/^[a-f0-9]{64}$/.test(receipt.contentHash||'')){
+    audit=JSON.stringify({verified:true,bytes:receipt.bytes,contentHash:receipt.contentHash});
+   }else if(config.mode==='dropbox')throw Error('Dropbox delivery verification failed');
+   store.db.prepare("UPDATE jobs SET state='delivered',error=NULL,completed_at=?,failed_at=NULL,failure_stage=NULL,delivery_receipt=?,next_attempt=0 WHERE id=?").run(Date.now(),audit,job.id);
   }catch(e){
    console.warn('Artwork job '+job.id+' failed during '+stage+': '+safeFailure(e));
-   const attempts=job.attempts+1;store.db.prepare('UPDATE jobs SET state=?,error=?,next_attempt=? WHERE id=?').run(attempts<3?'queued':'failed','Artwork processing or delivery failed',Date.now()+Math.min(300000,1000*30**attempts),job.id);
+   const attempts=job.attempts+1,failed=attempts>=3;
+   store.db.prepare('UPDATE jobs SET state=?,error=?,next_attempt=?,failed_at=?,failure_stage=? WHERE id=?').run(failed?'failed':'queued','Artwork processing or delivery failed',Date.now()+Math.min(300000,1000*30**attempts),failed?Date.now():null,failed?stage:null,job.id);
   }finally{busy=false;}
  }
- const timer=setInterval(()=>tick().catch(()=>{}),interval);timer.unref();
+ const timer=setInterval(()=>tick().catch(()=>console.warn('Artwork worker tick failed unexpectedly')),interval);timer.unref();
  return {tick,async close(){closed=true;clearInterval(timer);while(busy)await new Promise(r=>setTimeout(r,50));}};
 }
 module.exports={startWorker,archiveJob,runRenderer};

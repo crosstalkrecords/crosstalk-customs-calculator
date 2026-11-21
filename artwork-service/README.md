@@ -55,6 +55,20 @@ Staff-only /internal/jobs lists IDs/status/errors without order names or paths;
 POST /internal/retry/:id retries failed jobs. User status is capability-protected.
 No customer values or provider response bodies are logged.
 
+Terminal failures now retain their artwork until a successful retry. A separate
+`ARTWORK_STAFF_SECRET` (at least 32 characters, server-side only) enables
+`GET /internal/failures?limit=25&offset=0`. It returns paginated failed job
+IDs, order IDs, stage and time, never Dropbox paths or artwork capabilities.
+The staff secret also authorizes the existing retry endpoint; the binding
+secret remains valid there for existing server-side callers. No tester-facing
+staff page or notification is enabled. A verified delivery stores only its
+completion time, byte count and content hash for audit; raw Dropbox responses
+are not kept in the job record. Failed jobs no longer consume the 100 active
+job slots or the 2 GiB active-source quota. A 1 GiB filesystem free-space
+guard also protects draft creation. Verify that it reflects the Railway volume
+quota; accumulated failures can still fill the volume. This requires staff
+monitoring and a reviewed recovery or disposal policy.
+
 ## Fonts and editability
 
 Three optional bundled font families are added to the preview. New text defaults
@@ -104,6 +118,8 @@ about 2 GiB RAM initially, to be measured under representative source photos.
 Never run two worker replicas against this volume; no distributed lease exists.
 
 - ARTWORK_BIND_SECRET: new server-only random value; enter through secret settings.
+- ARTWORK_STAFF_SECRET: separate server-only recovery value; leave unset until
+  staff access is provisioned. Never put it in a URL or browser script.
 - ARTWORK_ORIGINS: comma-separated exact calculator/editor origins.
 - ARTWORK_DATA_DIR: persistent private volume, writable by the Node user.
 - ARTWORK_DELIVERY_MODE: dropbox for real delivery; synthetic is rejected in production.
@@ -131,11 +147,14 @@ acceptance. Final user-facing limits must be checked against normal orders.
 2. Full font policy and physical print-template approval.
 3. Large-photo, repeated-job, memory and mobile interruption/recovery checks.
 4. Private persistent service, HTTPS, ingress limits, backup/restore and retention verification. Draft/ready jobs expire after 24 hours;
-   delivered/failed jobs expire after seven days. Cleanup runs hourly. These
-   periods must be approved and tested before public customer uploads.
+   delivered jobs expire seven days after confirmed delivery; failed jobs are
+   retained until a successful retry. Cleanup runs hourly. The free-space
+   threshold and deletion periods need approval before public uploads.
 5. Secure provider credentials and real synthetic Dropbox delivery verification.
 6. Inactive Make test copy, optional artwork routing, authenticated binding,
-   visible failure notification and delivery retry verification.
+   visible failure notification and delivery retry verification. The private
+   failure API is a manual recovery tool, not an alert; automatic alerting and
+   a volume backup/restore drill remain go-live gates.
 7. Device interruption/resumption acceptance: session capabilities are retained
    locally, content fingerprints prevent changed designs reusing sealed uploads,
    and repeated source uploads are idempotent. Test on actual target phones.

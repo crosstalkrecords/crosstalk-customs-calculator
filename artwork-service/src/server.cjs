@@ -13,11 +13,12 @@ function error(status,message){const e=new Error(message);e.status=status;return
 function secureEqual(a,b){return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));}
 function makeApp(config,options={}){
  if(!config.bindSecret||config.bindSecret.length<32)throw Error('A separate 32-character or longer binding secret is required');
+ if(config.staffSecret&&config.staffSecret.length<32)throw Error('Staff recovery secret must be at least 32 characters');
  if(config.mode==='synthetic'&&process.env.NODE_ENV==='production')throw Error('Synthetic delivery is disabled in production');
  if(!config.refreshToken)config.refreshToken=loadCredential(config);
  if(config.mode==='dropbox'&&(!config.refreshToken||!config.clientId||!config.clientSecret))throw Error('Dropbox delivery credentials are not configured');
  const store=openStore(config.dataDir),app=express(),worker=startWorker(store,config,options.worker);const rates=new Map();let uploads=0;
- let pruning=Promise.resolve();const cleanup=()=>{pruning=pruning.then(()=>prune(store)).catch(()=>{});};cleanup();const cleanupTimer=setInterval(cleanup,3600000);cleanupTimer.unref();
+ let pruning=Promise.resolve();const cleanup=()=>{pruning=pruning.then(()=>prune(store)).catch(()=>console.warn('Artwork retention cleanup failed'));};cleanup();const cleanupTimer=setInterval(cleanup,3600000);cleanupTimer.unref();
  app.disable('x-powered-by');app.set('trust proxy',false);
  app.use((req,res,next)=>{
   res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});
@@ -43,13 +44,16 @@ function makeApp(config,options={}){
   throw error(403,'An allowed browser origin is required');
  }
  function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}
- app.post('/v1/drafts',(req,res)=>{
+ app.post('/v1/drafts',async(req,res)=>{
   browserOrigin(req);const key=req.socket.remoteAddress||'unknown',now=Date.now(),r=rates.get(key);if(!r||now-r.start>3600000)rates.set(key,{start:now,count:0});
   if(++rates.get(key).count>20)throw error(429,'Too many artwork sessions; try later');
   if(rates.size>10000)for(const [k,v] of rates)if(now-v.start>3600000)rates.delete(k);
-  const count=store.db.prepare("SELECT count(*) AS n FROM jobs WHERE state!='delivered'").get().n;
-  const total=store.db.prepare('SELECT coalesce(sum(bytes),0) AS n FROM assets').get().n;
-  if(count>=100||total>=2*1024**3)throw error(503,'Artwork service capacity reached');
+  // Retained failures stay available for staff without consuming active-job
+  // slots. Keep both active-upload limits and real disk headroom as safeguards.
+  const disk=await fs.statfs(config.dataDir);
+  const count=store.db.prepare("SELECT count(*) AS n FROM jobs WHERE state NOT IN ('delivered','failed')").get().n;
+  const total=store.db.prepare("SELECT coalesce(sum(a.bytes),0) AS n FROM assets a JOIN jobs j ON j.id=a.job_id WHERE j.state NOT IN ('delivered','failed')").get().n;
+  if(count>=100||total>=2*1024**3||disk.bavail*disk.bsize<1024**3)throw error(503,'Artwork service capacity reached');
   res.status(201).json(store.create());
  });
  app.put('/v1/drafts/:id/assets/:hash',(req,res,next)=>{
@@ -87,17 +91,32 @@ function makeApp(config,options={}){
  });
  app.get('/internal/jobs',(req,res)=>{
   if(!secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret))throw error(401,'Unauthorised');
-  res.json(store.db.prepare('SELECT id,created,state,attempts,error FROM jobs ORDER BY created DESC LIMIT 100').all());
+  res.json(store.db.prepare('SELECT id,created,state,attempts,error,completed_at AS completedAt,failed_at AS failedAt,delivery_receipt IS NOT NULL AS verifiedDelivery FROM jobs ORDER BY created DESC LIMIT 100').all());
+ });
+ app.get('/internal/failures',(req,res)=>{
+  if(!config.staffSecret)throw error(503,'Staff recovery access is not configured');
+  if(!secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret))throw error(401,'Unauthorised');
+  const rawLimit=req.query.limit??'25',rawOffset=req.query.offset??'0';
+  if(typeof rawLimit!=='string'||!/^[1-9][0-9]*$/.test(rawLimit)||Number(rawLimit)>100||typeof rawOffset!=='string'||!/^(0|[1-9][0-9]*)$/.test(rawOffset)||Number(rawOffset)>100000)throw error(422,'Invalid pagination');
+  const limit=Number(rawLimit),offset=Number(rawOffset);
+  const rows=store.db.prepare("SELECT id,created,attempts,error,failed_at,failure_stage,binding FROM jobs WHERE state='failed' ORDER BY coalesce(failed_at,created) DESC,id DESC LIMIT ? OFFSET ?").all(limit+1,offset);
+  const items=rows.slice(0,limit).map(row=>{
+   let orderId=null;try{const binding=JSON.parse(row.binding);if(typeof binding.orderId==='string')orderId=binding.orderId;}catch(_){}
+   return {id:row.id,orderId,created:row.created,failedAt:row.failed_at,attempts:row.attempts,stage:row.failure_stage,error:row.error};
+  });
+  res.json({items,nextOffset:rows.length>limit?offset+limit:null});
  });
  app.post('/internal/retry/:id',(req,res)=>{
-  if(!secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret))throw error(401,'Unauthorised');
-  const result=store.db.prepare("UPDATE jobs SET state='queued',attempts=0,next_attempt=0,error=NULL WHERE id=? AND state='failed'").run(req.params.id);
+  const binder=secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret);
+  const staff=config.staffSecret&&secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret);
+  if(!binder&&!staff)throw error(401,'Unauthorised');
+  const result=store.db.prepare("UPDATE jobs SET state='queued',attempts=0,next_attempt=0,error=NULL,failed_at=NULL,failure_stage=NULL WHERE id=? AND state='failed'").run(req.params.id);
   if(!result.changes)throw error(409,'Only failed jobs can be retried');res.status(202).json({state:'queued'});
  });
  app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control','public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
  return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await worker.close();store.close();}};
 }
-function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,testRecipient:process.env.ARTWORK_TEST_RECIPIENT,testWebhookUrl:process.env.ARTWORK_TEST_WEBHOOK_URL,testAccessCode:process.env.ARTWORK_TEST_ACCESS_CODE,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
+function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,testRecipient:process.env.ARTWORK_TEST_RECIPIENT,testWebhookUrl:process.env.ARTWORK_TEST_WEBHOOK_URL,testAccessCode:process.env.ARTWORK_TEST_ACCESS_CODE,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,staffSecret:process.env.ARTWORK_STAFF_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
 if(require.main===module){const service=makeApp(environment());const server=service.app.listen(Number(process.env.PORT||4310),process.env.HOST||'127.0.0.1',()=>console.log('Artwork service listening'));for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close();service.close().then(()=>process.exit(0));});}
 module.exports={makeApp,environment};

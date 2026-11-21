@@ -6,8 +6,13 @@ function openStore(root){
  fs.mkdirSync(root,{recursive:true,mode:0o700});
  const db=new DatabaseSync(path.join(root,'jobs.sqlite'));
  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
- CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL,created INTEGER NOT NULL,state TEXT NOT NULL,project TEXT,digest TEXT,binding TEXT,attempts INTEGER NOT NULL DEFAULT 0,next_attempt INTEGER NOT NULL DEFAULT 0,error TEXT);
+ CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL,created INTEGER NOT NULL,state TEXT NOT NULL,project TEXT,digest TEXT,binding TEXT,attempts INTEGER NOT NULL DEFAULT 0,next_attempt INTEGER NOT NULL DEFAULT 0,error TEXT,completed_at INTEGER,failed_at INTEGER,failure_stage TEXT,delivery_receipt TEXT);
  CREATE TABLE IF NOT EXISTS assets(job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,hash TEXT NOT NULL,bytes INTEGER NOT NULL,mime TEXT NOT NULL,PRIMARY KEY(job_id,hash));`);
+ // Existing JOSH TEST volumes predate these audit fields. Keep their jobs intact.
+ const columns=new Set(db.prepare('PRAGMA table_info(jobs)').all().map(column=>column.name));
+ for(const [name,type] of Object.entries({completed_at:'INTEGER',failed_at:'INTEGER',failure_stage:'TEXT',delivery_receipt:'TEXT'})){
+  if(!columns.has(name))db.exec('ALTER TABLE jobs ADD COLUMN '+name+' '+type);
+ }
  // One process/one worker per persistent volume. A crash resumes queued delivery.
  db.prepare("UPDATE jobs SET state='queued' WHERE state='processing'").run();
  function get(id){return db.prepare('SELECT * FROM jobs WHERE id=?').get(id);}
