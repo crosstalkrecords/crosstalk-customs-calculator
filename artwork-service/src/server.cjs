@@ -33,7 +33,15 @@ function makeApp(config,options={}){
  installTestOrders(app,store,config,options.testOrders);
  app.get('/health',(_,res)=>res.json({service:'crosstalk-artwork',deliveryMode:config.mode,configured:['synthetic','dropbox'].includes(config.mode)}));
  app.get('/v1/client-config',(_,res)=>res.json({returnOrigins:config.origins}));
- function browserOrigin(req){if(!req.get('Origin')||!config.origins.includes(req.get('Origin')))throw error(403,'An allowed browser origin is required');}
+ function browserOrigin(req){
+  const origin=req.get('Origin');
+  if(origin&&config.origins.includes(origin))return;
+  // Chromium may omit Origin for a same-origin request on loopback HTTP.
+  // Fetch Metadata and the exact public host allow that case without opening
+  // the API to a cross-site browser or an arbitrary Host header.
+  if(!origin&&req.get('Sec-Fetch-Site')==='same-origin'&&config.publicOrigin&&req.get('Host')===new URL(config.publicOrigin).host)return;
+  throw error(403,'An allowed browser origin is required');
+ }
  function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}
  app.post('/v1/drafts',(req,res)=>{
   browserOrigin(req);const key=req.socket.remoteAddress||'unknown',now=Date.now(),r=rates.get(key);if(!r||now-r.start>3600000)rates.set(key,{start:now,count:0});

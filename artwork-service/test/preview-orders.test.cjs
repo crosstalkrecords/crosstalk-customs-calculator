@@ -2,6 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {chromium}=require('playwright'),packaged=require('@sparticuz/chromium');
 const {makeApp}=require('../src/server.cjs');
+const {createCanvas}=require('../src/psd.cjs');
 test('guarded preview submits only to isolated JOSH TEST route and shows truthful confirmation',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-preview-orders-'));
  const sent=[],config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
@@ -31,6 +32,63 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   assert.equal(sent.length,1);assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
   assert(outbound.some(request=>request.url===base+'/v1/test-orders'));
   assert(!outbound.some(request=>request.url.includes('hook.eu1.make.com')));
+  await context.close();
+ }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('mobile guarded preview attaches synthetic art and acknowledges an isolated submission',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-mobile-preview-'));
+ const sent=[];
+ const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
+ const service=makeApp(config,{worker:{interval:999999},testOrders:{fetchImpl:async(url,options)=>{
+  assert.equal(url,config.testWebhookUrl);
+  const payload=JSON.parse(options.body);sent.push(payload);
+  return {ok:true,json:async()=>({testLabel:'JOSH TEST',artwork_status:'bound'})};
+ }}});
+ const server=service.app.listen(0,'127.0.0.1');let browser;
+ try{
+  await new Promise(resolve=>server.once('listening',resolve));
+  const base='http://127.0.0.1:'+server.address().port;config.publicOrigin=base;config.origins.push(base);
+  browser=await chromium.launch({headless:true,executablePath:await packaged.executablePath(),args:packaged.args.filter(x=>x!=='--single-process')});
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,httpCredentials:{username:'tester',password:'test-access-only'}});
+  const requests=[],draftOrigins=[];context.on('request',request=>{requests.push(request.url());if(request.url().includes('/v1/drafts'))draftOrigins.push(request.headers()['origin']||null)});
+  const page=await context.newPage();page.setDefaultTimeout(30000);
+  await page.goto(base+'/calculator-preview.html');
+  await page.waitForFunction(()=>document.querySelector('input[name="Email"]')?.readOnly);
+  assert.equal(await page.locator('input[name="Customer Name"]').inputValue(),'TEST JOSH 21.11');
+  await page.locator('#regularStart').click();await page.locator('#sizes [data-size="12"]').click();
+  await page.locator('[data-step="1"] [data-next="2"]').click();
+  await page.getByText('Prefer to type a tracklist manually?').click();await page.locator('#manual').fill('A1 - synthetic mobile track');
+  await page.locator('[data-step="2"] [data-next="3"]').click();
+  await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
+  const popup=page.waitForEvent('popup');await page.locator('#openArtworkDesigner').click();
+  const editor=await popup;editor.setDefaultTimeout(30000);
+  const canvas=createCanvas(120,120),ctx=canvas.getContext('2d');ctx.fillStyle='#35698c';ctx.fillRect(0,0,120,120);
+  await editor.locator('#imageInput').setInputFiles({name:'synthetic-mobile.png',mimeType:'image/png',buffer:canvas.toBuffer('image/png')});
+  await editor.locator('.design-layer').first().waitFor();
+  await editor.locator('#finishBtn').click();await editor.locator('#completeArtwork').click();
+  try{await Promise.race([
+   editor.locator('#finishSuccess.show').waitFor(),
+   editor.locator('#handoffStatus').filter({hasText:'An allowed browser origin is required'}).waitFor().then(()=>{throw Error('Local draft origin rejected')})
+  ]);}
+  catch(e){console.error('Mobile handoff status:',await editor.locator('#handoffStatus').textContent(),'draft origins:',draftOrigins);throw e;}
+  await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor();
+  const reference=await page.locator('input[name="Artwork Reference"]').inputValue();
+  assert.match(reference,/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/);
+  await page.locator('[data-step="3"] [data-next="4"]').click();
+  await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
+  await page.locator('#terms').check();await page.getByRole('button',{name:'Place My Order'}).click();
+  await page.locator('#success').waitFor({state:'visible'});
+  const confirmation=await page.locator('#success').innerText();
+  assert.match(confirmation,/JOSH TEST submission accepted/);
+  assert.match(confirmation,/No customer order or invoice was created/);
+  assert.match(confirmation,/Delivery is not yet confirmed|Delivery is still pending|delivered to the isolated Dropbox folder/);
+  assert.equal(sent.length,1);assert.equal(sent[0].testLabel,'JOSH TEST');
+  assert.equal(sent[0]['Artwork Reference'],reference);
+  assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
+  assert(requests.some(url=>url===base+'/v1/test-orders'));
+  assert(!requests.some(url=>url.includes('hook.eu1.make.com')));
+  assert.equal(service.store.get(reference.split('.')[0]).state,'ready','mocked Make did not bind or deliver artwork');
   await context.close();
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
