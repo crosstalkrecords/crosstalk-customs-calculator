@@ -79,9 +79,14 @@
   if(result.state==='complete'){
    heading.textContent='JOSH TEST order confirmed';
    message.textContent='The isolated test route confirmed TEST JOSH 21.11. Crosstalk will separately check the Airtable record, email, file upload and exported ZIP. No payment was taken on this page.';
+   if(result.artworkId){
+    if(result.deliveryVerified)status.textContent='JOSH TEST artwork ZIP delivered and verified in the isolated Dropbox folder.';
+    else if(result.deliveryFailed)status.textContent='JOSH TEST artwork delivery failed. Give Crosstalk the test order ID below for follow-up.';
+    else if(!result.deliveryPending)status.textContent='Artwork delivery can no longer be verified here. Give Crosstalk the test order ID below for review.';
+    else status.textContent='JOSH TEST artwork delivery is still pending.';
+   }else status.textContent='No designer artwork was attached to this test.';
    if(previousState!=='complete'){
     if(result.deliveryPending&&result.artworkId)void watch(result.artworkId);
-    else status.textContent='No designer artwork was attached to this test.';
     dispatchEvent(new Event('crosstalk-order-success'));
    }
   }else if(result.state==='unknown'||result.state==='manual_review'){

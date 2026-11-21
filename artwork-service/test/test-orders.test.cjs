@@ -74,11 +74,21 @@ test('queued artwork intake hides capability from Make; trusted bind and callbac
   const route='/internal/test-submissions/'+ID+'/outcome',done=outcome(ID,hash,'complete',{artwork_status:'bound'});
   assert.equal((await f.trusted(route,done)).status,200,'final callback can race ahead of early ack');
   release();await until(()=>f.svc.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(ID).state==='complete');
-  const final=await(await f.status(ID)).json();assert.equal(final.state,'complete');assert.equal(final.artworkStatus,'bound');
+  const final=await(await f.status(ID)).json();assert.equal(final.state,'complete');assert.equal(final.artworkStatus,'bound');assert.equal(final.deliveryPending,true);
   assert.equal((await f.submit(body)).status,200);assert.equal(sent.length,1);
   assert.equal((await f.submit(body,foreign)).status,409);
   assert.equal((await f.submit({...body,fields:{...form,Tracklist:form.Tracklist+'\nchanged'}})).status,409);
   assert.equal((await f.trusted(route,done)).status,200);assert.equal((await f.trusted(route,{...done,artwork_status:'already_bound'})).status,409);
+  const staff=()=>fetch(f.base+'/internal/test-submissions/'+ID,{headers:{Authorization:'Bearer '+f.config.staffSecret}});
+  assert.equal((await(await staff()).json()).deliveryPending,true);
+  f.svc.store.db.prepare("UPDATE jobs SET state='delivered',delivery_receipt=? WHERE id=?").run(JSON.stringify({verified:true,bytes:2048,contentHash:'a'.repeat(64)}),job.id);
+  const delivered=await(await f.status(ID)).json();assert.equal(delivered.artworkStatus,'delivered');assert.equal(delivered.deliveryPending,false);assert.equal(delivered.deliveryVerified,true);
+  const staffDelivered=await(await staff()).json();assert.equal(staffDelivered.artworkState,'delivered');assert.equal(staffDelivered.deliveryVerified,true);assert.equal(staffDelivered.deliveryPending,false);
+  assert.equal((await(await f.submit(body)).json()).artworkStatus,'delivered','idempotent response reflects the worker, not the old bind callback');
+  f.svc.store.db.prepare("UPDATE jobs SET delivery_receipt=NULL WHERE id=?").run(job.id);
+  const unverified=await(await f.status(ID)).json();assert.equal(unverified.artworkStatus,'not_verifiable');assert.equal(unverified.deliveryVerified,false);assert.equal(unverified.deliveryPending,false);
+  f.svc.store.db.prepare("UPDATE jobs SET state='failed' WHERE id=?").run(job.id);
+  const failed=await(await f.status(ID)).json();assert.equal(failed.artworkStatus,'failed');assert.equal(failed.deliveryFailed,true);assert.equal(failed.deliveryPending,false);
  }finally{release();await f.close();}
 });
 

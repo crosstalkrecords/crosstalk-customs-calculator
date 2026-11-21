@@ -60,7 +60,9 @@
  // The live form must dispatch this only after Make confirms an actual order.
  addEventListener('crosstalk-order-success',()=>{
   input.value='';sessionStorage.removeItem(referenceKey);
-  session=crypto.randomUUID();sessionStorage.setItem('crosstalk-artwork-order-session',session);
+  // The JOSH TEST confirmation screen must survive refresh so its existing
+  // order can show the later delivery outcome without creating another order.
+  if(!testPreview){session=crypto.randomUUID();sessionStorage.setItem('crosstalk-artwork-order-session',session);}
   editor=null;status.textContent='No designer artwork attached.';updateAvailability();
  });
 })();

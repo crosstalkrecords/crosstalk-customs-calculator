@@ -211,11 +211,27 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
   return (req.get('Origin')===config.publicOrigin||(!req.get('Origin')&&req.get('Sec-Fetch-Site')==='same-origin'))&&
    req.get('Host')===new URL(config.publicOrigin).host;
  }
+ function deliveryState(referenceId){
+  if(!referenceId)return {artworkStatus:'not_supplied',deliveryPending:false,deliveryVerified:false,deliveryFailed:false};
+  const job=store.get(referenceId);
+  if(!job)return {artworkStatus:'not_verifiable',deliveryPending:false,deliveryVerified:false,deliveryFailed:false};
+  let receipt;
+  try{receipt=JSON.parse(job.delivery_receipt);}catch(_){}
+  const verified=job.state==='delivered'&&receipt?.verified===true&&
+   Number.isSafeInteger(receipt.bytes)&&receipt.bytes>=0&&/^[a-f0-9]{64}$/.test(receipt.contentHash||'');
+  if(verified)return {artworkStatus:'delivered',deliveryPending:false,deliveryVerified:true,deliveryFailed:false};
+  if(job.state==='failed')return {artworkStatus:'failed',deliveryPending:false,deliveryVerified:false,deliveryFailed:true};
+  if(job.state==='delivered')return {artworkStatus:'not_verifiable',deliveryPending:false,deliveryVerified:false,deliveryFailed:false};
+  return {artworkStatus:job.state==='processing'?'processing':'bound',deliveryPending:true,deliveryVerified:false,deliveryFailed:false};
+ }
  function publicState(row){
-  if(row.state==='complete')return JSON.parse(row.response);
+  if(row.state==='complete'){
+   const saved=JSON.parse(row.response);
+   return row.reference_id?{...saved,...deliveryState(row.reference_id)}:saved;
+  }
   const uncertain=['unknown','manual_review'].includes(row.state);
-  return {testOrderId:row.id,state:row.state,artworkStatus:row.reference_id?'pending':'not_supplied',
-   deliveryPending:!!row.reference_id,...(uncertain?{outcomeUncertain:true}:{})};
+  return {testOrderId:row.id,state:row.state,...deliveryState(row.reference_id),
+   ...(uncertain?{outcomeUncertain:true}:{})};
  }
  function makePayload(row){
   const mapped=JSON.parse(row.payload);
@@ -288,11 +304,11 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
  app.get('/internal/test-submissions/:id',staffAccess,(req,res)=>{
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id))return res.status(422).json({error:'Invalid test order ID'});
   const row=store.db.prepare(`SELECT s.id,s.created,s.updated,s.state,s.reference_id,s.request_hash,s.review_stage,s.airtable_id,
-    j.state AS artwork_state,CASE WHEN j.delivery_receipt IS NULL THEN 0 ELSE 1 END AS delivery_verified
+    j.state AS artwork_state
     FROM test_submissions s LEFT JOIN jobs j ON j.id=s.reference_id WHERE s.id=?`).get(req.params.id);
   if(!row)return res.status(404).json({error:'Test submission not found'});
   res.json({...safeRow(row),requestFingerprint:row.request_hash||null,
-   artworkState:row.artwork_state||null,deliveryVerified:!!row.delivery_verified,
+   artworkState:row.artwork_state||null,...deliveryState(row.reference_id),
    needsReconciliation:['unknown','manual_review'].includes(row.state),reviewStage:row.review_stage||null,
    airtableRecordId:row.airtable_id||null});
  });

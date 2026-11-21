@@ -220,6 +220,11 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   assert(requests.some(url=>url===base+'/v1/test-orders'));
   assert(!requests.some(url=>url.includes('hook.eu1.make.com')));
   assert.equal(service.store.get(artworkJobId).state,'queued','trusted test bind is queued for disabled worker');
+  service.store.db.prepare("UPDATE jobs SET state='delivered',delivery_receipt=? WHERE id=?").run(JSON.stringify({verified:true,bytes:2048,contentHash:'a'.repeat(64)}),artworkJobId);
+  await page.reload();
+  await page.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor();
+  assert.match(await page.locator('#testDeliveryStatus').innerText(),/delivered and verified in the isolated Dropbox folder/);
+  assert.doesNotMatch(await page.locator('#testDeliveryStatus').innerText(),/No designer artwork/);
   await context.close();
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
