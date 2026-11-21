@@ -53,10 +53,12 @@ access. The isolated form URL does not expose the Airtable table.
   successful isolated Railway redeploy, `/health` returned
   `deliveryMode=disabled` and `configured=false` on 21 November 2026.
 - Railway reports a successful **JOSH TEST only** deployment of review commit
-  `2bcd592` on 21 November 2026. Hosted `/health` returned
+  `3835d52` on 21 November 2026. Hosted `/health` returned
   `deliveryMode=disabled` and `configured=false` after that deployment;
   unauthenticated normal and percent-encoded preview paths, designer and
-  test-config returned 401. The test form's
+  test-config returned 401 in checks across the review. The read-only staff
+  submission route returned 503 because `ARTWORK_STAFF_SECRET` has not yet
+  been provisioned in JOSH TEST. The test form's
   server-only Make key guard is deployed, but the full intake is still inactive
   and its protected webhook URL has not been configured in the JOSH TEST
   Railway service. A hosted authenticated mobile and staff-recovery smoke test
@@ -104,11 +106,12 @@ draft with a signed browser cookie and one order session. It checks the
 displayed estimate against the chosen options, but artist eligibility remains
 a staff decision and no estimate may trigger an invoice. Desktop/mobile local
 tests cover Back/Forward, refresh restoration, keyboard focus and labels.
-A subsequent local-only patch adds a staff-secret-protected, read-only list of
+A subsequent patch adds a staff-secret-protected, read-only list of
 uncertain submissions and disables the expired Father's Day offer, including
-old saved drafts; it has passed 17 service tests but has **not** yet been
-committed or deployed at the time of this report revision. The staff view
-does not resolve or resend an uncertain submission.
+old saved drafts; it passed 17 service tests and is deployed at `3835d52`.
+The staff view still needs its distinct server-side secret configured and
+an authenticated hosted check. It does not resolve or resend an uncertain
+submission.
 
 A further preview-only change disables public playlist lookup and import in
 JOSH TEST, so synthetic tester searches do not reach the separate shared
@@ -149,11 +152,12 @@ with `spawn ETXTBSY`: concurrent tests extracted Chromium into the same
 `/tmp/chromium`. The serialized runner and updated UI fixture passed the full
 GitHub review gate on final code commit `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`
 ([run 44850487239](https://github.com/crosstalkrecords/crosstalk-customs-calculator/actions/runs/44850487239)).
-The latest deployed SHA `2bcd592` still requires a hosted authenticated smoke test.
+The latest deployed SHA `3835d52` still requires a hosted authenticated smoke test.
 The test-intake allowlist, fictional shipping, changed-details replay and
-server-only Make key guard are deployed to JOSH TEST. The later staff visibility
-and expired-promotion patch has only local test evidence. No pull-request
-GitHub Actions run was returned for `2bcd592`. A
+server-only Make key guard are deployed to JOSH TEST. The staff visibility
+and expired-promotion patch passed local tests and deployed, but its staff
+route returned 503 until a distinct secret is provisioned. No pull-request
+GitHub Actions run was returned for `2bcd592` or established for `3835d52`. A
 second synthetic acceptance run passed for two local archives, but remote ZIP
 contents and hosted authenticated interaction remain unverified.
 
@@ -252,14 +256,14 @@ queued/polling redesign.
 | 2j. Automatic approval blocks private request inspection | Certain in this session / medium | Approval review rejected the UI step exposing a closed file-request ID/URL and the static runner 8715455 UI before Run once. No alternate execution was attempted. | Use an explicitly approved secure test method that inspects only non-secret state and keeps request URLs private. Until available, leave the runner and full intake inactive and report the stages untested. **Blocker; no full run.** |
 | 2g. Artist field semantics need confirmation | Medium / low | The current intake maps `Artist Order = Yes` to a boolean-like value in an Airtable single-line `Artist` field, rather than an artist name. | In the isolated record, compare the intended meaning of that field with staff expectations and map it explicitly; preserve the source behavior only if it is deliberately a yes/no flag. **Open; live unchanged.** |
 | 2d. Form values can disagree with the quoted price | Low after isolated fix / medium | The JOSH TEST server recalculates the displayed estimate from allowed format, quantity, colour, packaging, rush and shipping; tampered amounts fail locally. Production remains unchanged. | Exercise all pricing branches and tampered prices in the hosted test, then review live pricing parity before cutover. **Isolated code deployed; hosted parity open.** |
-| 2k. Artist eligibility and expired promotion | Medium / high if invoiced | The artist unlock string is client-side and a restored test draft could revive the expired Father's Day selection. Browser artist status does not prove eligibility. | The local-only patch hides/disables the expired offer, blocks restoration and rejects the marker at JOSH TEST intake. Keep artist and final quote under staff approval before any invoice; implement trusted eligibility or remove automatic artist pricing in the eventual production flow. **Promotion patch tested locally, deployment pending; eligibility open.** |
-| 3. Failed or uncertain jobs could be missed | Medium / high | Three delivery attempts previously ended in `failed`; an ambiguous Make timeout leaves test submissions `unknown` and rejects a blind repeat. There is no staff alert or backup schedule. | Deployed code retains failed artwork jobs and supports authenticated retry. A local-only patch adds a staff-secret-protected read-only list of uncertain submissions; it has no resend action and needs a distinct Railway staff secret and hosted test. Add a reconciled state transition, actual alert and backup/restore procedure. **Artwork recovery code deployed; intake visibility local-only; operational gate open.** |
+| 2k. Artist eligibility and expired promotion | Medium / high if invoiced | The artist unlock string is client-side and a restored test draft could revive the expired Father's Day selection. Browser artist status does not prove eligibility. | The deployed JOSH TEST patch hides/disables the expired offer, blocks restoration and rejects its marker. Keep artist and final quote under staff approval before any invoice; implement trusted eligibility or remove automatic artist pricing in production. **Promotion retested locally and deployed; eligibility open.** |
+| 3. Failed or uncertain jobs could be missed | Medium / high | Three delivery attempts previously ended in `failed`; an ambiguous Make timeout leaves test submissions `unknown` and rejects a blind repeat. There is no staff alert or backup schedule. | Deployed code retains failed artwork jobs and supports authenticated retry. JOSH TEST now has a staff-secret-protected read-only list of uncertain submissions with no resend action, but the distinct secret is not provisioned and its hosted route returned 503. Add manual reconciliation transition, alert and backup/restore procedure. **Code deployed; operational gate open.** |
 | 4. Printed files may differ from approved templates | Medium / high | Synthetic parser/render tests exist; actual remote ZIP and PSDs have not been opened/edit-saved/reopened in Photoshop or physically approved. | Download the delivered test ZIP, inspect source files and PSD layers/masks/fonts, edit/save/reopen, print covers and labels, and obtain engineer approval. **Open.** |
 | 5. Hosted phone and email experience unknown | Medium / medium | The mobile fix is now in the successful Railway deployment, but hosted phone use has not been witnessed; Make email module succeeded but inbox arrival is unverified. | Have a human tester use desktop and phone with refresh/interruption/large image, and check Josh's inbox including spam for both test messages. **Open.** |
 | 6. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST. The replacement Make Dropbox grant is app-folder scoped; separate production credentials, volume, backup, alert and ingress limiter have not been verified. | Provision distinct production service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore and monitored failure queue. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 7. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
 | 8. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 9. Final CI and hosted gate | Low / medium | Code commit `ecfa1547` passed the earlier GitHub service/UI/acceptance/audit gate; Railway reports a successful JOSH TEST deployment of `2bcd592`. Hosted authenticated phone/staff checks and CI evidence for `2bcd592` are not established here. | Run the latest CI gate, hosted authenticated smoke and the isolated intake once a permitted secure execution route exists. **Deploy resolved; hosted/full-route retest open.** |
+| 9. Final CI and hosted gate | Low / medium | Code commit `ecfa1547` passed an earlier GitHub service/UI/acceptance/audit gate; Railway reports successful JOSH TEST deployment of `3835d52`. Hosted authenticated phone/staff checks and CI evidence for this SHA are not established. | Run latest CI gate, hosted authenticated smoke and isolated intake once a permitted secure execution route exists. **Deploy resolved; hosted/full-route retest open.** |
 
 ## Live and test configuration comparison
 
@@ -269,7 +273,7 @@ queued/polling redesign.
 | Make | Artwork-only 8084300 inactive; full intake 8715068 inactive with protected hook, guarded test Airtable/Dropbox **closed-request** route and no email/bind; static on-demand runner 8715455 inactive/unexecuted; claim probe 8715169 and folder/request probes succeeded in isolation. Old broad Dropbox 13265327 unused. | Customer Intake 4762364 remains active; no integration change applied. |
 | Orders and billing | Test Airtable base has manually seeded fixture and sparse upsert probe row; no form-created order, invoice, payment or usable audio link. Copied invoice button omitted from staff interface. | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is separate. |
 | Dropbox | Fixed JOSH TEST root; verified exporter ZIP read by Make, fixed folder writes and a closed request. Open upload acceptance untested. | Separate production root/authorization and tested environment required. |
-| Exporter | JOSH TEST Railway service/volume, one worker; `2bcd592` deployed successfully, delivery disabled; no full intake binding. | No production exporter in this project yet. |
+| Exporter | JOSH TEST Railway service/volume, one worker; `3835d52` deployed successfully, delivery disabled; staff intake visibility needs its secret; no full intake binding. | No production exporter in this project yet. |
 | Secrets | Test hook key exists server-side in Make and is not in a blueprint/browser URL; JOSH TEST Railway webhook URL transfer was blocked, so hosted submission remains off. | New separate production credentials and staff recovery secret to provision securely. |
 
 ## Evidence required before a live approval request
