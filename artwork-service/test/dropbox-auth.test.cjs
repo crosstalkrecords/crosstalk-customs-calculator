@@ -1,6 +1,11 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {makeApp}=require('../src/server.cjs');
+const {accessToken}=require('../src/dropbox-api.cjs');
+test('Dropbox OAuth failure reports only an approved error code',async()=>{
+ const config={refreshToken:'private-refresh',clientId:'app-id',clientSecret:'private-secret'};
+ await assert.rejects(accessToken(config,async()=>({ok:false,status:400,json:async()=>({error:'invalid_grant',error_description:'secret-token-do-not-log'})})),e=>e.message==='Dropbox authentication failed (HTTP 400; invalid_grant)'&&!e.message.includes('secret-token'));
+});
 const {loadCredential}=require('../src/dropbox-auth.cjs');
 test('Dropbox setup checks administrator, browser cookie, state, expiry and one-time use; encrypts tokens across restarts',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'josh-test-auth-'));let clock=Date.now(),exchanges=0;

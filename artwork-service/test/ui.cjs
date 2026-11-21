@@ -8,15 +8,46 @@ const {createCanvas}=require('../src/psd.cjs');
  const canvas=createCanvas(120,80);const cx=canvas.getContext('2d');cx.fillStyle='#f4b520';cx.fillRect(0,0,120,80);await fs.writeFile(path.join(root,'synthetic-source.png'),canvas.toBuffer('image/png'));
  const service=makeApp({dataDir:path.join(root,'private'),bindSecret:'ui-test-secret-'.repeat(4),origins:['http://127.0.0.1:4311','http://127.0.0.1:4312'],mode:'disabled',dropboxRoot:'/Crosstalk Customs/Testing'},{worker:{interval:999999}});
  const server=service.app.listen(4311,'127.0.0.1');await new Promise(r=>server.once('listening',r));
- const preview=(await fs.readFile(path.resolve(__dirname,'../public/calculator-preview.html'),'utf8')).replace('<script src="calculator-artwork.js"></script>','<script src="http://127.0.0.1:4311/calculator-artwork.js"></script>');
+ // This suite exercises the form/editor handoff and its deliberately mocked
+ // legacy submit path. The guarded JOSH TEST order route has separate tests;
+ // loading its script here would require a configured webhook and disable this
+ // isolated fixture before the handoff assertions run.
+ const preview=(await fs.readFile(path.resolve(__dirname,'../public/calculator-preview.html'),'utf8'))
+  .replace('<script src="calculator-artwork.js"></script>','<script src="http://127.0.0.1:4311/calculator-artwork.js"></script>')
+  .replace('<script src="preview-orders.js"></script>','')
+  .replace('<script src="preview-usability.js"></script>','<script src="http://127.0.0.1:4311/preview-usability.js"></script>');
  const formServer=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(preview)}).listen(4312,'127.0.0.1');
  await new Promise(r=>formServer.once('listening',r));
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||await packaged.executablePath(),args:packaged.args.filter(a=>!['--single-process','--disable-web-security','--disable-site-isolation-trials'].includes(a))});
  try{
   for(const mobile of [false,true]){
    const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1365,height:900},isMobile:mobile,hasTouch:mobile});const page=await context.newPage();page.setDefaultTimeout(12000);console.log('Opening '+(mobile?'mobile':'desktop'));page.on('pageerror',e=>console.log('UI error: '+e.message));
-   await page.goto(mobile?'http://127.0.0.1:4312/':'http://127.0.0.1:4311/calculator-preview.html');
+   // This fixture uses the legacy handoff on a non-preview URL. The actual
+   // JOSH TEST preview's server-held capability has its own browser test.
+   if(!mobile)await page.route('**/legacy-fixture.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
+   await page.goto(mobile?'http://127.0.0.1:4312/':'http://127.0.0.1:4311/legacy-fixture.html');
    assert.equal(await page.locator('#openArtworkDesigner').count(),1);
+   assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
+   await page.locator('#regularStart').click();
+   await page.locator('#sizes [data-size="12"]').click();
+   await page.locator('[data-step="1"] [data-next="2"]').click();
+   await page.goBack();
+   assert.equal(await page.locator('.step.active').getAttribute('data-step'),'1');
+   assert.equal(await page.locator('#sizes [data-size="12"]').getAttribute('aria-pressed'),'true');
+   await page.goForward();
+   assert.equal(await page.locator('.step.active').getAttribute('data-step'),'2');
+   assert.equal(await page.locator('.step.active h2').evaluate(el=>document.activeElement===el),true);
+   assert.equal(await page.locator('#qty').getAttribute('id'),await page.locator('label').filter({hasText:'Quantity'}).getAttribute('for'));
+   await page.getByText('Prefer to type a tracklist manually?').click();
+   await page.locator('#manual').fill('A1 - JOSH TEST track');
+   await page.locator('[data-step="2"] [data-next="3"]').click();
+   assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
+   await page.locator('#packs [data-pack="Custom Finish Pack"]').click();
+   assert.equal(await page.locator('#openArtworkDesigner').isVisible(),true);
+   assert.equal(await page.locator('input[name="Artwork Reference"]').isEnabled(),true);
+   await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
+   assert.equal(await page.locator('#openArtworkDesigner').isVisible(),true);
+   assert.equal(await page.locator('input[name="Artwork Reference"]').isEnabled(),true);
    const popupPromise=page.waitForEvent('popup');await page.locator('#openArtworkDesigner').click();const editor=await popupPromise;await editor.waitForLoadState('domcontentloaded');editor.setDefaultTimeout(12000);console.log('Designer opened');await editor.locator('#imageInput').setInputFiles(path.join(root,'synthetic-source.png'));await editor.locator('.layer.image').count();
    await editor.locator(mobile?'#mobileTextBtn':'#addTextBtn').click();
    // Close the existing mobile editor through its visible Done control.
@@ -24,6 +55,21 @@ const {createCanvas}=require('../src/psd.cjs');
    console.log('Text added');await editor.locator('#finishBtn').click();console.log('Finish opened');await editor.locator('#completeArtwork').click();console.log('Upload clicked');await editor.waitForTimeout(1000);console.log('Upload status:',await editor.locator('#handoffStatus').textContent());
    await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor({timeout:7000});
    const reference=await page.locator('input[name="Artwork Reference"]').inputValue();assert.match(reference,/^[a-f0-9]{32}\./);
+   await page.locator('#packs [data-pack="Standard"]').click();
+   assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
+   assert.equal(await page.locator('input[name="Artwork Reference"]').isEnabled(),false);
+   assert.equal(await page.evaluate(()=>new FormData(document.getElementById('orderForm')).has('Artwork Reference')),false);
+   await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
+   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
+   assert.equal(await page.evaluate(()=>new FormData(document.getElementById('orderForm')).get('Artwork Reference')),reference);
+   await page.reload();
+   assert.equal(await page.locator('.step.active').getAttribute('data-step'),'3');
+   assert.equal(await page.locator('#packs [data-pack="Printed Jacket + Labels"]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('#manual').inputValue(),'A1 - JOSH TEST track');
+   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
+   const formDraft=await page.evaluate(()=>sessionStorage.getItem('crosstalk-josh-test-form-draft-v1'));
+   assert(!formDraft.includes(reference),'form draft must not contain artwork capability');
+   assert(!formDraft.includes('josh-test@example.invalid'),'form draft must not contain test identity');
    await editor.screenshot({path:path.join(root,mobile?'mobile-uploaded.png':'desktop-uploaded.png'),fullPage:false});
    const before=service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n;
    await editor.reload();await editor.locator('#restoreRecovery').count();
@@ -33,11 +79,57 @@ const {createCanvas}=require('../src/psd.cjs');
    const saved=await editor.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('crosstalk-artwork-upload:')).map(k=>JSON.parse(localStorage.getItem(k))));
    assert(saved.some(s=>s.id===reference.split('.')[0]));assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,before);
    const oldSession=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
-   await page.evaluate(()=>dispatchEvent(new Event('crosstalk-order-success')));
+   await page.locator('[data-step="3"] [data-next="4"]').click();
+   await page.locator('.audio[data-audio="have"]').click();
+   await page.locator('[data-step="4"] [data-next="5"]').click();
+   await page.locator('input[name="Customer Name"]').fill('JOSH TEST');
+   await page.locator('input[name="Email"]').fill('josh-test@example.invalid');
+   await page.locator('input[name="Custom Field 1"]').fill('0400000000');
+   await page.locator('#terms').check();
+   let attempts=0;
+   await page.route('**/order-submission-disabled',route=>route.fulfill({status:++attempts===1?503:200,contentType:'application/json',body:'{}'}));
+   page.on('dialog',dialog=>dialog.accept());
+   await page.locator('button[type="submit"]').click();
+   await page.locator('button[type="submit"]').waitFor();
+   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
+   assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),oldSession);
+   await page.locator('button[type="submit"]').click();
+   await page.locator('#success').waitFor({state:'visible'});
+   assert.equal(attempts,2);
    assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'');
    assert.notEqual(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),oldSession);
-   await context.close();console.log((mobile?'Mobile':'Desktop')+' upload, opener handoff and refresh resumption passed');
+   assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-josh-test-form-draft-v1')),null);
+   await context.close();console.log((mobile?'Mobile':'Desktop')+' upload, opener handoff, retry and confirmed-order reset passed');
   }
+  // A standard order completes without an artwork reference or a draft.
+  const plainContext=await browser.newContext();const plain=await plainContext.newPage();
+  await plain.route('**/legacy-fixture.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
+  await plain.goto('http://127.0.0.1:4311/legacy-fixture.html');
+  const plainJobs=service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n;
+  await plain.locator('#regularStart').click();
+  await plain.locator('#sizes [data-size="12"]').click();
+  await plain.locator('[data-step="1"] [data-next="2"]').click();
+  await plain.getByText('Prefer to type a tracklist manually?').click();
+  await plain.locator('#manual').fill('A1 - JOSH TEST standard order');
+  await plain.locator('[data-step="2"] [data-next="3"]').click();
+  assert.equal(await plain.locator('#openArtworkDesigner').isVisible(),false);
+  await plain.locator('[data-step="3"] [data-next="4"]').click();
+  await plain.locator('.audio[data-audio="have"]').click();
+  await plain.locator('[data-step="4"] [data-next="5"]').click();
+  await plain.locator('input[name="Customer Name"]').fill('JOSH TEST');
+  await plain.locator('input[name="Email"]').fill('standard@example.invalid');
+  await plain.locator('input[name="Custom Field 1"]').fill('0400000000');
+  let plainAttempts=0,plainBody='';
+  await plain.route('**/order-submission-disabled',async route=>{plainAttempts++;plainBody=route.request().postData()||'';await route.fulfill({status:200,contentType:'application/json',body:'{}'});});
+  await plain.locator('button[type="submit"]').click();
+  assert.equal(plainAttempts,0,'Terms validation must prevent submission');
+  await plain.locator('#terms').check();
+  await plain.locator('button[type="submit"]').click();
+  await plain.locator('#success').waitFor({state:'visible'});
+  assert.equal(plainAttempts,1);
+  assert.equal(plainBody.includes('name="Artwork Reference"'),false);
+  assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,plainJobs);
+  await plainContext.close();console.log('Standard order, required terms, and no-artwork payload passed');
   // A forged return destination must fail before creating an upload session.
   const blocked=await browser.newContext();const form=await blocked.newPage();await form.goto('http://127.0.0.1:4312/');
   const popupPromise=form.waitForEvent('popup');
@@ -47,6 +139,13 @@ const {createCanvas}=require('../src/psd.cjs');
   const beforeBlocked=service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n;
   await forged.locator('#completeArtwork').click();
   await forged.locator('#handoffStatus').filter({hasText:'not approved for artwork handoff'}).waitFor();
+  assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,beforeBlocked);
+  const standalone=await blocked.newPage();await standalone.goto('http://127.0.0.1:4311/designer.html');
+  await standalone.locator('#standaloneNotice').waitFor({state:'visible'});
+  assert.match(await standalone.locator('#standaloneNotice').innerText(),/open from the JOSH TEST form/i);
+  await standalone.locator('#imageInput').setInputFiles(path.join(root,'synthetic-source.png'));
+  await standalone.locator('#finishBtn').click();await standalone.locator('#completeArtwork').click();
+  await standalone.locator('#handoffStatus').filter({hasText:'Open this designer from the JOSH TEST order form'}).waitFor();
   assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,beforeBlocked);
   await blocked.close();console.log('Unapproved return origin rejected before upload');
  }finally{await browser.close();await new Promise(r=>formServer.close(r));await new Promise(r=>server.close(r));await service.close();}

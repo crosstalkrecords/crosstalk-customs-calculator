@@ -1,0 +1,45 @@
+name: Artwork integration review
+
+on:
+  push:
+    branches:
+      - artwork-form-handoff-review-20261119
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-test-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: artwork-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: artwork-service/package-lock.json
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Build isolated preview
+        run: node build-public.cjs
+      - name: Service, delivery and authentication tests
+        run: npm test
+      - name: Desktop and mobile handoff
+        run: node test/ui.cjs
+      - name: Synthetic PSD and archive acceptance
+        run: npm run acceptance
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Preserve synthetic review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artwork-review-evidence
+          path: artwork-service/test-output/
+          if-no-files-found: ignore
+          retention-days: 14

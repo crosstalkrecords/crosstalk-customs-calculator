@@ -8,15 +8,19 @@ const {startWorker}=require('./worker.cjs');
 const {prune}=require('./retention.cjs');
 const {installTestDelivery}=require('./test-delivery.cjs');
 const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
+const {protectPreview,installTestOrders,testPreviewMode,browserSessionHash,sealDraftToken}=require('./test-orders.cjs');
+const {testUploadSummary,testRootUploadSummary}=require('./test-upload-diagnostic.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
-function secureEqual(a,b){return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));}
+function secureEqual(a,b){if(typeof a!=='string'||typeof b!=='string')return false;const left=Buffer.from(a),right=Buffer.from(b);return left.length===right.length&&crypto.timingSafeEqual(left,right);}
 function makeApp(config,options={}){
  if(!config.bindSecret||config.bindSecret.length<32)throw Error('A separate 32-character or longer binding secret is required');
+ if(config.staffSecret&&config.staffSecret.length<32)throw Error('Staff recovery secret must be at least 32 characters');
+ if(config.staffSecret===config.bindSecret)throw Error('Staff recovery secret must differ from the binding secret');
  if(config.mode==='synthetic'&&process.env.NODE_ENV==='production')throw Error('Synthetic delivery is disabled in production');
  if(!config.refreshToken)config.refreshToken=loadCredential(config);
  if(config.mode==='dropbox'&&(!config.refreshToken||!config.clientId||!config.clientSecret))throw Error('Dropbox delivery credentials are not configured');
  const store=openStore(config.dataDir),app=express(),worker=startWorker(store,config,options.worker);const rates=new Map();let uploads=0;
- let pruning=Promise.resolve();const cleanup=()=>{pruning=pruning.then(()=>prune(store)).catch(()=>{});};cleanup();const cleanupTimer=setInterval(cleanup,3600000);cleanupTimer.unref();
+ let pruning=Promise.resolve();const cleanup=()=>{pruning=pruning.then(()=>prune(store)).catch(()=>console.warn('Artwork retention cleanup failed'));};cleanup();const cleanupTimer=setInterval(cleanup,3600000);cleanupTimer.unref();
  app.disable('x-powered-by');app.set('trust proxy',false);
  app.use((req,res,next)=>{
   res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});
@@ -24,23 +28,67 @@ function makeApp(config,options={}){
   if(origin){if(!config.origins.includes(origin))return next(error(403,'Origin is not allowed'));res.set({'Access-Control-Allow-Origin':origin,Vary:'Origin','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, PUT, OPTIONS'});}
   if(req.method==='OPTIONS')return res.sendStatus(204);next();
  });
+ // Only the isolated preview uses the access gate; Make and worker calls use
+ // their separate server-side authentication and never receive this password.
+ protectPreview(app,config);
  installDropboxAuth(app,config,{authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');},fetchImpl:options.dropboxFetch,now:options.now});
  installTestDelivery(app,store,config,{...options.testDelivery,authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');}});
+ const testIntake=installTestOrders(app,store,config,options.testOrders);
  app.get('/health',(_,res)=>res.json({service:'crosstalk-artwork',deliveryMode:config.mode,configured:['synthetic','dropbox'].includes(config.mode)}));
  app.get('/v1/client-config',(_,res)=>res.json({returnOrigins:config.origins}));
- function browserOrigin(req){if(!req.get('Origin')||!config.origins.includes(req.get('Origin')))throw error(403,'An allowed browser origin is required');}
- function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}
- app.post('/v1/drafts',(req,res)=>{
+ function browserOrigin(req){
+  const origin=req.get('Origin');
+  if(origin&&config.origins.includes(origin))return;
+  // Chromium may omit Origin for a same-origin request on loopback HTTP.
+  // Fetch Metadata and the exact public host allow that case without opening
+  // the API to a cross-site browser or an arbitrary Host header.
+  if(!origin&&req.get('Sec-Fetch-Site')==='same-origin'&&config.publicOrigin&&req.get('Host')===new URL(config.publicOrigin).host)return;
+  throw error(403,'An allowed browser origin is required');
+ }
+ function auth(req){
+  if(testPreviewMode(config)){
+   const linked=store.db.prepare('SELECT browser_hash,token_sealed FROM test_draft_sessions WHERE job_id=?').get(req.params.id);
+   const j=linked?.token_sealed&&linked.browser_hash===browserSessionHash(req,config)&&store.get(req.params.id);
+   if(!j)throw error(404,'Artwork not found');return j;
+  }
+  const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));
+  if(!j)throw error(404,'Artwork not found');return j;
+ }
+ function testDraftAuth(req,j){
+  if(!testPreviewMode(config))return;
+  const linked=store.db.prepare('SELECT browser_hash FROM test_draft_sessions WHERE job_id=?').get(j.id);
+  if(!linked||linked.browser_hash!==browserSessionHash(req,config))throw error(404,'Artwork not found in this JOSH TEST browser session');
+ }
+ const testDraftBody=express.json({limit:'1kb'});
+ app.post('/v1/drafts',(req,res,next)=>testPreviewMode(config)?testDraftBody(req,res,next):next(),async(req,res)=>{
   browserOrigin(req);const key=req.socket.remoteAddress||'unknown',now=Date.now(),r=rates.get(key);if(!r||now-r.start>3600000)rates.set(key,{start:now,count:0});
+  let testSession=null;
+  if(testPreviewMode(config)){
+   const id=req.body?.testOrderId;
+   if(req.get('Host')!==new URL(config.publicOrigin).host||
+      !(req.get('Origin')===config.publicOrigin||(!req.get('Origin')&&req.get('Sec-Fetch-Site')==='same-origin')))throw error(403,'Invalid test page origin');
+   if(typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))throw error(422,'Invalid test order session');
+   const browserHash=browserSessionHash(req,config);
+   if(!browserHash)throw error(403,'JOSH TEST browser session is missing or expired');
+   testSession={id,browserHash};
+  }
   if(++rates.get(key).count>20)throw error(429,'Too many artwork sessions; try later');
   if(rates.size>10000)for(const [k,v] of rates)if(now-v.start>3600000)rates.delete(k);
-  const count=store.db.prepare("SELECT count(*) AS n FROM jobs WHERE state!='delivered'").get().n;
-  const total=store.db.prepare('SELECT coalesce(sum(bytes),0) AS n FROM assets').get().n;
-  if(count>=100||total>=2*1024**3)throw error(503,'Artwork service capacity reached');
-  res.status(201).json(store.create());
+  // Retained failures stay available for staff without consuming active-job
+  // slots. Keep both active-upload limits and real disk headroom as safeguards.
+  const disk=await fs.statfs(config.dataDir);
+  const count=store.db.prepare("SELECT count(*) AS n FROM jobs WHERE state NOT IN ('delivered','failed')").get().n;
+  const total=store.db.prepare("SELECT coalesce(sum(a.bytes),0) AS n FROM assets a JOIN jobs j ON j.id=a.job_id WHERE j.state NOT IN ('delivered','failed')").get().n;
+  if(count>=100||total>=2*1024**3||disk.bavail*disk.bsize<1024**3)throw error(503,'Artwork service capacity reached');
+  const draft=store.create();
+  if(testSession){
+   store.db.prepare('INSERT INTO test_draft_sessions(job_id,order_id,browser_hash,token_sealed) VALUES(?,?,?,?)').run(draft.id,testSession.id,testSession.browserHash,sealDraftToken(draft.token,draft.id,config));
+   return res.status(201).json({id:draft.id});
+  }
+  res.status(201).json(draft);
  });
  app.put('/v1/drafts/:id/assets/:hash',(req,res,next)=>{
-  try{browserOrigin(req);const j=auth(req);if(j.state!=='draft')throw error(409,'Artwork is sealed');if(!/^[a-f0-9]{64}$/.test(req.params.hash))throw error(422,'Invalid asset identifier');if(uploads>=2)throw error(429,'Upload busy; retry shortly');uploads++;res.once('finish',()=>uploads--);res.once('close',()=>{if(!res.writableFinished)uploads--;});next();}catch(e){next(e);}
+  try{browserOrigin(req);const j=auth(req);testDraftAuth(req,j);if(j.state!=='draft')throw error(409,'Artwork is sealed');if(!/^[a-f0-9]{64}$/.test(req.params.hash))throw error(422,'Invalid asset identifier');if(uploads>=2)throw error(429,'Upload busy; retry shortly');uploads++;res.once('finish',()=>uploads--);res.once('close',()=>{if(!res.writableFinished)uploads--;});next();}catch(e){next(e);}
  },express.raw({type:()=>true,limit:LIMITS.assetBytes}),async(req,res)=>{
   const j=auth(req),hash=req.params.hash,bytes=req.body;
   if(!Buffer.isBuffer(bytes)||digest(bytes)!==hash)throw error(422,'Source image checksum mismatch');
@@ -48,21 +96,29 @@ function makeApp(config,options={}){
   if(!mime||dimensions.width*dimensions.height>LIMITS.pixels)throw error(422,'Use PNG, JPEG or WebP images up to 25 megapixels');
   const assets=store.assets(j.id),exists=assets.find(a=>a.hash===hash);
   if(!exists&&(assets.length>=LIMITS.assets||assets.reduce((n,a)=>n+a.bytes,0)+bytes.length>LIMITS.totalBytes))throw error(422,'Source image limit exceeded');
+  if(!exists){
+   const disk=await fs.statfs(config.dataDir);
+   const activeBytes=store.db.prepare("SELECT coalesce(sum(a.bytes),0) AS n FROM assets a JOIN jobs j ON j.id=a.job_id WHERE j.state NOT IN ('delivered','failed')").get().n;
+   if(activeBytes+bytes.length>2*1024**3||disk.bavail*disk.bsize<1024**3+bytes.length)throw error(503,'Artwork service capacity reached');
+  }
   // Reserve atomically before asynchronous disk I/O so parallel uploads cannot exceed quotas.
   if(!exists)store.db.prepare('INSERT INTO assets(job_id,hash,bytes,mime) VALUES(?,?,?,?)').run(j.id,hash,bytes.length,mime);
   try{await fs.writeFile(path.join(store.dir(j.id),'assets',hash),bytes,{mode:0o600});}catch(e){if(!exists)store.db.prepare('DELETE FROM assets WHERE job_id=? AND hash=?').run(j.id,hash);throw e;}
   res.json({hash,bytes:bytes.length});
  });
  app.post('/v1/drafts/:id/commit',express.json({limit:LIMITS.projectBytes}),async(req,res)=>{
-  browserOrigin(req);const j=auth(req),assets=store.assets(j.id),project=validate(req.body,new Set(assets.map(a=>a.hash))),json=JSON.stringify(project),hash=digest(json);
-  if(j.state!=='draft'){if(j.digest===hash)return res.json({reference:j.id+'.'+req.get('Authorization').slice(7),state:j.state});throw error(409,'Artwork is already sealed');}
+  browserOrigin(req);const j=auth(req);testDraftAuth(req,j);const assets=store.assets(j.id),project=validate(req.body,new Set(assets.map(a=>a.hash))),json=JSON.stringify(project),hash=digest(json);
+  if(j.state!=='draft'){
+   if(j.digest===hash)return res.json(testPreviewMode(config)?{artworkJobId:j.id,state:j.state}:{reference:j.id+'.'+req.get('Authorization').slice(7),state:j.state});
+   throw error(409,'Artwork is already sealed');
+  }
   for(const asset of assets){const b=await fs.readFile(path.join(store.dir(j.id),'assets',asset.hash));if(digest(b)!==asset.hash)throw error(409,'Source upload has not completed');}
   // Recheck after disk I/O: concurrent commits must not replace a sealed design.
   const result=store.db.prepare("UPDATE jobs SET project=?,digest=?,state='ready' WHERE id=? AND state='draft'").run(json,hash,j.id);
   if(!result.changes)throw error(409,'Artwork was sealed by another request');
-  res.json({reference:j.id+'.'+req.get('Authorization').slice(7),state:'ready'});
+  res.json(testPreviewMode(config)?{artworkJobId:j.id,state:'ready'}:{reference:j.id+'.'+req.get('Authorization').slice(7),state:'ready'});
  });
- app.get('/v1/drafts/:id',(req,res)=>{const j=auth(req);res.json({id:j.id,state:j.state,attempts:j.attempts,error:j.error||null});});
+ app.get('/v1/drafts/:id',(req,res)=>{if(testPreviewMode(config))browserOrigin(req);const j=auth(req);testDraftAuth(req,j);res.json({id:j.id,state:j.state,attempts:j.attempts,error:j.error||null});});
  app.post('/internal/bind',express.json({limit:'4kb'}),(req,res)=>{
   if(!secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret))throw error(401,'Unauthorised binding');
   const {reference,orderId,folder}=req.body||{};if(typeof reference!=='string')throw error(422,'Artwork reference missing');const [id,token,...rest]=reference.split('.');if(rest.length)throw error(422,'Invalid reference');
@@ -74,17 +130,72 @@ function makeApp(config,options={}){
  });
  app.get('/internal/jobs',(req,res)=>{
   if(!secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret))throw error(401,'Unauthorised');
-  res.json(store.db.prepare('SELECT id,created,state,attempts,error FROM jobs ORDER BY created DESC LIMIT 100').all());
+  res.json(store.db.prepare('SELECT id,created,state,attempts,error,completed_at AS completedAt,failed_at AS failedAt,delivery_receipt IS NOT NULL AS verifiedDelivery FROM jobs ORDER BY created DESC LIMIT 100').all());
+ });
+ app.get('/internal/failures',(req,res)=>{
+  if(!config.staffSecret)throw error(503,'Staff recovery access is not configured');
+  if(!secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret))throw error(401,'Unauthorised');
+  const rawLimit=req.query.limit??'25',rawOffset=req.query.offset??'0';
+  if(typeof rawLimit!=='string'||!/^[1-9][0-9]*$/.test(rawLimit)||Number(rawLimit)>100||typeof rawOffset!=='string'||!/^(0|[1-9][0-9]*)$/.test(rawOffset)||Number(rawOffset)>100000)throw error(422,'Invalid pagination');
+  const limit=Number(rawLimit),offset=Number(rawOffset);
+  const rows=store.db.prepare("SELECT id,created,attempts,error,failed_at,failure_stage,binding FROM jobs WHERE state='failed' ORDER BY coalesce(failed_at,created) DESC,id DESC LIMIT ? OFFSET ?").all(limit+1,offset);
+  const items=rows.slice(0,limit).map(row=>{
+   let orderId=null;try{const binding=JSON.parse(row.binding);if(typeof binding.orderId==='string')orderId=binding.orderId;}catch(_){}
+   return {id:row.id,orderId,created:row.created,failedAt:row.failed_at,attempts:row.attempts,stage:row.failure_stage,error:row.error};
+  });
+  res.json({items,nextOffset:rows.length>limit?offset+limit:null});
+ });
+ // Read-only operational counts for the isolated test volume. Staff can see
+ // whether a submission needs reconciliation without exposing a capability,
+ // Dropbox path, customer identity or the underlying SQLite database.
+ app.get('/internal/test-recovery-summary',async(req,res)=>{
+  if(!testPreviewMode(config))throw error(404,'Not found');
+  if(!config.staffSecret)throw error(503,'Staff recovery access is not configured');
+  if(!secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret))throw error(401,'Unauthorised');
+  const jobs=store.db.prepare("SELECT state,count(*) AS n,min(CASE WHEN state='failed' THEN coalesce(failed_at,created) ELSE created END) AS oldest FROM jobs WHERE state IN ('failed','queued','processing') GROUP BY state").all();
+  const submissions=store.db.prepare("SELECT state,count(*) AS n,min(coalesce(updated,created)) AS oldest FROM test_submissions WHERE state IN ('queued','dispatching','processing','unknown','manual_review') GROUP BY state").all();
+  const byState=(rows,state)=>rows.find(row=>row.state===state)||{n:0,oldest:null};
+  const disk=await fs.statfs(config.dataDir);
+  const generatedAt=Date.now();
+  const age=timestamp=>timestamp===null?null:Math.max(0,generatedAt-timestamp);
+  res.json({generatedAt,jobs:{failed:byState(jobs,'failed').n,queued:byState(jobs,'queued').n,processing:byState(jobs,'processing').n,
+   oldestFailedAt:byState(jobs,'failed').oldest,oldestQueuedAt:byState(jobs,'queued').oldest,
+   oldestProcessingAt:byState(jobs,'processing').oldest,oldestQueuedAgeMs:age(byState(jobs,'queued').oldest),
+   oldestProcessingAgeMs:age(byState(jobs,'processing').oldest)},
+   submissions:Object.fromEntries(['queued','dispatching','processing','unknown','manual_review'].map(state=>[state,{
+    count:byState(submissions,state).n,oldestUpdatedAt:byState(submissions,state).oldest,
+    oldestAgeMs:age(byState(submissions,state).oldest)
+   }])),
+   volumeFreeBytes:disk.bavail*disk.bsize});
+ });
+ // Read only the one static JOSH TEST file-request destination. Neither the
+ // caller nor the browser can select a Dropbox path or see names and links.
+ app.get('/internal/test-upload-summary',async(req,res)=>{
+  if(!testPreviewMode(config))throw error(404,'Not found');
+  if(!config.staffSecret||!config.refreshToken||!config.clientId||!config.clientSecret)throw error(503,'Test upload diagnostic is not configured');
+  if(!secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret))throw error(401,'Unauthorised');
+  res.json(await testUploadSummary(config,options.dropboxApiRequest));
+ });
+ app.get('/internal/test-upload-root-summary',async(req,res)=>{
+  if(!testPreviewMode(config))throw error(404,'Not found');
+  if(!config.staffSecret||!config.refreshToken||!config.clientId||!config.clientSecret)throw error(503,'Test upload diagnostic is not configured');
+  if(!secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret))throw error(401,'Unauthorised');
+  res.json(await testRootUploadSummary(config,options.dropboxApiRequest));
  });
  app.post('/internal/retry/:id',(req,res)=>{
-  if(!secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret))throw error(401,'Unauthorised');
-  const result=store.db.prepare("UPDATE jobs SET state='queued',attempts=0,next_attempt=0,error=NULL WHERE id=? AND state='failed'").run(req.params.id);
+  const binder=secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret);
+  const staff=config.staffSecret&&secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret);
+  if(!binder&&!staff)throw error(401,'Unauthorised');
+  const result=store.db.prepare("UPDATE jobs SET state='queued',attempts=0,next_attempt=0,error=NULL,failed_at=NULL,failure_stage=NULL WHERE id=? AND state='failed'").run(req.params.id);
   if(!result.changes)throw error(409,'Only failed jobs can be retried');res.status(202).json({state:'queued'});
  });
- app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>res.set('Cache-Control','public, max-age=300')}));
+ // The copied form handler is present if the JOSH TEST integration script
+ // fails to load. Its inert endpoint must never acknowledge a customer order.
+ app.post('/order-submission-disabled',(_,res)=>res.status(410).json({error:'Use the JOSH TEST submission flow'}));
+ app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control',res.locals.privatePreview?'private, no-store':'public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
- return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await worker.close();store.close();}};
+ return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await testIntake.close();await worker.close();store.close();}};
 }
-function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
+function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,testRecipient:process.env.ARTWORK_TEST_RECIPIENT,testWebhookUrl:process.env.ARTWORK_TEST_WEBHOOK_URL,testMakeApiKey:process.env.ARTWORK_TEST_MAKE_API_KEY,testAccessCode:process.env.ARTWORK_TEST_ACCESS_CODE,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,staffSecret:process.env.ARTWORK_STAFF_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
 if(require.main===module){const service=makeApp(environment());const server=service.app.listen(Number(process.env.PORT||4310),process.env.HOST||'127.0.0.1',()=>console.log('Artwork service listening'));for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close();service.close().then(()=>process.exit(0));});}
 module.exports={makeApp,environment};
