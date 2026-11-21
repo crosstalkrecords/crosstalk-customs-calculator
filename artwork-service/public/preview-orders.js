@@ -9,6 +9,11 @@
  const success=document.getElementById('success'),heading=success.querySelector('h2'),message=success.querySelector('p');
  const status=document.createElement('p');status.id='testDeliveryStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');success.append(status);
  document.getElementById('uploadWrap')?.remove();
+ const playlistButton=document.getElementById('playlistTry'),playlistUrl=document.getElementById('playlistUrl');
+ if(playlistButton)playlistButton.disabled=true;
+ if(playlistUrl)playlistUrl.disabled=true;
+ const playlistMessage=document.getElementById('playlistMsg');
+ if(playlistMessage)playlistMessage.textContent='Public playlist and track lookups are disabled in JOSH TEST. Enter synthetic track names or a manual tracklist.';
  const audioCopy=document.querySelector('[data-step="4"] .muted');
  if(audioCopy)audioCopy.textContent='This test does not create an audio upload link or a real order. Use synthetic audio details only.';
  const fields=[['Customer Name','name'],['Email','email'],['Custom Field 1','phone']];

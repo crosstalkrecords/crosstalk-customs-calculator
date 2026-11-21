@@ -1,0 +1,98 @@
+{
+  "kind": "Crosstalk Customs isolated intake mapping and validation record",
+  "deployable": false,
+  "reason": "A dedicated hook, a scoped Dropbox connection and idempotent recovery routes are still required. This is not a Make scenario blueprint.",
+  "scope": {
+    "testLabel": "JOSH TEST",
+    "customerName": "TEST JOSH 21.11",
+    "recipient": "delousedcomatorium@gmail.com",
+    "airtableBase": "appDz7CEL2KQWpzyC",
+    "airtableTable": "tbly1iXdcMvFuqCcY",
+    "airtableConnection": 13265002,
+    "dropboxOrderRoot": "/Crosstalk Customs/JOSH TEST",
+    "makeScenarioName": "JOSH TEST Customer Intake"
+  },
+  "moduleValidation": {
+    "airtableCreate": "The test-only field map, including Packaging, Vinyl Colour, Side A/B Length, Extras, Submission ID, Artwork Job ID and Artwork Delivery Status, validated against the test base and connection with zero errors or warnings on 2026-11-21. This validates configuration shape, not record creation or a full scenario execution.",
+    "airtableSearch": "ActionSearchRecords using an exact Submission ID formula and maxRecords=2 validated with zero errors or warnings on 2026-11-21.",
+    "dropboxFileRequest": "Verified module identifier dropbox:createFileRequest version 5. It requires title and destination path and returns a distinct customer upload URL. Its connection and destination are not bound or tested."
+  },
+  "airtableCreateRecord": {
+    "module": "airtable:ActionCreateRecord",
+    "version": 3,
+    "parameters": { "__IMTCONN__": 13265002 },
+    "mapper": {
+      "base": "appDz7CEL2KQWpzyC",
+      "table": "tbly1iXdcMvFuqCcY",
+      "typecast": true,
+      "useColumnId": false,
+      "record": {
+        "fldKgbOba0zvKyWRt": "{{1.`Customer Name`}}",
+        "fldfkF6sDQsNpXdXk": "{{1.Email}}",
+        "fld2POlaG4bAY7SCQ": "{{1.`Custom Field 1`}}",
+        "fldYMxBMG5MubBQ5M": "New Submissions",
+        "fldXlei2WHnueVkFz": "{{1.`Artist Order`}}",
+        "fldwAXAFk0CWyp1Oy": "{{lower(toString(1.Rush)) = \"on\"}}",
+        "fld5F5mKkYYOAGQqD": "{{lower(toString(1.`Shipping Required`)) = \"on\"}}",
+        "fldN1FpgWdUHgqC5w": "{{1.`Delivery Method`}}",
+        "fldQnSLXlzyedrnIO": "{{1.Speed}}",
+        "flddgwWOugRimbwIw": "{{1.Sides}}",
+        "fldiDDxb2Aaz85Jjj": "{{1.Quantity}}",
+        "fldkvqgZfvpOlXaN3": "{{1.`Record Size`}}",
+        "fldrkJPDoAPG0kS7s": "{{1.`Estimated Price Given`}}",
+        "fldxlk24RQeHUAPcp": "{{1.Tracklist}}",
+        "flduI8PgnORR8I71d": "{{1.Tracklist}}",
+        "fldlipVWj9gGrEEVR": "{{1.`Customer Name`}},{{1.`Street Address`}} {{1.Suburb}} {{1.Postcode}} {{1.State}}.",
+        "fldGqpmxYQBhWAFrp": "{{1.Extras}}",
+        "fldDCDuwYdQuWJDmR": "{{1.Packaging}}",
+        "fldzWWtP29T4sQYtv": "{{1.`Vinyl Colour`}}",
+        "fldsaBEXJkwNKkrPa": "{{1.`Side A Length`}}",
+        "fld4VpGvvfNlWQDxi": "{{1.`Side B Length`}}",
+        "fldro75kOQGnubjQR": "{{1.`Submission ID`}}",
+        "fldZ3a2PYHZ7LKubs": "{{1.`Artwork Job ID`}}",
+        "fldC0OBNOiit8AltO": "{{if(empty(1.`Artwork Reference`); \"Not supplied\"; \"Queued\")}}"
+      }
+    },
+    "note": "The Artist text field now receives the explicit Yes/No value, not the source scenario's boolean expression. Quoted price is untrusted customer input and must not trigger invoicing."
+  },
+  "airtableLookupBeforeCreateOrRecovery": {
+    "module": "airtable:ActionSearchRecords",
+    "version": 3,
+    "parameters": { "__IMTCONN__": 13265002 },
+    "mapper": {
+      "base": "appDz7CEL2KQWpzyC",
+      "table": "tbly1iXdcMvFuqCcY",
+      "formulaField": "formula",
+      "formula": "{Submission ID} = '{{1.`Submission ID`}}'",
+      "maxRecords": 2,
+      "useColumnId": false
+    },
+    "invariant": "Zero matches permits create; one match reuses that record after checking identity/details; two matches blocks and alerts staff. UUID syntax must be checked before interpolating into a formula."
+  },
+  "createdTestOnlyFields": [
+    { "id": "fldDCDuwYdQuWJDmR", "name": "Packaging", "type": "singleSelect", "choices": ["Standard", "Printed Jacket + Labels", "Custom Finish Pack"] },
+    { "id": "fldzWWtP29T4sQYtv", "name": "Vinyl Colour", "type": "singleSelect", "choices": ["Clear", "Black", "Red"] },
+    { "id": "fldsaBEXJkwNKkrPa", "name": "Side A Length", "type": "singleLineText" },
+    { "id": "fld4VpGvvfNlWQDxi", "name": "Side B Length", "type": "singleLineText" }
+  ],
+  "nativeDropboxFileRequest": {
+    "module": "dropbox:createFileRequest",
+    "version": 5,
+    "parameters": { "__IMTCONN__": "REPLACE_WITH_NEW_JOSH_TEST_APP_FOLDER_CONNECTION" },
+    "mapper": {
+      "title": "JOSH TEST audio upload — {{2.`Job Number`}}",
+      "path": "{{27.path_display}}",
+      "description": "TEST JOSH 21.11 — audio files for a test order only",
+      "open": true
+    },
+    "customerUrl": "{{51.url}}",
+    "staffFolderUrl": "{{16.url}}",
+    "invariant": "Store the file request URL in Audio Upload fld5G2oHi9NL73kkn and the share URL in Internal Folder Link fldFsfOT7hf2Bg4ZO. Verify the file request is open and uploads to the exporter's same isolated app-folder namespace before email or acknowledgement."
+  },
+  "responseContract": {
+    "serverTimeoutMs": 25000,
+    "withArtwork": ["bound", "already_bound"],
+    "withoutArtwork": ["not_supplied"],
+    "note": "Do not return 202 merely because the webhook queued. Time the entire Make path. If it cannot finish within 25 seconds, change the isolated server and UI to report a persisted queued stage and poll by Submission ID before customer testing."
+  }
+}

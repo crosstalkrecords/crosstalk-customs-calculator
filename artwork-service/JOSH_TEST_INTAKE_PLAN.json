@@ -1,7 +1,7 @@
 {
   "kind": "sanitized Make blueprint plan",
   "deployable": false,
-  "reason": "The dedicated test Data store exists, but the test-only Airtable and Dropbox connections and separate webhook are not bound. Make's Airtable grant currently shows zero bases for the selected account; no broad workspace grant was made. No credential values or webhook URLs are included.",
+  "reason": "The dedicated test Data store exists and a Locked Airtable OAuth connection (13265002) was granted with custom access to the JOSH TEST base only. Airtable's Integrations UI independently showed this grant includes only Crosstalk Customs — JOSH TEST, not V1.0 or the whole workspace. The scoped Dropbox connection and separate webhook are not bound; idempotent recovery routes are not implemented. No credential values or webhook URLs are included.",
   "scope": "Crosstalk Customs JOSH TEST only",
   "make": {
     "organizationId": 6808399,
@@ -22,9 +22,14 @@
     "submissionIdFieldId": "fldro75kOQGnubjQR",
     "artworkJobIdFieldId": "fldZ3a2PYHZ7LKubs",
     "artworkDeliveryStatusFieldId": "fldC0OBNOiit8AltO",
+    "packagingFieldId": "fldDCDuwYdQuWJDmR",
+    "vinylColourFieldId": "fldzWWtP29T4sQYtv",
+    "sideALengthFieldId": "fldsaBEXJkwNKkrPa",
+    "sideBLengthFieldId": "fld4VpGvvfNlWQDxi",
+    "extrasFieldId": "fldGqpmxYQBhWAFrp",
     "audioUploadFieldId": "fld5G2oHi9NL73kkn",
     "internalFolderLinkFieldId": "fldFsfOT7hf2Bg4ZO",
-    "requiredConnection": "new Make Airtable OAuth grant restricted to JOSH TEST base"
+    "requiredConnection": "Make Airtable OAuth connection 13265002, Locked and independently verified in Airtable Integrations UI as JOSH TEST base only; verify Make read/write during isolated activation"
   },
   "dataStore": {
     "id": 267564,
@@ -51,7 +56,7 @@
     {"id": 1, "module": "gateway:CustomWebHook", "version": 1, "configuration": "new dedicated test hook with API-key authentication, never reuse live hook; bind the matching key only in the JOSH TEST Railway server"},
     {"id": 49, "module": "builtin:BasicRouter", "version": 1, "purpose": "explicit test-only preflight accept/reject; rejected route responds without writes"},
     {"id": 50, "module": "datastore:AddRecord", "version": 1, "purpose": "atomic claim keyed by Submission ID; overwrite disabled; duplicate route must read state and reconcile before any repeat write"},
-    {"id": 2, "module": "airtable:ActionCreateRecord", "version": 3, "configuration": "test base/table; preserve source field mappings and add Submission ID and initial Artwork Delivery Status"},
+    {"id": 2, "module": "airtable:ActionCreateRecord", "version": 3, "configuration": "test base/table; use JOSH_TEST_INTAKE_MAPPING.json for source fields plus Submission ID, Artwork Job ID, initial Artwork Delivery Status, Extras, Packaging, Vinyl Colour and both side lengths"},
     {"id": 28, "module": "airtable:ActionGetRecord", "version": 3, "configuration": "test base/table; id={{2.id}}"},
     {"id": 12, "module": "dropbox:createFolder", "version": 5, "configuration": "fixed JOSH TEST root, name={{2.`Job Number`}}, autorename=false"},
     {"id": 27, "module": "dropbox:createFolder", "version": 5, "configuration": "path={{12.path_lower}}, name=Uploads"},
@@ -74,7 +79,8 @@
     "module29": "override any dynamic recipient with Josh-only fixed destination after explicit preflight, and use file-request URL for customer upload",
     "module41": "replace live staff recipient with Josh-only destination",
     "module40": "respond only after persisted stage, with explicit failure path",
-    "module2Artist": "Existing intake writes a boolean-like Artist Order expression into single-line Artist field; verify staff meaning in isolated records before copying this mapping"
+    "module2Artist": "Existing intake writes a boolean-like Artist Order expression into single-line Artist field; isolated mapping uses explicit Yes/No and needs staff verification",
+    "module2MissingOptions": "The live intake omits Extras, Packaging, Vinyl Colour and Side A/B Length. Four dedicated test-only Airtable fields were created on 2026-11-21, plus the existing Extras field; map and verify all five in the isolated scenario. Field IDs are in airtable and JOSH_TEST_INTAKE_MAPPING.json."
   },
   "materialRisk": "Live module 30's file-request URL is overwritten in Internal Folder Link by module 5, while customer email 29 and response 40 use the shared-folder URL. The isolated version must verify the file request accepts a test upload before sending its URL to Josh or returning it to the tester.",
   "recoveryAndIdempotency": {

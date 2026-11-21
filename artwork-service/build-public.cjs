@@ -48,8 +48,14 @@ fs.mkdirSync(path.join(root,'public/assets'),{recursive:true});fs.copyFileSync(p
 let calculator=fs.readFileSync(path.join(root,'../calculator.html'),'utf8');
 const before=calculator;calculator=calculator.replace(/https:\/\/hook\.eu1\.make\.com\/[a-zA-Z0-9]+/g,'/order-submission-disabled');
 if(calculator===before||calculator.includes('hook.eu1.make.com'))throw Error('Preview order endpoint replacement failed');
-calculator=calculator.replace('</head>','<meta name="robots" content="noindex,nofollow,noarchive"><title>JOSH TEST — Crosstalk Customs</title></head>');
+// The tester should not send synthetic track searches or playlist URLs to the
+// separate production lookup service. This is a preview-only substitution.
+const lookupOrigin='https://crosstalk-playlist-importer.vercel.app';
+if(calculator.split(lookupOrigin).length!==5)throw Error('Preview lookup isolation check failed');
+calculator=calculator.replaceAll(lookupOrigin,'/josh-test-lookup-disabled');
+calculator=calculator.replace(/<title>[^<]*<\/title>/,'<title>JOSH TEST — Crosstalk Customs</title>');
+calculator=calculator.replace('</head>','<meta name="robots" content="noindex,nofollow,noarchive"></head>');
 calculator=calculator.replace('</body>','<script src="calculator-artwork.js"></script><script src="preview-orders.js"></script></body>');
-calculator=calculator.replace(/<body[^>]*>/,'$&<div role="note" style="padding:12px;background:#ffe89d;color:#111;font-weight:700">JOSH TEST — TEST JOSH 21.11. This isolated form sends only a test notification to Crosstalk and a test artwork ZIP to the JOSH TEST Dropbox folder. No order, invoice, charge, or audio upload link is created. Use synthetic artwork and audio details only.</div>');
+calculator=calculator.replace(/<body[^>]*>/,'$&<div role="note" style="padding:12px;background:#ffe89d;color:#111;font-weight:700">JOSH TEST — TEST JOSH 21.11. This isolated form can send a test notification to Crosstalk and, if artwork is attached, a test ZIP to the JOSH TEST Dropbox folder. No order, invoice, charge, or audio upload link is created. Use synthetic artwork and audio details only.</div>');
 fs.writeFileSync(path.join(root,'public/calculator-preview.html'),calculator);
 console.log('Built isolated artwork designer and calculator preview; live calculator unchanged');

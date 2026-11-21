@@ -15,8 +15,12 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   const context=await browser.newContext({httpCredentials:{username:'tester',password:'test-access-only'}}),page=await context.newPage();page.setDefaultTimeout(30000);
   const outbound=[];page.on('request',request=>{if(request.method()==='POST')outbound.push({url:request.url(),origin:request.headers()['origin']||null,site:request.headers()['sec-fetch-site']||null,referer:request.headers()['referer']||null})});
   await page.goto(base+'/calculator-preview.html');
+  assert.equal(await page.title(),'JOSH TEST — Crosstalk Customs');
   await page.locator('input[name="Email"]').waitFor({state:'attached'});
   await page.waitForFunction(()=>document.querySelector('input[name="Email"]').value==='delousedcomatorium@gmail.com');
+  assert.equal(await page.locator('#playlistTry').isDisabled(),true);
+  assert.equal(await page.locator('#playlistUrl').isDisabled(),true);
+  assert(!((await page.content()).includes('https://crosstalk-playlist-importer.vercel.app')));
   await page.locator('#regularStart').click();await page.locator('#sizes [data-size="12"]').click();
   await page.locator('[data-step="1"] [data-next="2"]').click();
   await page.getByText('Prefer to type a tracklist manually?').click();await page.locator('#manual').fill('A1 - synthetic track');
