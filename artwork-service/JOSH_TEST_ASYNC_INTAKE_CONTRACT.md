@@ -91,8 +91,10 @@ JOSH TEST check returned four older failed artwork jobs and no current queued
 or processing submissions. It does not send an alert or resolve a job. Staff
 must inspect the isolated ledger and provider/Dropbox evidence before any
 manual recovery. Josh observed both Josh-only probe emails arrive and reported
-a success screen on the private upload request. Subsequent staff-only metadata
-checks found zero files in the fixed Uploads folder and zero uploads on the
-Dropbox request; the discrepancy must be reproduced and resolved. A controlled
+a success screen on the private upload request. A later Dropbox owner view
+confirmed a 1.75 MB GIF/photo and a 15.67 KB one-second dummy WAV in the exact
+fixed Uploads folder; the request reports two uploads/two items. Small WAV
+transfer passed, while audio format/size policy and malware handling remain
+unproven. A controlled
 full webhook run, bound artwork ZIP inspection, and timeout/failure tests remain
 open.
