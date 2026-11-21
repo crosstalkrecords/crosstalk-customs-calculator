@@ -1,5 +1,6 @@
 'use strict';
 const crypto=require('node:crypto'),path=require('node:path');
+const {validateBinding}=require('./delivery.cjs');
 
 const NAME='TEST JOSH 21.11';
 const ROOT='/Crosstalk Customs/JOSH TEST';
@@ -19,6 +20,7 @@ const PRICE_CENTS=Object.freeze({
 const LP_SIDES='ABCDEFGH';
 const SESSION_COOKIE='crosstalk_josh_session';
 const SESSION_SECONDS=24*60*60;
+const PROCESSING_TIMEOUT_MS=10*60*1000;
 const FORM_FIELDS=new Set([
  'Artist Order','Customer Name','Email','Custom Field 1','Estimated Price Given',
  'Extras','Packaging','Postcode','Quantity','Record Size','Rush',
@@ -148,7 +150,10 @@ function issueBrowserSession(res,config){
  res.set('Set-Cookie',`${SESSION_COOKIE}=${issued}.${nonce}.${signature}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; SameSite=Strict${secure}`);
 }
 function testOnly(config){
- return testPreviewMode(config)&&config.mode==='dropbox'&&!!config.testWebhookUrl&&!!config.testMakeApiKey;
+ let url;
+ try{url=new URL(config.testWebhookUrl);}catch(_){return false;}
+ return testPreviewMode(config)&&config.mode==='dropbox'&&!!config.testMakeApiKey&&
+  url.protocol==='https:'&&url.hostname==='hook.eu1.make.com'&&!url.username&&!url.password;
 }
 function testPreviewMode(config){
  return config.testLabel==='JOSH TEST'&&config.dropboxRoot===ROOT&&config.testRecipient==='delousedcomatorium@gmail.com'&&!!config.testAccessCode;
@@ -178,10 +183,12 @@ function protectPreview(app,config){
   next();
  });
 }
-function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
+function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
  store.db.exec(`CREATE TABLE IF NOT EXISTS test_submissions (
   id TEXT PRIMARY KEY, created INTEGER NOT NULL, reference_id TEXT NOT NULL,
-  state TEXT NOT NULL, response TEXT, request_hash TEXT, browser_hash TEXT
+  state TEXT NOT NULL, response TEXT, request_hash TEXT, browser_hash TEXT,
+  payload TEXT, updated INTEGER, accepted_at INTEGER, airtable_id TEXT,
+  review_stage TEXT
  );
  CREATE TABLE IF NOT EXISTS test_draft_sessions (
   job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
@@ -191,53 +198,190 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
   store.db.exec('ALTER TABLE test_submissions ADD COLUMN request_hash TEXT');
  if(!store.db.prepare('PRAGMA table_info(test_submissions)').all().some(column=>column.name==='browser_hash'))
   store.db.exec('ALTER TABLE test_submissions ADD COLUMN browser_hash TEXT');
+ const submissionColumns=new Set(store.db.prepare('PRAGMA table_info(test_submissions)').all().map(column=>column.name));
+ for(const [name,type] of Object.entries({payload:'TEXT',updated:'INTEGER',accepted_at:'INTEGER',airtable_id:'TEXT',review_stage:'TEXT'}))
+  if(!submissionColumns.has(name))store.db.exec('ALTER TABLE test_submissions ADD COLUMN '+name+' '+type);
  if(!store.db.prepare('PRAGMA table_info(test_draft_sessions)').all().some(column=>column.name==='token_sealed'))
   store.db.exec('ALTER TABLE test_draft_sessions ADD COLUMN token_sealed TEXT');
- // A request left in flight by a process restart has no trustworthy outcome.
- // Reconcile it against Make before any further submission with the same ID.
- store.db.prepare("UPDATE test_submissions SET state='unknown' WHERE state='sending'").run();
+ // The atomic dispatch claim precedes the network call. A restart cannot
+ // distinguish "not sent" from "accepted by Make" after that claim.
+ store.db.prepare("UPDATE test_submissions SET state='unknown',updated=? WHERE state IN ('sending','dispatching')").run(Date.now());
+ let closed=false,inFlight=null;
+ function sameBrowserOrigin(req){
+  return (req.get('Origin')===config.publicOrigin||(!req.get('Origin')&&req.get('Sec-Fetch-Site')==='same-origin'))&&
+   req.get('Host')===new URL(config.publicOrigin).host;
+ }
+ function publicState(row){
+  if(row.state==='complete')return JSON.parse(row.response);
+  const uncertain=['unknown','manual_review'].includes(row.state);
+  return {testOrderId:row.id,state:row.state,artworkStatus:row.reference_id?'pending':'not_supplied',
+   deliveryPending:!!row.reference_id,...(uncertain?{outcomeUncertain:true}:{})};
+ }
+ function makePayload(row){
+  const mapped=JSON.parse(row.payload);
+  if(row.reference_id){
+   const linked=store.db.prepare('SELECT order_id,browser_hash,token_sealed FROM test_draft_sessions WHERE job_id=?').get(row.reference_id);
+   if(!linked||linked.order_id!==row.id||linked.browser_hash!==row.browser_hash)throw Error('Artwork session mismatch');
+   const job=store.get(row.reference_id);
+   if(!linked.token_sealed||!job||job.state!=='ready')throw Error('Artwork unavailable for intake');
+  }
+  const summary=['Record size','Speed','Quantity','Vinyl Colour','Packaging','Estimated Price Given','Tracklist'].map(k=>{
+   const key=k==='Record size'?'Record Size':k;
+   return k+': '+mapped[key].slice(0,k==='Tracklist'?1200:100);
+  }).join('\n');
+  return {testLabel:'JOSH TEST',...mapped,
+   'Submission ID':row.id,'Request Fingerprint':row.request_hash,
+   'Artwork Job ID':row.reference_id,'Test Order Name':NAME,
+   'Test Order ID':row.id,
+   'Test Summary':'JOSH TEST ONLY — estimate matches preview arithmetic; artist eligibility and final quote require staff verification. Do not invoice.\n'+summary};
+ }
+ async function dispatch(){
+  if(closed||inFlight||!testOnly(config))return;
+  store.db.prepare("UPDATE test_submissions SET state='unknown',updated=? WHERE state='processing' AND accepted_at<?").run(Date.now(),Date.now()-PROCESSING_TIMEOUT_MS);
+  const row=store.db.prepare("SELECT * FROM test_submissions WHERE state='queued' ORDER BY created,id LIMIT 1").get();
+  if(!row)return;
+  const now=Date.now();
+  if(!store.db.prepare("UPDATE test_submissions SET state='dispatching',updated=? WHERE id=? AND state='queued'").run(now,row.id).changes)return;
+  inFlight=(async()=>{
+   try{
+    const payload=makePayload(row);
+    const response=await fetchImpl(config.testWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json','x-make-apikey':config.testMakeApiKey},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
+    if(!response.ok)throw Error('Make did not accept the test submission');
+    const result=await response.json();
+    if(result.testLabel!=='JOSH TEST'||result.submissionId!==row.id||result.requestFingerprint!==row.request_hash||result.state!=='accepted'||
+      !/^rec[A-Za-z0-9]{14}$/.test(result.airtableRecordId))
+     throw Error('Unexpected Make acknowledgement');
+    const current=store.db.prepare('SELECT airtable_id FROM test_submissions WHERE id=?').get(row.id);
+    if(current.airtable_id&&current.airtable_id!==result.airtableRecordId)throw Error('Conflicting Airtable claim');
+    // The authenticated final callback can race ahead of the HTTP response.
+    store.db.prepare("UPDATE test_submissions SET state='processing',airtable_id=?,accepted_at=?,updated=? WHERE id=? AND state='dispatching' AND (airtable_id IS NULL OR airtable_id=?)")
+     .run(result.airtableRecordId,Date.now(),Date.now(),row.id,result.airtableRecordId);
+   }catch(_){
+    // A timeout or failed response can still follow downstream side effects.
+    store.db.prepare("UPDATE test_submissions SET state='unknown',updated=? WHERE id=? AND state='dispatching'").run(Date.now(),row.id);
+   }
+  })();
+  try{await inFlight;}finally{inFlight=null;}
+ }
+ function runDispatch(){void dispatch().catch(()=>console.warn('JOSH TEST intake worker needs operator review'));}
+ const timer=setInterval(runDispatch,Math.max(50,interval));timer.unref();
+ queueMicrotask(runDispatch);
  function staffAccess(req,res,next){
   if(config.testLabel!=='JOSH TEST'||config.dropboxRoot!==ROOT)return res.status(503).json({error:'JOSH TEST staff view is unavailable'});
   if(!config.staffSecret)return res.status(503).json({error:'Staff recovery access is not configured'});
   if(!safeEqual(req.get('Authorization'),'Bearer '+config.staffSecret))return res.status(401).json({error:'Unauthorised'});
   next();
  }
- function safeRow(row){return {testOrderId:row.id,createdAt:row.created,state:row.state,
+ function safeRow(row){return {testOrderId:row.id,createdAt:row.created,updatedAt:row.updated||row.created,state:row.state,
   hasArtwork:!!row.reference_id,artworkJobId:row.reference_id||null};}
  app.get('/internal/test-submissions',staffAccess,(req,res)=>{
   const limit=req.query.limit??'25',offset=req.query.offset??'0',state=req.query.state??'uncertain';
   if(typeof limit!=='string'||!/^[1-9][0-9]*$/.test(limit)||Number(limit)>100||
      typeof offset!=='string'||!/^(0|[1-9][0-9]*)$/.test(offset)||Number(offset)>100000||
-     typeof state!=='string'||!['uncertain','unknown','sending','complete'].includes(state))return res.status(422).json({error:'Invalid test submission query'});
-  const where=state==='uncertain'?"state IN ('unknown','sending')":'state=?';
-  const query=`SELECT id,created,state,reference_id FROM test_submissions WHERE ${where} ORDER BY created DESC,id DESC LIMIT ? OFFSET ?`;
+     typeof state!=='string'||!['uncertain','queued','dispatching','processing','unknown','manual_review','complete'].includes(state))return res.status(422).json({error:'Invalid test submission query'});
+  const where=state==='uncertain'?"state IN ('unknown','manual_review')":'state=?';
+  const query=`SELECT id,created,updated,state,reference_id FROM test_submissions WHERE ${where} ORDER BY created DESC,id DESC LIMIT ? OFFSET ?`;
   const args=state==='uncertain'?[Number(limit)+1,Number(offset)]:[state,Number(limit)+1,Number(offset)];
   const rows=store.db.prepare(query).all(...args);
   res.json({items:rows.slice(0,Number(limit)).map(safeRow),nextOffset:rows.length>Number(limit)?Number(offset)+Number(limit):null});
  });
  app.get('/internal/test-submissions/:id',staffAccess,(req,res)=>{
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id))return res.status(422).json({error:'Invalid test order ID'});
-  const row=store.db.prepare(`SELECT s.id,s.created,s.state,s.reference_id,s.request_hash,
+  const row=store.db.prepare(`SELECT s.id,s.created,s.updated,s.state,s.reference_id,s.request_hash,s.review_stage,s.airtable_id,
     j.state AS artwork_state,CASE WHEN j.delivery_receipt IS NULL THEN 0 ELSE 1 END AS delivery_verified
     FROM test_submissions s LEFT JOIN jobs j ON j.id=s.reference_id WHERE s.id=?`).get(req.params.id);
   if(!row)return res.status(404).json({error:'Test submission not found'});
   res.json({...safeRow(row),requestFingerprint:row.request_hash||null,
    artworkState:row.artwork_state||null,deliveryVerified:!!row.delivery_verified,
-   needsReconciliation:row.state==='unknown'||row.state==='sending'});
+   needsReconciliation:['unknown','manual_review'].includes(row.state),reviewStage:row.review_stage||null,
+   airtableRecordId:row.airtable_id||null});
+ });
+ function trusted(req){return testPreviewMode(config)&&safeEqual(req.get('Authorization'),'Bearer '+config.bindSecret);}
+ function pinClaim(row,airtableId){
+  if(!/^rec[A-Za-z0-9]{14}$/.test(airtableId)||
+     !store.db.prepare('UPDATE test_submissions SET airtable_id=? WHERE id=? AND (airtable_id IS NULL OR airtable_id=?)').run(airtableId,row.id,airtableId).changes)return false;
+  return true;
+ }
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+ const hash64=/^[a-f0-9]{64}$/;
+ app.post('/internal/test-bind',require('express').json({limit:'4kb'}),(req,res)=>{
+  if(!trusted(req))return res.status(401).json({error:'Unauthorised'});
+  const v=req.body||{};
+  if(typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['testLabel','submissionId','requestFingerprint','artworkJobId','airtableRecordId','folder'].includes(k))||
+    v.testLabel!=='JOSH TEST'||!uuid.test(v.submissionId||'')||!hash64.test(v.requestFingerprint||'')||
+    !/^[a-f0-9]{32}$/.test(v.artworkJobId||'')||!/^rec[A-Za-z0-9]{14}$/.test(v.airtableRecordId||'')||
+    v.folder!==ROOT+'/'+v.submissionId+'/Uploads')return res.status(422).json({error:'Invalid JOSH TEST binding'});
+  const row=store.db.prepare('SELECT * FROM test_submissions WHERE id=?').get(v.submissionId);
+  if(!row||!['dispatching','processing','unknown','manual_review','complete'].includes(row.state)||
+    row.request_hash!==v.requestFingerprint||row.reference_id!==v.artworkJobId)return res.status(409).json({error:'Test order binding does not match the claimed submission'});
+  const linked=store.db.prepare('SELECT order_id,browser_hash,token_sealed FROM test_draft_sessions WHERE job_id=?').get(v.artworkJobId);
+  if(!linked||linked.order_id!==row.id||linked.browser_hash!==row.browser_hash)return res.status(409).json({error:'Artwork does not belong to the claimed submission'});
+  const token=openDraftToken(linked.token_sealed,v.artworkJobId,config),job=token&&store.authorize(v.artworkJobId,token);
+  if(!job)return res.status(409).json({error:'Artwork is unavailable for binding'});
+  const binding=JSON.stringify(validateBinding({orderId:v.airtableRecordId,folder:v.folder},ROOT));
+  if(job.binding){
+   if(job.binding!==binding||!pinClaim(row,v.airtableRecordId))return res.status(409).json({error:'Artwork is bound to a different test order'});
+   return res.json({id:job.id,artwork_status:'already_bound',state:job.state});
+  }
+  if(config.mode!=='dropbox')return res.status(503).json({error:'JOSH TEST artwork delivery is disabled'});
+  if(job.state!=='ready'||!pinClaim(row,v.airtableRecordId))return res.status(409).json({error:'Artwork is not ready for this test order'});
+  const result=store.db.prepare("UPDATE jobs SET binding=?,state='queued' WHERE id=? AND state='ready' AND binding IS NULL").run(binding,job.id);
+  if(!result.changes){
+   const latest=store.get(job.id);
+   if(latest?.binding===binding)return res.json({id:job.id,artwork_status:'already_bound',state:latest.state});
+   return res.status(409).json({error:'Artwork binding changed'});
+  }
+  res.status(202).json({id:job.id,artwork_status:'bound',state:'queued'});
+ });
+ const reviewStages=new Set(['folder_uncertain','request_uncertain','open_uncertain','customer_email_uncertain','staff_email_uncertain','artwork_bind_uncertain','finalization_uncertain','callback_uncertain']);
+ app.post('/internal/test-submissions/:id/outcome',require('express').json({limit:'4kb'}),(req,res)=>{
+  if(!trusted(req))return res.status(401).json({error:'Unauthorised'});
+  const v=req.body||{};
+  if(!uuid.test(req.params.id)||typeof v!=='object'||Array.isArray(v)||
+    Object.keys(v).some(k=>!['testLabel','submissionId','requestFingerprint','airtableRecordId','state','artwork_status','stage'].includes(k))||
+    v.testLabel!=='JOSH TEST'||v.submissionId!==req.params.id||!hash64.test(v.requestFingerprint||'')||
+    !/^rec[A-Za-z0-9]{14}$/.test(v.airtableRecordId||'')||!['complete','manual_review'].includes(v.state))
+   return res.status(422).json({error:'Invalid JOSH TEST outcome'});
+  if(v.state==='manual_review'&&(!reviewStages.has(v.stage)||v.artwork_status!==undefined)||
+     v.state==='complete'&&(v.stage!==undefined||!['bound','already_bound','not_supplied'].includes(v.artwork_status)))
+   return res.status(422).json({error:'Invalid JOSH TEST outcome'});
+  const row=store.db.prepare('SELECT * FROM test_submissions WHERE id=?').get(req.params.id);
+  if(!row||row.request_hash!==v.requestFingerprint||!['dispatching','processing','unknown','manual_review','complete'].includes(row.state)||
+    (row.airtable_id&&row.airtable_id!==v.airtableRecordId))return res.status(409).json({error:'Outcome does not match the claimed test order'});
+  if(v.state==='complete'){
+   if((!row.reference_id)!==(v.artwork_status==='not_supplied'))return res.status(409).json({error:'Artwork outcome does not match this test order'});
+   if(row.reference_id){
+    const job=store.get(row.reference_id),expected=JSON.stringify({orderId:v.airtableRecordId,folder:ROOT+'/'+row.id+'/Uploads'});
+    if(job?.binding!==expected)return res.status(409).json({error:'Artwork has not been bound to the claimed test order'});
+   }
+  }
+  if(row.state==='complete'){
+   if(v.state!=='complete'||JSON.parse(row.response).artworkStatus!==v.artwork_status)return res.status(409).json({error:'Test outcome already finalised differently'});
+   return res.json({state:'complete',testOrderId:row.id});
+  }
+  if(row.state==='manual_review'&&v.state==='manual_review'){
+   if(row.review_stage!==v.stage)return res.status(409).json({error:'Test review stage differs'});
+   return res.json({state:'manual_review',testOrderId:row.id});
+  }
+  if(!pinClaim(row,v.airtableRecordId))return res.status(409).json({error:'Airtable claim differs'});
+  if(v.state==='manual_review'){
+   store.db.prepare("UPDATE test_submissions SET state='manual_review',review_stage=?,updated=? WHERE id=? AND state!='complete'").run(v.stage,Date.now(),row.id);
+   return res.json({state:'manual_review',testOrderId:row.id});
+  }
+  const safe={testOrderId:row.id,state:'complete',artworkStatus:v.artwork_status,artworkId:row.reference_id,deliveryPending:!!row.reference_id};
+  store.db.prepare("UPDATE test_submissions SET state='complete',response=?,review_stage=NULL,updated=? WHERE id=? AND state!='complete'").run(JSON.stringify(safe),Date.now(),row.id);
+  res.json({state:'complete',testOrderId:row.id});
  });
  app.get('/v1/test-config',(_,res)=>{
   if(!testOnly(config))return res.status(503).json({error:'The JOSH TEST submission window is closed'});
   res.json({name:NAME,email:config.testRecipient,phone:'0400000000'});
  });
- app.post('/v1/test-orders',require('express').json({limit:'16kb'}),async(req,res)=>{
+ app.post('/v1/test-orders',require('express').json({limit:'16kb'}),(req,res)=>{
   if(!testOnly(config))return res.status(503).json({error:'The JOSH TEST submission window is closed'});
-  const sameOrigin=req.get('Origin')===config.publicOrigin||(!req.get('Origin')&&req.get('Sec-Fetch-Site')==='same-origin');
-  if(!sameOrigin||req.get('Host')!==new URL(config.publicOrigin).host)return res.status(403).json({error:'Invalid test page origin'});
-  const url=new URL(config.testWebhookUrl);
-  if(url.protocol!=='https:'||url.hostname!=='hook.eu1.make.com'||url.username||url.password)return res.status(503).json({error:'The JOSH TEST webhook is not configured safely'});
+  if(!sameBrowserOrigin(req))return res.status(403).json({error:'Invalid test page origin'});
   const body=req.body||{},id=body.testOrderId,artworkJobId=body.artworkJobId||'',fields=body.fields||{};
   if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(key=>!['testOrderId','artworkJobId','fields'].includes(key)))return res.status(422).json({error:'Invalid test submission'});
-  if(typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return res.status(422).json({error:'Invalid test order session'});
+  if(typeof id!=='string'||!uuid.test(id))return res.status(422).json({error:'Invalid test order session'});
   const browserHash=browserSessionHash(req,config);
   if(!browserHash)return res.status(403).json({error:'JOSH TEST browser session is missing or expired. Reopen the test form and create new artwork.'});
   if(typeof artworkJobId!=='string'||(artworkJobId&&!/^[a-f0-9]{32}$/.test(artworkJobId)))return res.status(422).json({error:'Invalid artwork job'});
@@ -253,48 +397,33 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
    if(existing.browser_hash!==browserHash)return res.status(409).json({error:'Test session is already used by another browser session'});
    if(existing.reference_id!==referenceId)return res.status(409).json({error:'Test session already used for a different design'});
    if(existing.request_hash&&existing.request_hash!==requestHash)return res.status(409).json({error:'Test session already used for different order details'});
-   if(existing.state==='complete')return res.json(JSON.parse(existing.response));
-   if(existing.state==='sending')return res.status(409).json({error:'Test submission is still being processed. Keep this page open and ask Crosstalk to check the test order ID.',testOrderId:id,outcomeUncertain:true});
-   if(existing.state==='unknown')return res.status(409).json({error:'Test submission outcome is uncertain. Ask Crosstalk to check the test order ID before trying again.',testOrderId:id,outcomeUncertain:true});
+   if(existing.state==='complete')return res.json(publicState(existing));
+   if(['unknown','manual_review','sending'].includes(existing.state))return res.status(409).json(publicState(existing));
+   return res.status(202).json(publicState(existing));
   }
-  let reference='';
   if(artworkJobId){
    const linked=store.db.prepare('SELECT order_id,browser_hash,token_sealed FROM test_draft_sessions WHERE job_id=?').get(referenceId);
    if(!linked||linked.order_id!==id||linked.browser_hash!==browserHash)return res.status(422).json({error:'Artwork does not belong to this test order session or is not ready'});
    const token=openDraftToken(linked.token_sealed,referenceId,config);
    const job=token&&store.authorize(referenceId,token);
    if(!job||job.state!=='ready')return res.status(422).json({error:'Artwork does not belong to this test order session or is not ready'});
-   reference=referenceId+'.'+token;
   }
-  if(!existing){
-   const count=store.db.prepare('SELECT count(*) AS n FROM test_submissions').get().n;
-   if(count>=MAX_ORDERS)return res.status(429).json({error:'JOSH TEST has reached its submission limit'});
-   store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state,request_hash,browser_hash) VALUES(?,?,?,'sending',?,?)").run(id,Date.now(),referenceId,requestHash,browserHash);
-  }
-  store.db.prepare("UPDATE test_submissions SET state='sending',request_hash=coalesce(request_hash,?) WHERE id=?").run(requestHash,id);
-  // The intake copy can map these live form field names to the isolated base.
-  // Shipping fields are replaced with an unmistakably fictional address.
-  const summary=['Record size','Speed','Quantity','Vinyl Colour','Packaging','Estimated Price Given','Tracklist'].map(k=>{
-   const key=k==='Record size'?'Record Size':k;
-   return k+': '+mapped[key].slice(0,k==='Tracklist'?1200:100);
-  }).join('\n');
-  const payload={testLabel:'JOSH TEST',...mapped,'Artwork Reference':reference,
-   'Submission ID':id,'Request Fingerprint':requestHash,
-   'Artwork Job ID':referenceId,'Test Order Name':NAME,
-   'Test Order ID':id,'Test Summary':'JOSH TEST ONLY — estimate matches preview arithmetic; artist eligibility and final quote require staff verification. Do not invoice.\n'+summary};
-  try{
-   const response=await fetchImpl(config.testWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json','x-make-apikey':config.testMakeApiKey},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
-   if(!response.ok)throw Error('Make rejected the test submission');
-   const result=await response.json();
-   const allowed=artworkJobId?['bound','already_bound']:['not_supplied'];
-   if(result.testLabel!=='JOSH TEST'||!allowed.includes(result.artwork_status))throw Error('Unexpected Make acknowledgement');
-   const safe={testOrderId:id,artworkStatus:result.artwork_status,artworkId:referenceId,deliveryPending:!!reference};
-   store.db.prepare("UPDATE test_submissions SET state='complete',response=? WHERE id=?").run(JSON.stringify(safe),id);
-   return res.status(202).json(safe);
-  }catch(_){
-   store.db.prepare("UPDATE test_submissions SET state='unknown' WHERE id=?").run(id);
-   return res.status(502).json({error:'Test submission could not be confirmed. Keep this page open and ask Crosstalk to check the test order ID.',testOrderId:id,outcomeUncertain:true});
-  }
+  const count=store.db.prepare('SELECT count(*) AS n FROM test_submissions').get().n;
+  if(count>=MAX_ORDERS)return res.status(429).json({error:'JOSH TEST has reached its submission limit'});
+  const now=Date.now();
+  store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state,request_hash,browser_hash,payload,updated) VALUES(?,?,?,'queued',?,?,?,?)")
+   .run(id,now,referenceId,requestHash,browserHash,JSON.stringify(mapped),now);
+  // A queued response means the request is durable on the isolated volume.
+  // Make acceptance, email, Airtable and delivery remain unconfirmed.
+  res.status(202).json(publicState({id,state:'queued',reference_id:referenceId}));
  });
+ app.get('/v1/test-orders/:id',(req,res)=>{
+  if(!testPreviewMode(config)||!sameBrowserOrigin(req)||!browserSessionHash(req,config))return res.status(403).json({error:'JOSH TEST session required'});
+  if(!uuid.test(req.params.id))return res.status(422).json({error:'Invalid test order ID'});
+  const row=store.db.prepare('SELECT * FROM test_submissions WHERE id=?').get(req.params.id);
+  if(!row||row.browser_hash!==browserSessionHash(req,config))return res.status(404).json({error:'Test order not found in this browser session'});
+  res.json(publicState(row));
+ });
+ return {async close(){closed=true;clearInterval(timer);if(inFlight)await inFlight;}};
 }
 module.exports={protectPreview,installTestOrders,NAME,testOnly,testPreviewMode,browserSessionHash,sealDraftToken};

@@ -23,6 +23,42 @@ test('existing volume schema migrates without dropping a failed job',async()=>{
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
 
+test('JOSH TEST recovery summary is staff-only, read-only and contains no private references',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-summary-'));
+ const config={dataDir:root,bindSecret:'bind-only-'.repeat(4),staffSecret:'staff-only-'.repeat(4),origins:['https://synthetic.test'],publicOrigin:'https://synthetic.test',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testAccessCode:'test-access',mode:'disabled',dropboxRoot:'/Crosstalk Customs/JOSH TEST'};
+ const service=makeApp(config,{worker:{interval:999999}}),server=service.app.listen(0,'127.0.0.1');
+ await new Promise(r=>server.once('listening',r));
+ const url='http://127.0.0.1:'+server.address().port+'/internal/test-recovery-summary';
+ try{
+  const failed=service.store.create(),queued=service.store.create(),processing=service.store.create(),created=Date.now()-5000;
+  service.store.db.prepare("UPDATE jobs SET state='failed',failed_at=? WHERE id=?").run(created,failed.id);
+  service.store.db.prepare("UPDATE jobs SET state='queued',created=? WHERE id=?").run(created,queued.id);
+  service.store.db.prepare("UPDATE jobs SET state='processing',created=? WHERE id=?").run(created,processing.id);
+  service.store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state,request_hash,browser_hash) VALUES(?,?,?,'unknown',?,?)").run('b72ca4e5-0e82-4f75-9413-35568ae8ef0c',created,failed.id,'private-fingerprint','private-session');
+  for(const [state,id] of [['queued','a72ca4e5-0e82-4f75-9413-35568ae8ef0c'],['processing','c72ca4e5-0e82-4f75-9413-35568ae8ef0c'],['manual_review','d72ca4e5-0e82-4f75-9413-35568ae8ef0c']])
+   service.store.db.prepare('INSERT INTO test_submissions(id,created,reference_id,state,updated) VALUES(?,?,?,?,?)').run(id,created,'',state,created);
+  assert.equal((await fetch(url)).status,401);
+  assert.equal((await fetch(url,{headers:{Authorization:'Bearer '+config.bindSecret}})).status,401);
+  const result=await fetch(url,{headers:{Authorization:'Bearer '+config.staffSecret}});assert.equal(result.status,200);
+  const summary=await result.json();
+  assert.equal(summary.jobs.failed,1);assert.equal(summary.jobs.queued,1);assert.equal(summary.jobs.processing,1);
+  assert.equal(summary.jobs.oldestFailedAt,created);assert.equal(summary.jobs.oldestQueuedAt,created);
+  assert.equal(summary.jobs.oldestProcessingAt,created);assert(summary.jobs.oldestQueuedAgeMs>=5000);
+  assert(summary.jobs.oldestProcessingAgeMs>=5000);
+  for(const state of ['queued','processing','unknown','manual_review']){
+   assert.equal(summary.submissions[state].count,1);
+   assert.equal(summary.submissions[state].oldestUpdatedAt,created);
+   assert(summary.submissions[state].oldestAgeMs>=5000);
+  }
+  assert.deepEqual(summary.submissions.dispatching,{count:0,oldestUpdatedAt:null,oldestAgeMs:null});
+  assert(summary.volumeFreeBytes>0);assert(summary.generatedAt>created);
+  const text=JSON.stringify(summary);
+  for(const privateValue of [failed.id,queued.id,processing.id,failed.token,queued.token,processing.token,'b72ca4e5-0e82-4f75-9413-35568ae8ef0c','private-fingerprint','private-session','/Crosstalk Customs/JOSH TEST'])assert(!text.includes(privateValue));
+  assert.equal(service.store.get(failed.id).state,'failed');
+  assert.equal(service.store.db.prepare("SELECT state FROM test_submissions WHERE id=?").get('b72ca4e5-0e82-4f75-9413-35568ae8ef0c').state,'unknown');
+ }finally{await new Promise(r=>server.close(r));await service.close();await fs.rm(root,{recursive:true,force:true});}
+});
+
 test('staff recovery secret is distinct and an existing draft cannot upload when disk is full',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-capacity-'));
  const bindSecret='bind-only-'.repeat(4),config={dataDir:root,bindSecret,origins:['https://synthetic.test'],mode:'disabled',dropboxRoot:'/Crosstalk Customs/Orders'};

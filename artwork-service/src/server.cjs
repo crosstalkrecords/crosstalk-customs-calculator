@@ -32,7 +32,7 @@ function makeApp(config,options={}){
  protectPreview(app,config);
  installDropboxAuth(app,config,{authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');},fetchImpl:options.dropboxFetch,now:options.now});
  installTestDelivery(app,store,config,{...options.testDelivery,authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');}});
- installTestOrders(app,store,config,options.testOrders);
+ const testIntake=installTestOrders(app,store,config,options.testOrders);
  app.get('/health',(_,res)=>res.json({service:'crosstalk-artwork',deliveryMode:config.mode,configured:['synthetic','dropbox'].includes(config.mode)}));
  app.get('/v1/client-config',(_,res)=>res.json({returnOrigins:config.origins}));
  function browserOrigin(req){
@@ -144,6 +144,29 @@ function makeApp(config,options={}){
   });
   res.json({items,nextOffset:rows.length>limit?offset+limit:null});
  });
+ // Read-only operational counts for the isolated test volume. Staff can see
+ // whether a submission needs reconciliation without exposing a capability,
+ // Dropbox path, customer identity or the underlying SQLite database.
+ app.get('/internal/test-recovery-summary',async(req,res)=>{
+  if(!testPreviewMode(config))throw error(404,'Not found');
+  if(!config.staffSecret)throw error(503,'Staff recovery access is not configured');
+  if(!secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret))throw error(401,'Unauthorised');
+  const jobs=store.db.prepare("SELECT state,count(*) AS n,min(CASE WHEN state='failed' THEN coalesce(failed_at,created) ELSE created END) AS oldest FROM jobs WHERE state IN ('failed','queued','processing') GROUP BY state").all();
+  const submissions=store.db.prepare("SELECT state,count(*) AS n,min(coalesce(updated,created)) AS oldest FROM test_submissions WHERE state IN ('queued','dispatching','processing','unknown','manual_review') GROUP BY state").all();
+  const byState=(rows,state)=>rows.find(row=>row.state===state)||{n:0,oldest:null};
+  const disk=await fs.statfs(config.dataDir);
+  const generatedAt=Date.now();
+  const age=timestamp=>timestamp===null?null:Math.max(0,generatedAt-timestamp);
+  res.json({generatedAt,jobs:{failed:byState(jobs,'failed').n,queued:byState(jobs,'queued').n,processing:byState(jobs,'processing').n,
+   oldestFailedAt:byState(jobs,'failed').oldest,oldestQueuedAt:byState(jobs,'queued').oldest,
+   oldestProcessingAt:byState(jobs,'processing').oldest,oldestQueuedAgeMs:age(byState(jobs,'queued').oldest),
+   oldestProcessingAgeMs:age(byState(jobs,'processing').oldest)},
+   submissions:Object.fromEntries(['queued','dispatching','processing','unknown','manual_review'].map(state=>[state,{
+    count:byState(submissions,state).n,oldestUpdatedAt:byState(submissions,state).oldest,
+    oldestAgeMs:age(byState(submissions,state).oldest)
+   }])),
+   volumeFreeBytes:disk.bavail*disk.bsize});
+ });
  app.post('/internal/retry/:id',(req,res)=>{
   const binder=secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret);
   const staff=config.staffSecret&&secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret);
@@ -156,7 +179,7 @@ function makeApp(config,options={}){
  app.post('/order-submission-disabled',(_,res)=>res.status(410).json({error:'Use the JOSH TEST submission flow'}));
  app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control',res.locals.privatePreview?'private, no-store':'public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
- return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await worker.close();store.close();}};
+ return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await testIntake.close();await worker.close();store.close();}};
 }
 function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,testRecipient:process.env.ARTWORK_TEST_RECIPIENT,testWebhookUrl:process.env.ARTWORK_TEST_WEBHOOK_URL,testMakeApiKey:process.env.ARTWORK_TEST_MAKE_API_KEY,testAccessCode:process.env.ARTWORK_TEST_ACCESS_CODE,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,staffSecret:process.env.ARTWORK_STAFF_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
 if(require.main===module){const service=makeApp(environment());const server=service.app.listen(Number(process.env.PORT||4310),process.env.HOST||'127.0.0.1',()=>console.log('Artwork service listening'));for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close();service.close().then(()=>process.exit(0));});}

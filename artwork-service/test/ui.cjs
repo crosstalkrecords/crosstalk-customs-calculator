@@ -140,6 +140,12 @@ const {createCanvas}=require('../src/psd.cjs');
   await forged.locator('#completeArtwork').click();
   await forged.locator('#handoffStatus').filter({hasText:'not approved for artwork handoff'}).waitFor();
   assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,beforeBlocked);
+  const standalone=await blocked.newPage();await standalone.goto('http://127.0.0.1:4311/designer.html');
+  assert.match(await standalone.locator('#saveStatus').innerText(),/open from the JOSH TEST form/i);
+  await standalone.locator('#imageInput').setInputFiles(path.join(root,'synthetic-source.png'));
+  await standalone.locator('#finishBtn').click();await standalone.locator('#completeArtwork').click();
+  await standalone.locator('#handoffStatus').filter({hasText:'Open this designer from the JOSH TEST order form'}).waitFor();
+  assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,beforeBlocked);
   await blocked.close();console.log('Unapproved return origin rejected before upload');
  }finally{await browser.close();await new Promise(r=>formServer.close(r));await new Promise(r=>server.close(r));await service.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

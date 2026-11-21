@@ -17,7 +17,7 @@
  const playlistMessage=document.getElementById('playlistMsg');
  if(playlistMessage)playlistMessage.textContent='Public playlist and track lookups are disabled in JOSH TEST. Enter synthetic track names or a manual tracklist.';
  const audioCopy=document.querySelector('[data-step="4"] .muted');
- if(audioCopy)audioCopy.textContent='This test does not create an audio upload link or a real order. Use synthetic audio details only.';
+ if(audioCopy)audioCopy.textContent='This form does not collect audio files directly. If the isolated test intake accepts your submission, Josh may receive a private upload link for a harmless dummy file. Do not upload genuine customer audio.';
  const fields=[['Customer Name','name'],['Email','email'],['Custom Field 1','phone']];
  let config;
  try{
@@ -48,8 +48,53 @@
   });
   delivery.addEventListener('change',setTestAddress);
   setTestAddress();
- }catch(_){error.textContent='The JOSH TEST submission window is closed. Ask Crosstalk to reopen it before submitting.';submit.disabled=true;return;}
+ }catch(_){
+  error.textContent='JOSH TEST submission is closed for now. You can review the interface and designer, but the form cannot submit until Crosstalk opens a controlled test window.';
+  const banner=document.querySelector('body > [role="note"]');
+  if(banner)banner.textContent='JOSH TEST — TEST JOSH 21.11. Submission is currently closed. You can explore the form and designer, but no test order, email, upload link, charge or invoice will be created from this page.';
+  submit.disabled=true;return;
+ }
  function session(){return sessionStorage.getItem('crosstalk-artwork-order-session');}
+ function showResult(id,result){
+  const firstResult=success.style.display!=='block',previousState=success.dataset.intakeState;
+  document.getElementById('wrap').style.display='none';success.style.display='block';
+  success.dataset.intakeState=result.state;heading.tabIndex=-1;
+  let code=success.querySelector('[data-test-order-id]');
+  if(!code){code=document.createElement('p');code.dataset.testOrderId='1';success.append(code);}
+  code.textContent='Test order ID: '+id;
+  if(result.state==='complete'){
+   heading.textContent='JOSH TEST order confirmed';
+   message.textContent='The isolated test route confirmed TEST JOSH 21.11. Crosstalk will separately check the Airtable record, email, file upload and exported ZIP. No payment was taken on this page.';
+   if(previousState!=='complete'){
+    if(result.deliveryPending&&result.artworkId)void watch(result.artworkId);
+    else status.textContent='No designer artwork was attached to this test.';
+    dispatchEvent(new Event('crosstalk-order-success'));
+   }
+  }else if(result.state==='unknown'||result.state==='manual_review'){
+   heading.textContent='JOSH TEST needs Crosstalk review';
+   message.textContent='The outcome cannot be confirmed yet. Keep this test order ID and ask Crosstalk to reconcile it. Do not submit again; no payment was taken.';
+   status.textContent='Manual review required. An email, upload link or artwork ZIP is not confirmed by this page.';
+  }else{
+   heading.textContent='JOSH TEST submission saved';
+   message.textContent='TEST JOSH 21.11 is queued in the isolated test service. This is not yet an order confirmation. Keep this page open while the test route runs; no payment was taken.';
+   status.textContent='Checking the isolated intake. Airtable, email, upload link and artwork delivery are not yet confirmed.';
+  }
+  if(firstResult||previousState!==result.state&&['complete','manual_review','unknown'].includes(result.state))heading.focus();
+ }
+ async function pollOutcome(id){
+  for(let attempt=0;attempt<100;attempt++){
+   try{
+    const response=await fetch('/v1/test-orders/'+id,{cache:'no-store'});
+    if(response.ok){const result=await response.json();showResult(id,result);
+     if(['complete','unknown','manual_review'].includes(result.state))return;}
+    else if(response.status===403||response.status===404){
+     status.textContent='This browser session can no longer check the test order. Give Crosstalk the test order ID above.';return;
+    }
+   }catch(_){}
+   await new Promise(resolve=>setTimeout(resolve,3000));
+  }
+  status.textContent='The test is still pending or its status could not be checked. Give Crosstalk the test order ID above; do not submit again.';
+ }
  async function watch(id){
   for(let attempt=0;attempt<80;attempt++){
    try{
@@ -70,27 +115,23 @@
   const data=Object.fromEntries(new FormData(form));
   const artworkJobId=data['Artwork Job ID']||'';
   const id=session();
-  let uncertain=false;
   try{
    const response=await fetch('/v1/test-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({testOrderId:id,artworkJobId,fields:data})});
    const result=await response.json();
-   uncertain=!response.ok&&result.outcomeUncertain===true&&result.testOrderId===id;
-   if(!response.ok)throw Error(result.error||'JOSH TEST submission failed.');
-   document.getElementById('wrap').style.display='none';success.style.display='block';
-   heading.textContent='JOSH TEST submission accepted';
-   message.textContent='TEST JOSH 21.11 was acknowledged by the isolated Make test route. This page does not confirm a staff record, test email, or exported ZIP; Crosstalk will check those separately. No payment was taken on this page.';
-   const code=document.createElement('p');code.textContent='Test order ID: '+result.testOrderId;success.append(code);
-   if(artworkJobId&&result.deliveryPending)void watch(artworkJobId);
-   else status.textContent='No designer artwork was attached to this test.';
-   dispatchEvent(new Event('crosstalk-order-success'));
-  }catch(e){
-   if(uncertain){
-    error.textContent=(e.message||'Test submission outcome is uncertain.')+' Test order ID: '+id+'. Do not submit again until Crosstalk has reconciled this test.';
-    submit.textContent='Awaiting Crosstalk review';
-   }else{
-    error.textContent=(e.message||'Test submission failed.')+' Keep this page open and retry, or give Crosstalk your test order ID: '+id;
-    submit.disabled=false;submit.textContent='Submit JOSH TEST';
+   if(!response.ok){
+    if(result.outcomeUncertain&&result.testOrderId===id){showResult(id,{...result,state:'unknown'});return;}
+    throw Error(result.error||'JOSH TEST submission failed.');
    }
+   showResult(id,result);
+   if(result.state!=='complete')void pollOutcome(id);
+  }catch(e){
+   error.textContent=(e.message||'Test submission failed.')+' Keep this page open and retry, or give Crosstalk your test order ID: '+id;
+   submit.disabled=false;submit.textContent='Submit JOSH TEST';
   }
  };
+ const existingId=session();
+ if(existingId)fetch('/v1/test-orders/'+existingId,{cache:'no-store'}).then(async response=>{
+  if(response.ok){const result=await response.json();showResult(existingId,result);
+   if(!['complete','unknown','manual_review'].includes(result.state))void pollOutcome(existingId);}
+ }).catch(()=>{});
 })();

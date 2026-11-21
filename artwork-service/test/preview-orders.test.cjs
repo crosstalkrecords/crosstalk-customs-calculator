@@ -3,10 +3,18 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const {chromium}=require('playwright'),packaged=require('@sparticuz/chromium');
 const {makeApp}=require('../src/server.cjs');
 const {createCanvas}=require('../src/psd.cjs');
+const RECORD='recAAAAAAAAAAAAAA';
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function until(fn){for(let i=0;i<100;i++){if(fn())return;await wait(25);}throw Error('Expected outbound JOSH TEST dispatch');}
+const ack=payload=>({ok:true,json:async()=>({testLabel:'JOSH TEST',submissionId:payload['Submission ID'],requestFingerprint:payload['Request Fingerprint'],airtableRecordId:RECORD,state:'accepted'})});
+function callback(base,secret,payload,artworkStatus){
+ return fetch(base+'/internal/test-submissions/'+payload['Submission ID']+'/outcome',{method:'POST',headers:{Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({
+  testLabel:'JOSH TEST',submissionId:payload['Submission ID'],requestFingerprint:payload['Request Fingerprint'],airtableRecordId:RECORD,state:'complete',artwork_status:artworkStatus})});
+}
 test('guarded preview submits only to isolated JOSH TEST route and shows truthful confirmation',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-preview-orders-'));
  const sent=[],config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
- const service=makeApp(config,{testOrders:{fetchImpl:async(_,options)=>{sent.push(JSON.parse(options.body));return {ok:true,json:async()=>({testLabel:'JOSH TEST',artwork_status:'not_supplied'})}}}});
+ const service=makeApp(config,{testOrders:{interval:20,fetchImpl:async(_,options)=>{const payload=JSON.parse(options.body);sent.push(payload);return ack(payload);}}});
  const server=service.app.listen(0,'127.0.0.1');let browser;
  try{
   await new Promise(resolve=>server.once('listening',resolve));
@@ -35,6 +43,8 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   assert(!((await page.content()).includes("You'll upload your finished artwork after submitting")));
   assert.match(await page.locator('#success').innerText(),/test acknowledgement, not a customer order/i);
   assert.match(await page.locator('[data-step="4"]').innerText(),/does not collect audio files/i);
+  assert.match(await page.locator('[data-step="4"]').innerText(),/private upload link/i);
+  assert.match(await page.locator('body > [role="note"]').innerText(),/controlled test window/i);
   assert.match(await page.locator('[data-step="5"]').innerText(),/synthetic JOSH TEST submission/i);
   await page.locator('input[name="Email"]').waitFor({state:'attached'});
   await page.waitForFunction(()=>document.querySelector('input[name="Email"]').value==='delousedcomatorium@gmail.com');
@@ -60,8 +70,17 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   try{await page.locator('#success').waitFor({state:'visible',timeout:5000});}catch(e){
    console.error('TEST PREVIEW STATE',JSON.stringify({error:await page.locator('#testSubmitError').innerText(),outbound,button:await page.locator('button[type="submit"]').allTextContents()}));throw e;
   }
-  assert.match(await page.locator('#success').innerText(),/JOSH TEST submission accepted/);
-  assert.match(await page.locator('#success').innerText(),/does not confirm a staff record, test email, or exported ZIP/);
+  assert.match(await page.locator('#success').innerText(),/JOSH TEST submission saved/);
+  assert.equal(await page.locator('#success h2').evaluate(el=>document.activeElement===el),true);
+  assert.match(await page.locator('#success').innerText(),/not yet an order confirmation/);
+  await until(()=>sent.length===1);
+  await page.waitForFunction(()=>document.querySelector('#success')?.dataset.intakeState==='processing');
+  await page.evaluate(()=>{const id=document.querySelector('[data-test-order-id]');id.tabIndex=0;id.focus();});
+  await wait(3200);
+  assert.equal(await page.locator('[data-test-order-id]').evaluate(el=>document.activeElement===el),true,'polling does not steal keyboard focus');
+  assert.equal((await callback(base,config.bindSecret,sent[0],'not_supplied')).status,200);
+  await page.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor({timeout:8000});
+  assert.equal(await page.locator('#success h2').evaluate(el=>document.activeElement===el),true,'terminal confirmation is announced');
   assert.match(await page.locator('#testDeliveryStatus').innerText(),/No designer artwork/);
   assert.equal(sent.length,1);assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
   assert.equal(sent[0]['Delivery Method'],'Pickup');
@@ -76,7 +95,7 @@ test('uncertain Make intake freezes the test form and supplies the reconciliatio
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-uncertain-preview-'));
  const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
  let attempts=0;
- const service=makeApp(config,{testOrders:{fetchImpl:async()=>{attempts++;throw Error('Ambiguous Make timeout');}}});
+ const service=makeApp(config,{testOrders:{interval:20,fetchImpl:async()=>{attempts++;throw Error('Ambiguous Make timeout');}}});
  const server=service.app.listen(0,'127.0.0.1');let browser;
  try{
   await new Promise(resolve=>server.once('listening',resolve));
@@ -92,11 +111,10 @@ test('uncertain Make intake freezes the test form and supplies the reconciliatio
   await page.locator('[data-step="3"] [data-next="4"]').click();
   await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
   await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
-  const message=page.locator('#testSubmitError');
-  await message.filter({hasText:'Do not submit again'}).waitFor();
-  assert.match(await message.innerText(),/Test order ID: [0-9a-f-]{36}/);
+  await page.locator('#success h2').filter({hasText:'JOSH TEST needs Crosstalk review'}).waitFor({timeout:8000});
+  assert.match(await page.locator('#success').innerText(),/Test order ID: [0-9a-f-]{36}/);
+  assert.match(await page.locator('#success').innerText(),/Do not submit again/);
   assert.equal(await page.locator('button[type="submit"]').isDisabled(),true);
-  assert.equal(await page.locator('button[type="submit"]').innerText(),'Awaiting Crosstalk review');
   assert.equal(attempts,1);
   await context.close();
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
@@ -106,10 +124,10 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-mobile-preview-'));
  const sent=[];
  const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
- const service=makeApp(config,{worker:{interval:999999},testOrders:{fetchImpl:async(url,options)=>{
+ const service=makeApp(config,{worker:{interval:999999},testOrders:{interval:20,fetchImpl:async(url,options)=>{
   assert.equal(url,config.testWebhookUrl);
   const payload=JSON.parse(options.body);sent.push(payload);
-  return {ok:true,json:async()=>({testLabel:'JOSH TEST',artwork_status:'bound'})};
+  return ack(payload);
  }}});
  const server=service.app.listen(0,'127.0.0.1');let browser;
  try{
@@ -151,15 +169,23 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
   await page.locator('#success').waitFor({state:'visible'});
   const confirmation=await page.locator('#success').innerText();
-  assert.match(confirmation,/JOSH TEST submission accepted/);
-  assert.match(confirmation,/No payment was taken on this page/);
-  assert.match(confirmation,/Delivery is not yet confirmed|Delivery is still pending|delivered to the isolated Dropbox folder/);
+  assert.match(confirmation,/JOSH TEST submission saved/);
+  assert.match(confirmation,/no payment was taken/);
+  assert.match(confirmation,/artwork delivery are not yet confirmed/);
+  await until(()=>sent.length===1);
+  const payload=sent[0],bind={testLabel:'JOSH TEST',submissionId:payload['Submission ID'],requestFingerprint:payload['Request Fingerprint'],
+   artworkJobId,airtableRecordId:RECORD,folder:'/Crosstalk Customs/JOSH TEST/'+payload['Submission ID']+'/Uploads'};
+  const bound=await fetch(base+'/internal/test-bind',{method:'POST',headers:{Authorization:'Bearer '+config.bindSecret,'Content-Type':'application/json'},body:JSON.stringify(bind)});
+  assert.equal(bound.status,202);
+  assert.equal((await callback(base,config.bindSecret,payload,'bound')).status,200);
+  await page.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor({timeout:8000});
   assert.equal(sent.length,1);assert.equal(sent[0].testLabel,'JOSH TEST');
-  assert.match(sent[0]['Artwork Reference'],new RegExp('^'+artworkJobId+'\\.[A-Za-z0-9_-]{43}$'));
+  assert.equal(sent[0]['Artwork Reference'],undefined,'Make never receives artwork bearer capability');
+  assert.equal(sent[0]['Artwork Job ID'],artworkJobId);
   assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
   assert(requests.some(url=>url===base+'/v1/test-orders'));
   assert(!requests.some(url=>url.includes('hook.eu1.make.com')));
-  assert.equal(service.store.get(artworkJobId).state,'ready','mocked Make did not bind or deliver artwork');
+  assert.equal(service.store.get(artworkJobId).state,'queued','trusted test bind is queued for disabled worker');
   await context.close();
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
 });

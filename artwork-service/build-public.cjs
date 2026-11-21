@@ -17,6 +17,7 @@ html=html.replace("return{font:'Arial, Helvetica, sans-serif',fontSize:5.8", "re
 const hook=`
 // Delivery integration: source/state only; no print-size layer rasterization here.
 function artworkDraftKey(){const session=new URLSearchParams(location.search).get('artworkSession');return session&&/^[0-9a-f-]{36}$/i.test(session)?'order:'+session:'standalone'}
+if(!window.opener||!new URLSearchParams(location.search).get('artworkSession'))$('saveStatus').textContent='Explore here; open from the JOSH TEST form to attach or upload artwork';
 for(const id of ['addTextBtn','mobileTextBtn'])$(id).onclick=async()=>{try{await document.fonts.load('700 32px "Crosstalk Sans"');addText()}catch(_){showToast('The artwork font could not load. Please retry.')}};
 saveNow=async function(){try{const db=await openDB();if(!db)throw Error();const data=JSON.parse(snapshot());data.version=4;data.savedAt=new Date().toISOString();await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data,artworkDraftKey());tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});$('saveStatus').textContent='Saved on this device'}catch(_){$('saveStatus').textContent='Saved for this session'}};
 $('completeArtwork').onclick=async()=>{
@@ -24,6 +25,7 @@ $('completeArtwork').onclick=async()=>{
  try{
   const session=new URLSearchParams(location.search).get('artworkSession');
   const returnOrigin=new URLSearchParams(location.search).get('returnOrigin');
+  if(!window.opener||!session)throw Error('Open this designer from the JOSH TEST order form so the artwork can attach to that test. Your draft remains on this device.');
   if(window.opener&&session){
    const response=await fetch('/v1/client-config');
    if(!response.ok)throw Error('The order handoff is unavailable. Please retry.');
@@ -68,7 +70,7 @@ const testCopy=[
  ['You\'ll upload your finished artwork after submitting.',
   'Use the artwork designer here to attach a synthetic design before test submission. JOSH TEST does not create a separate artwork upload link.'],
  ['<h2 class="title">Now we need the actual music.</h2><p class="lede">Your tracklist is the plan. Before we can cut your record, we need the actual audio files.</p>',
-  '<h2 class="title">Plan the audio for this test.</h2><p class="lede">Use synthetic track names. JOSH TEST does not collect audio files or create a real record order.</p>'],
+  '<h2 class="title">Plan the audio for this test.</h2><p class="lede">Use synthetic track names. This form does not collect audio files directly or create a genuine customer order.</p>'],
  ['Every audio file must be provided manually by you before we cut anything.',
   'For a real order, you must supply every audio file before Crosstalk can cut anything.'],
  ['Playlist durations are used to help plan your record, but we’ll check the actual audio before cutting. If anything no longer fits, we’ll get in touch.',
@@ -76,11 +78,11 @@ const testCopy=[
  ['Our Qobuz links are simply a helping hand to locate possible legal downloads. Crosstalk does not purchase, download or transfer the music on your behalf.',
   'The live form may suggest legal download sources. Track lookup is disabled in JOSH TEST; do not make a purchase for this test.'],
  ['<strong>I\'ve got my files</strong><small>You\'ll upload them after ordering.</small>',
-  '<strong>I would supply audio files</strong><small>No audio upload happens in JOSH TEST.</small>'],
+  '<strong>I can supply a dummy file</strong><small>Use only a harmless test file if Josh receives a private JOSH TEST link.</small>'],
  ['You must purchase/download the files yourself and then upload them to Crosstalk. A playlist link by itself is never treated as supplied audio.',
-  'For a real order, you must obtain and upload your own files. For JOSH TEST, do not purchase or upload audio. A playlist link is never supplied audio.'],
+  'For a real order, you must obtain and upload your own files. For JOSH TEST, do not purchase music or upload genuine customer audio. A playlist link is never supplied audio.'],
  ['After submitting, you\'ll receive your private Dropbox link for audio and artwork.',
-  'JOSH TEST does not create an audio upload link or a real order. Use synthetic audio details only.'],
+  'If the isolated test intake accepts the submission, Josh may receive a private audio upload link by email. Use only a harmless dummy file; no genuine order or charge is created. Designer artwork is attached here, not through that link.'],
  ['Step 5 of 5 · Review & Order','Step 5 of 5 · Review & Test Submit'],
  ['<div class="legal"><strong>Copyright Declaration & Terms</strong>',
   '<div class="legal"><strong>Preview of real order terms</strong><p>Shown for interface review only. JOSH TEST submits no customer order or audio files.</p>'],
@@ -101,6 +103,6 @@ for(const [source,replacement] of testCopy){
 calculator=calculator.replace(/<title>[^<]*<\/title>/,'<title>JOSH TEST — Crosstalk Customs</title>');
 calculator=calculator.replace('</head>','<meta name="robots" content="noindex,nofollow,noarchive"></head>');
 calculator=calculator.replace('</body>','<script src="calculator-artwork.js"></script><script src="preview-orders.js"></script><script src="preview-usability.js"></script></body>');
-calculator=calculator.replace(/<body[^>]*>/,'$&<div role="note" style="padding:12px;background:#ffe89d;color:#111;font-weight:700">JOSH TEST — TEST JOSH 21.11. This isolated form can send a test notification to Crosstalk and, if artwork is attached, a test ZIP to the JOSH TEST Dropbox folder. No order, invoice, charge, or audio upload link is created. Use synthetic artwork and audio details only.</div>');
+calculator=calculator.replace(/<body[^>]*>/,'$&<div role="note" style="padding:12px;background:#ffe89d;color:#111;font-weight:700">JOSH TEST — TEST JOSH 21.11. Submission opens only during a controlled test window. If accepted, it can create an isolated test record, send Josh a private dummy-audio upload link, and queue attached artwork to the JOSH TEST Dropbox folder. No genuine order, invoice or charge is created. Use synthetic details and files only.</div>');
 fs.writeFileSync(path.join(root,'public/calculator-preview.html'),calculator);
 console.log('Built isolated artwork designer and calculator preview; live calculator unchanged');

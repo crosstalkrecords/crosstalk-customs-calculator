@@ -68,19 +68,29 @@ async function run(){
  const result={base,health:'pass',cases:[],artworkJobIds:[]};
  async function guardedContext(options={}){
   const context=await browser.newContext({ignoreHTTPSErrors:true,...(httpCredentials?{httpCredentials}:{}),...options});
+  const status=new Map();context.testStatuses=status;
   // This script checks only browser behaviour. An unmocked submission is a
   // test failure, never a call to Make or the real isolated order endpoint.
   await context.route('**/v1/test-orders',route=>{failures.push('Unmocked JOSH TEST submission');return route.abort()});
+  await context.route('**/v1/test-orders/*',route=>{
+   const id=route.request().url().split('/').at(-1),body=status.get(id);
+   return route.fulfill({status:body?200:404,contentType:'application/json',body:JSON.stringify(body||{error:'Unknown mocked submission'})});
+  });
   await context.route('**/order-submission-disabled',route=>{failures.push('Obsolete preview submission');return route.abort()});
   await context.route('https://hook.eu1.make.com/**',route=>{failures.push('Unexpected Make request');return route.abort()});
   return context;
+ }
+ async function mockedQueued(route,context,artworkJobId=''){
+  const id=route.request().postDataJSON().testOrderId;
+  context.testStatuses.set(id,{testOrderId:id,state:'complete',artworkStatus:artworkJobId?'bound':'not_supplied',artworkId:artworkJobId,deliveryPending:!!artworkJobId});
+  await route.fulfill({status:202,contentType:'application/json',body:JSON.stringify({testOrderId:id,state:'queued',artworkStatus:artworkJobId?'pending':'not_supplied',deliveryPending:!!artworkJobId})});
  }
  try{
   const standard=await guardedContext();const plain=await standard.newPage();plain.setDefaultTimeout(45000);
   await prepare(plain,'Standard');
   let standardAttempts=0;
-  await customer(plain,async route=>{standardAttempts++;const data=route.request().postDataJSON();assert.equal(data.artworkJobId,'');assert.equal('Artwork Job ID' in data.fields,false);await new Promise(r=>setTimeout(r,350));await route.fulfill({status:202,contentType:'application/json',body:JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'not_supplied',deliveryPending:false})});});
-  await plain.locator('button[type="submit"]').evaluate(button=>{button.click();button.click()});await plain.locator('#success').waitFor({state:'visible'});
+  await customer(plain,async route=>{standardAttempts++;const data=route.request().postDataJSON();assert.equal(data.artworkJobId,'');assert.equal('Artwork Job ID' in data.fields,false);await new Promise(r=>setTimeout(r,350));await mockedQueued(route,standard);});
+  await plain.locator('button[type="submit"]').evaluate(button=>{button.click();button.click()});await plain.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor();
   assert.equal(standardAttempts,1);
   result.cases.push('Standard without artwork and duplicate submit suppression');await standard.close();
 
@@ -120,13 +130,13 @@ async function run(){
     result.cases.push('switch to Standard and restore artwork');
    }
    let attempts=0;
-   await customer(page,async route=>{attempts++;const data=route.request().postDataJSON();assert.equal(data.artworkJobId,artworkJobId);await route.fulfill({status:attempts===1?503:202,contentType:'application/json',body:attempts===1?'{"error":"JOSH TEST injected submission error"}':JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'bound',deliveryPending:false})});});
+   await customer(page,async route=>{attempts++;const data=route.request().postDataJSON();assert.equal(data.artworkJobId,artworkJobId);if(attempts===1)await route.fulfill({status:503,contentType:'application/json',body:'{"error":"JOSH TEST injected submission error"}'});else await mockedQueued(route,context,artworkJobId);});
    const old=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
    await page.locator('button[type="submit"]').click();
    await page.locator('#testSubmitError').filter({hasText:'JOSH TEST injected submission error'}).waitFor();
    assert.equal(await page.locator('input[name="Artwork Job ID"]').inputValue(),artworkJobId);
    assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
-   await page.locator('button[type="submit"]').click();await page.locator('#success').waitFor({state:'visible'});
+   await page.locator('button[type="submit"]').click();await page.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor();
    assert.equal(attempts,2);assert.equal(await page.locator('input[name="Artwork Job ID"]').inputValue(),'');
    assert.notEqual(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
    result.cases.push((mobile?'mobile':'desktop')+' failed submission retry and confirmed reset');
