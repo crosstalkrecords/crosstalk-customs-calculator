@@ -4,19 +4,40 @@ const {DatabaseSync}=require('node:sqlite');
 const {makeApp}=require('../src/server.cjs');
 const {openStore}=require('../src/store.cjs');
 const {prune}=require('../src/retention.cjs');
+const {createCanvas}=require('../src/psd.cjs');
+const {digest}=require('../src/project.cjs');
 
 test('existing volume schema migrates without dropping a failed job',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-migration-'));
  try{
   const db=new DatabaseSync(path.join(root,'jobs.sqlite'));
   db.exec("CREATE TABLE jobs(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL,created INTEGER NOT NULL,state TEXT NOT NULL,project TEXT,digest TEXT,binding TEXT,attempts INTEGER NOT NULL DEFAULT 0,next_attempt INTEGER NOT NULL DEFAULT 0,error TEXT); CREATE TABLE assets(job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,hash TEXT NOT NULL,bytes INTEGER NOT NULL,mime TEXT NOT NULL,PRIMARY KEY(job_id,hash));");
-  db.prepare("INSERT INTO jobs(id,token_hash,created,state) VALUES(?,?,?,'failed')").run('a'.repeat(32),'hash',1);db.close();
+  db.prepare("INSERT INTO jobs(id,token_hash,created,state) VALUES(?,?,?,'failed')").run('a'.repeat(32),'hash',1);
+  db.prepare("INSERT INTO jobs(id,token_hash,created,state) VALUES(?,?,?,'delivered')").run('d'.repeat(32),'hash',1);db.close();
   const store=openStore(root);
   assert.equal(store.get('a'.repeat(32)).state,'failed');
+  assert(store.get('d'.repeat(32)).completed_at>0);
   for(const field of ['completed_at','failed_at','failure_stage','delivery_receipt'])assert(store.db.prepare('PRAGMA table_info(jobs)').all().some(c=>c.name===field));
-  assert.equal(await prune(store,Date.now()),0);assert(store.get('a'.repeat(32)));
+  assert.equal(await prune(store,Date.now()),0);assert(store.get('a'.repeat(32)));assert(store.get('d'.repeat(32)));
   store.close();
  }finally{await fs.rm(root,{recursive:true,force:true});}
+});
+
+test('staff recovery secret is distinct and an existing draft cannot upload when disk is full',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-capacity-'));
+ const bindSecret='bind-only-'.repeat(4),config={dataDir:root,bindSecret,origins:['https://synthetic.test'],mode:'disabled',dropboxRoot:'/Crosstalk Customs/Orders'};
+ assert.throws(()=>makeApp({...config,staffSecret:bindSecret}),/must differ/);
+ const service=makeApp(config,{worker:{interval:999999}}),server=service.app.listen(0,'127.0.0.1');
+ await new Promise(r=>server.once('listening',r));
+ const url='http://127.0.0.1:'+server.address().port,job=service.store.create();
+ const canvas=createCanvas(2,2);const bytes=canvas.toBuffer('image/png'),hash=digest(bytes);
+ const realStatfs=fs.statfs;
+ try{
+  fs.statfs=async()=>({bavail:0,bsize:4096});
+  const result=await fetch(url+'/v1/drafts/'+job.id+'/assets/'+hash,{method:'PUT',headers:{Origin:'https://synthetic.test',Authorization:'Bearer '+job.token,'Content-Type':'image/png'},body:bytes});
+  assert.equal(result.status,503);assert.equal(service.store.assets(job.id).length,0);
+  await assert.rejects(fs.stat(path.join(service.store.dir(job.id),'assets',hash)),{code:'ENOENT'});
+ }finally{fs.statfs=realStatfs;await new Promise(r=>server.close(r));await service.close();await fs.rm(root,{recursive:true,force:true});}
 });
 
 test('terminal failures survive retention, remain staff visible, and retry to an audited delivery',async()=>{

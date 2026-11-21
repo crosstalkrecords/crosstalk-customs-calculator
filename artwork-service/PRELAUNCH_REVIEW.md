@@ -63,13 +63,16 @@ The latest review code also fixes a missing `Origin` on a same-origin mobile
 draft request, prevents playlist error markup from executing, gates the private
 Dropbox probe on setup mode, retains failed jobs for staff recovery, stores
 verified delivery metadata without provider paths, and exposes a separate
-authenticated paginated failure list. The staff route needs a separately
+authenticated paginated failure list. New uploads check remaining disk space;
+staff and binding secrets must differ; migrated delivered records receive a
+completion-based retention window. The staff route needs a separately
 provisioned server-side secret and an operational test. These newer changes
 are not yet deployed to JOSH TEST. Staff failure alerting and backup/restore
 are still open.
 
-Local verification: `npm test` passed 14/14, including migrated-volume,
-terminal-failure, staff recovery and strict Dropbox receipt cases. The UI
+Local verification: `npm test` passed 15/15, including migrated-volume,
+terminal-failure, low-space upload rejection, staff recovery and strict Dropbox
+receipt cases. The UI
 script passed desktop/mobile handoff, no-artwork and forged-origin cases;
 `npm run acceptance` produced two synthetic archives with 3000 px covers and
 1146 px labels; both local ZIPs passed `unzip -tq`. Production dependency audit
@@ -88,12 +91,12 @@ The final deployed SHA still requires a hosted smoke test.
 | Priority / risk | Likelihood / impact | Evidence | Concrete resolution and retest status |
 | --- | --- | --- | --- |
 | 1. Production path is incomplete | Certain / high | Test scenario has no Airtable, real folder creation, audio link, invoice or staff notification; the live form and Customer Intake are unchanged. | Build an inactive copy of the current intake with isolated test base/folders, then bind using module 2's actual Airtable ID and module 27's returned Uploads path. Test artwork, no-artwork, customer/staff outcomes and error paths before cutover. **Open.** |
-| 2. Failed jobs could be missed or lost | Medium / high | Three delivery attempts previously ended in `failed`, worker tick errors were swallowed, failed data expired after seven days from creation; no staff alert or backup schedule. | Review code retains failures and their files, records failure stage and completed timestamp, lists them under a separate staff secret, and supports authenticated retry. The migration, forced failure, retention and retry tests pass locally. Repeat on JOSH TEST, add an actual alert and backup/restore procedure. **Code fix verified locally; operational gate open.** |
+| 2. Failed jobs could be missed or lost | Medium / high | Three delivery attempts previously ended in `failed`, worker tick errors were swallowed, failed data expired after seven days from creation; no staff alert or backup schedule. | Review code retains failures and their files, records failure stage and completed timestamp, lists them under a separate staff secret, and supports authenticated retry. Migration, forced failure, retention, low-space rejection and retry tests pass locally. Repeat on JOSH TEST, add an actual alert and backup/restore procedure. **Code fix verified locally; operational gate open.** |
 | 3. Printed files may differ from approved templates | Medium / high | Synthetic parser/render tests exist; actual remote ZIP and PSDs have not been opened/edit-saved/reopened in Photoshop or physically approved. | Download the delivered test ZIP, inspect source files and PSD layers/masks/fonts, edit/save/reopen, print covers and labels, and obtain engineer approval. **Open.** |
 | 4. Hosted phone and email experience unknown | Medium / medium | Local mobile test passed after a code fix not on Railway; Make email module succeeded but inbox arrival unverified; cloud browser could not use Basic auth. | Apply approved JOSH TEST source pin, have a human tester use desktop and phone with refresh/interruption/large image, and check Josh's inbox including spam for both test messages. **Open.** |
 | 5. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST; test OAuth is app-folder scoped but the token's provider permissions are wider than the application root check. No production volume, backup, alert or ingress limiter is verified. | Provision a distinct production environment/service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore, monitored failure queue and separate provider authorization. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 6. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
-| 7. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure volume capacity and restore. **Open policy/operational gate.** |
+| 7. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
 | 8. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Code commit `1b32d97` passed service, UI, acceptance and audit steps on GitHub. | CI runner and fixture fixes are verified on the review branch. Select and deploy the final JOSH TEST SHA, then repeat hosted smoke and mobile tests. **CI resolved; hosted retest open.** |
 
 ## Live and test configuration comparison

@@ -64,10 +64,14 @@ secret remains valid there for existing server-side callers. No tester-facing
 staff page or notification is enabled. A verified delivery stores only its
 completion time, byte count and content hash for audit; raw Dropbox responses
 are not kept in the job record. Failed jobs no longer consume the 100 active
-job slots or the 2 GiB active-source quota. A 1 GiB filesystem free-space
-guard also protects draft creation. Verify that it reflects the Railway volume
-quota; accumulated failures can still fill the volume. This requires staff
-monitoring and a reviewed recovery or disposal policy.
+job slots or the 2 GiB active-source quota. New asset uploads and draft
+creation also require 1 GiB of filesystem headroom. Legacy delivered jobs
+receive a completion timestamp on migration so they have a full seven-day
+retention window. Verify that headroom reflects the Railway volume quota;
+rendered PSDs and ZIPs also consume disk, and the threshold is not a
+reservation against concurrent uploads. Accumulated failures can still fill
+the volume. This requires staff monitoring and a reviewed recovery or
+disposal policy.
 
 ## Fonts and editability
 

@@ -13,6 +13,9 @@ function openStore(root){
  for(const [name,type] of Object.entries({completed_at:'INTEGER',failed_at:'INTEGER',failure_stage:'TEXT',delivery_receipt:'TEXT'})){
   if(!columns.has(name))db.exec('ALTER TABLE jobs ADD COLUMN '+name+' '+type);
  }
+ // Old delivered records have no completion time. Start their seven-day
+ // retention window at migration rather than deleting a late delivery now.
+ db.prepare("UPDATE jobs SET completed_at=? WHERE state='delivered' AND completed_at IS NULL").run(Date.now());
  // One process/one worker per persistent volume. A crash resumes queued delivery.
  db.prepare("UPDATE jobs SET state='queued' WHERE state='processing'").run();
  function get(id){return db.prepare('SELECT * FROM jobs WHERE id=?').get(id);}

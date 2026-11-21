@@ -14,6 +14,7 @@ function secureEqual(a,b){return typeof a==='string'&&typeof b==='string'&&a.len
 function makeApp(config,options={}){
  if(!config.bindSecret||config.bindSecret.length<32)throw Error('A separate 32-character or longer binding secret is required');
  if(config.staffSecret&&config.staffSecret.length<32)throw Error('Staff recovery secret must be at least 32 characters');
+ if(config.staffSecret===config.bindSecret)throw Error('Staff recovery secret must differ from the binding secret');
  if(config.mode==='synthetic'&&process.env.NODE_ENV==='production')throw Error('Synthetic delivery is disabled in production');
  if(!config.refreshToken)config.refreshToken=loadCredential(config);
  if(config.mode==='dropbox'&&(!config.refreshToken||!config.clientId||!config.clientSecret))throw Error('Dropbox delivery credentials are not configured');
@@ -65,6 +66,11 @@ function makeApp(config,options={}){
   if(!mime||dimensions.width*dimensions.height>LIMITS.pixels)throw error(422,'Use PNG, JPEG or WebP images up to 25 megapixels');
   const assets=store.assets(j.id),exists=assets.find(a=>a.hash===hash);
   if(!exists&&(assets.length>=LIMITS.assets||assets.reduce((n,a)=>n+a.bytes,0)+bytes.length>LIMITS.totalBytes))throw error(422,'Source image limit exceeded');
+  if(!exists){
+   const disk=await fs.statfs(config.dataDir);
+   const activeBytes=store.db.prepare("SELECT coalesce(sum(a.bytes),0) AS n FROM assets a JOIN jobs j ON j.id=a.job_id WHERE j.state NOT IN ('delivered','failed')").get().n;
+   if(activeBytes+bytes.length>2*1024**3||disk.bavail*disk.bsize<1024**3+bytes.length)throw error(503,'Artwork service capacity reached');
+  }
   // Reserve atomically before asynchronous disk I/O so parallel uploads cannot exceed quotas.
   if(!exists)store.db.prepare('INSERT INTO assets(job_id,hash,bytes,mime) VALUES(?,?,?,?)').run(j.id,hash,bytes.length,mime);
   try{await fs.writeFile(path.join(store.dir(j.id),'assets',hash),bytes,{mode:0o600});}catch(e){if(!exists)store.db.prepare('DELETE FROM assets WHERE job_id=? AND hash=?').run(j.id,hash);throw e;}
