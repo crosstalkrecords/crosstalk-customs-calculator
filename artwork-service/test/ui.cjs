@@ -141,6 +141,7 @@ const {createCanvas}=require('../src/psd.cjs');
   await forged.locator('#handoffStatus').filter({hasText:'not approved for artwork handoff'}).waitFor();
   assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,beforeBlocked);
   const standalone=await blocked.newPage();await standalone.goto('http://127.0.0.1:4311/designer.html');
+  await standalone.locator('#saveStatus').filter({hasText:/open from the JOSH TEST form/i}).waitFor();
   assert.match(await standalone.locator('#saveStatus').innerText(),/open from the JOSH TEST form/i);
   await standalone.locator('#imageInput').setInputFiles(path.join(root,'synthetic-source.png'));
   await standalone.locator('#finishBtn').click();await standalone.locator('#completeArtwork').click();

@@ -52,9 +52,23 @@
   error.textContent='JOSH TEST submission is closed for now. You can review the interface and designer, but the form cannot submit until Crosstalk opens a controlled test window.';
   const banner=document.querySelector('body > [role="note"]');
   if(banner)banner.textContent='JOSH TEST — TEST JOSH 21.11. Submission is currently closed. You can explore the form and designer, but no test order, email, upload link, charge or invoice will be created from this page.';
-  submit.disabled=true;return;
+  submit.disabled=true;
  }
  function session(){return sessionStorage.getItem('crosstalk-artwork-order-session');}
+ const attemptedKey='crosstalk-artwork-order-attempted';
+ function showSessionLost(id){
+  // A fresh signed cookie cannot read an older submission. Preserve the ID
+  // instead of leaving a form that will fail or invite a second order.
+  document.getElementById('wrap').style.display='none';success.style.display='block';
+  success.dataset.intakeState='session_lost';heading.tabIndex=-1;
+  heading.textContent='JOSH TEST session needs review';
+  message.textContent='This browser can no longer verify the earlier test submission. Give Crosstalk the test order ID below to reconcile it. Do not submit again until Crosstalk confirms the outcome; no payment was taken on this page.';
+  let code=success.querySelector('[data-test-order-id]');
+  if(!code){code=document.createElement('p');code.dataset.testOrderId='1';success.append(code);}
+  code.textContent='Test order ID: '+id;
+  status.textContent='The email, upload link and artwork ZIP cannot be confirmed by this browser session.';
+  submit.disabled=true;heading.focus();
+ }
  function showResult(id,result){
   const firstResult=success.style.display!=='block',previousState=success.dataset.intakeState;
   document.getElementById('wrap').style.display='none';success.style.display='block';
@@ -116,6 +130,9 @@
   const artworkJobId=data['Artwork Job ID']||'';
   const id=session();
   try{
+   // A missing server row is normal before the first submission. After any
+   // attempt, an ambiguous network failure must remain a reconciliation case.
+   sessionStorage.setItem(attemptedKey,id);
    const response=await fetch('/v1/test-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({testOrderId:id,artworkJobId,fields:data})});
    const result=await response.json();
    if(!response.ok){
@@ -133,5 +150,6 @@
  if(existingId)fetch('/v1/test-orders/'+existingId,{cache:'no-store'}).then(async response=>{
   if(response.ok){const result=await response.json();showResult(existingId,result);
    if(!['complete','unknown','manual_review'].includes(result.state))void pollOutcome(existingId);}
+  else if((response.status===403||response.status===404)&&sessionStorage.getItem(attemptedKey)===existingId)showSessionLost(existingId);
  }).catch(()=>{});
 })();

@@ -2,8 +2,12 @@
 
 This is an isolated Customs design. The protected Make scenario `8715068`
 remains inactive and has not run end to end. The current hosted order endpoint
-still rejects a queued acknowledgement. Do not use this document as evidence
-that the customer journey is complete, and do not connect the live form.
+implements a durable `queued` acknowledgement and same-session polling, but
+the server-only protected Make destination is not configured in JOSH TEST, so
+the hosted submission window is closed. The candidate Make route in
+`JOSH_TEST_FULL_INTAKE_BLUEPRINT_DRAFT.json` has not completed an execution.
+Do not use this document as evidence that the customer journey is complete,
+and do not connect the live form.
 
 ## Durable states and response truth
 
@@ -15,8 +19,8 @@ that the customer journey is complete, and do not connect the live form.
 | `manual_review` | A side effect or acknowledgement is ambiguous | Stage code, isolated Airtable ledger, staff reconciliation; no blind retry |
 | `complete` | Fixed test folders, open upload request, optional artwork bind, and both provider send modules succeeded, and Make's final callback matched the claim | Final callback and test ledger `Completed`; this does not prove inbox arrival, audio upload, or artwork ZIP delivery |
 
-The browser POST should return `202` with `queued` immediately after the
-outbox write. A same-session, read-only status endpoint should return the
+The browser POST returns `202` with `queued` immediately after the
+outbox write when the isolated window is configured. A same-session, read-only status endpoint returns the
 current safe state without an upload URL or artwork capability. Changed
 details, job ID, session, or fingerprint for the same UUID return `409`.
 Repeated identical POSTs return the existing state, never dispatch again.
@@ -77,10 +81,16 @@ job presence, accepts identical repeats, rejects conflicts, and never
 regresses `complete`. A trusted final callback can reconcile a prior
 `manual_review` only after downstream guards succeeded.
 
-An ambiguous Dropbox create/open or provider send leaves the Airtable stage
+An ambiguous Dropbox create/open or provider send must leave the Airtable stage
 `Uncertain` and prevents a duplicate run. If the callback itself fails, a
-watchdog flags a stale `processing` row for staff; neither Make's accepted
-response nor a generic success status can silently mark completion. Staff
+timeout marks a stale `processing` submission for staff; neither Make's accepted
+response nor a generic success status can silently mark completion. A separate
+staff-secret-protected summary is now deployed and read-only: the authenticated
+JOSH TEST check returned four older failed artwork jobs and no current queued
+or processing submissions. It does not send an alert or resolve a job. Staff
 must inspect the isolated ledger and provider/Dropbox evidence before any
-manual recovery. This still needs a controlled full webhook test, a real
-dummy upload, inbox inspection, ZIP verification, and timeout/failure tests.
+manual recovery. Josh observed both Josh-only probe emails arrive and reported
+a successful dummy upload through the private request page. The exact Dropbox
+destination and file contents still need independent verification. A controlled
+full webhook run, bound artwork ZIP inspection, and timeout/failure tests remain
+open.

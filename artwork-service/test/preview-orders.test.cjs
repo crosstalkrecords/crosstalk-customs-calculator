@@ -120,6 +120,40 @@ test('uncertain Make intake freezes the test form and supplies the reconciliatio
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
 
+test('lost browser session preserves the prior order ID and blocks a second submission, even after intake closes',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-lost-session-'));
+ const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
+ const service=makeApp(config,{worker:{interval:999999}}),server=service.app.listen(0,'127.0.0.1');let browser;
+ try{
+  await new Promise(resolve=>server.once('listening',resolve));
+  const base='http://127.0.0.1:'+server.address().port;config.publicOrigin=base;config.origins.push(base);
+  const id='b72ca4e5-0e82-4f75-9413-35568ae8ef0c';
+  service.store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state,browser_hash,updated) VALUES(?,?,'','processing',?,?)").run(id,Date.now()-10000,'prior-expired-browser-session',Date.now());
+  browser=await chromium.launch({headless:true,executablePath:await packaged.executablePath(),args:packaged.args.filter(x=>x!=='--single-process')});
+  const context=await browser.newContext({httpCredentials:{username:'tester',password:'test-access-only'}}),page=await context.newPage();
+  let posts=0;page.on('request',request=>{if(request.url()===base+'/v1/test-orders'&&request.method()==='POST')posts++;});
+  await page.goto(base+'/calculator-preview.html');
+  await page.evaluate(value=>{
+   sessionStorage.setItem('crosstalk-artwork-order-session',value);
+   sessionStorage.setItem('crosstalk-artwork-order-attempted',value);
+  },id);
+  await page.reload();
+  await page.locator('#success h2').filter({hasText:'JOSH TEST session needs review'}).waitFor();
+  assert.match(await page.locator('#success').innerText(),new RegExp('Test order ID: '+id));
+  assert.match(await page.locator('#success').innerText(),/Do not submit again/);
+  assert.equal(await page.locator('button[type="submit"]').isDisabled(),true);
+  assert.equal(posts,0);
+  config.testWebhookUrl='';
+  await page.reload();
+  await page.locator('#success h2').filter({hasText:'JOSH TEST session needs review'}).waitFor();
+  assert.match(await page.locator('#success').innerText(),new RegExp('Test order ID: '+id));
+  assert.equal(await page.locator('button[type="submit"]').isDisabled(),true);
+  assert.equal(posts,0);
+  assert.equal(service.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(id).state,'processing');
+  await context.close();
+ }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('mobile guarded preview attaches synthetic art and acknowledges an isolated submission',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-mobile-preview-'));
  const sent=[];

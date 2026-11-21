@@ -23,6 +23,27 @@ test('existing volume schema migrates without dropping a failed job',async()=>{
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
 
+test('retention keeps artwork for unresolved JOSH TEST intake beyond a day',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-pending-intake-'));
+ const config={dataDir:root,bindSecret:'bind-only-'.repeat(4),origins:[],mode:'disabled',dropboxRoot:'/Crosstalk Customs/JOSH TEST'};
+ const service=makeApp(config,{worker:{interval:999999}});
+ try{
+  const linked=service.store.create(),unlinked=service.store.create();
+  const old=Date.now()-2*86400000,id='b72ca4e5-0e82-4f75-9413-35568ae8ef0c';
+  service.store.db.prepare("UPDATE jobs SET state='ready',created=? WHERE id IN (?,?)").run(old,linked.id,unlinked.id);
+  service.store.db.prepare('INSERT INTO test_draft_sessions(job_id,order_id,browser_hash,token_sealed) VALUES(?,?,?,?)').run(linked.id,id,'browser','sealed-token');
+  service.store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state) VALUES(?,?,?,'unknown')").run(id,old,linked.id);
+  assert.equal(await prune(service.store,Date.now()),1);
+  assert(service.store.get(linked.id),'uncertain intake must retain the ready artwork');
+  assert(service.store.db.prepare('SELECT token_sealed FROM test_draft_sessions WHERE job_id=?').get(linked.id));
+  assert.equal(service.store.get(unlinked.id),undefined,'unclaimed drafts still expire');
+  service.store.db.prepare("UPDATE test_submissions SET state='complete' WHERE id=?").run(id);
+  assert.equal(await prune(service.store,Date.now()),1);
+  assert.equal(service.store.get(linked.id),undefined);
+  assert.equal(service.store.db.prepare('SELECT 1 FROM test_draft_sessions WHERE job_id=?').get(linked.id),undefined);
+ }finally{await service.close();await fs.rm(root,{recursive:true,force:true});}
+});
+
 test('JOSH TEST recovery summary is staff-only, read-only and contains no private references',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-summary-'));
  const config={dataDir:root,bindSecret:'bind-only-'.repeat(4),staffSecret:'staff-only-'.repeat(4),origins:['https://synthetic.test'],publicOrigin:'https://synthetic.test',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testAccessCode:'test-access',mode:'disabled',dropboxRoot:'/Crosstalk Customs/JOSH TEST'};
