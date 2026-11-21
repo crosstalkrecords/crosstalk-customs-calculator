@@ -24,8 +24,10 @@ with the exact destination, ID, URL and `is_open=false` persists only the
 request ID and `Manual review`, then returns HTTP 503
 `JOSH_TEST_INTAKE_NOT_READY`. It does not store or send the closed URL. A populated
 or mismatched claim returns HTTP 409 for manual review; a rejected preflight
-returns HTTP 422 without a write. Airtable claim, Get and detail update each
-have a generic 503 error response followed by `Break retry:false`.
+returns HTTP 422 without a write. Eleven side-effect/error routes have a
+generic 503 response followed by `Commit` stop handlers, with incomplete
+execution storage disabled. This replacement is saved and structurally valid,
+but the protected intake error routes have not been executed.
 The regex filters and error routes still need controlled runtime verification;
 the full route has not run. Readback showed `isActive=false`,
 `isinvalid=false`, and sequential execution set in blueprint metadata. It
@@ -74,23 +76,29 @@ Scenario `8715455`, **JOSH TEST static intake runner — CLOSED request**, is
 inactive, valid, on-demand and has no webhook. A `json:ParseJSON` first module
 provides a fixed synthetic no-artwork payload named `TEST JOSH 21.11`, Josh's
 test recipient and Submission ID `b72ca4e5-0e82-4f75-9413-35568ae8ef0c`.
-It follows the same guarded test Airtable claim and details, fixed Dropbox
-folders, closed file request, uncertain stages and manual-stop error routes
-as the inactive webhook intake. Webhook responses were replaced with harmless
-Compose markers. There are no email, payment, invoice, public share or
-artwork bind modules.
+It follows the same guarded test Airtable claim/details, fixed Dropbox
+folders, closed file request and uncertain stages as the inactive webhook
+intake. Both inactive scenarios use `Commit` stop handlers with incomplete
+executions disabled and no `Break` directives. The protected intake's eleven
+replaced handlers await controlled runtime verification. Webhook responses
+were replaced with harmless Compose markers. Neither scenario has email,
+payment, invoice, public share or artwork bind modules.
 
-One controlled UI Run once is expected to create/reuse one isolated Airtable
-test row, populate normalized details, create fixed order/Uploads folders
-and a **closed** file request, persist its ID and `Manual review`, then emit a
-marker. Repeating the static fixture should reuse the row and stop at the
-populated-claim branch before Dropbox. These effects need runtime
-verification. An automatic approval review blocked opening the runner's UI
-because that screen could expose a private file-request URL; **no Run once
-occurred**. Do not retry that blocked action through another route. The
-scenario remains inactive. Inspect only non-secret execution status, Airtable
-state and private folder paths; do not surface the file-request URL or ID in
-chat.
+An initial automatic approval review blocked the runner UI before execution.
+After a separate approved UI attempt, one Run once execution
+`a0b4c820eded4eeba0271aca17825d0e` succeeded with **four operations**:
+static JSON → Airtable upsert → Get Record → populated-claim Compose marker.
+It created one sparse test row for the fixture UUID, containing Submission ID
+and Airtable's default Order Status `New Submissions`, with no customer detail,
+fingerprint, intake state, Dropbox folder or request. No Dropbox module ran.
+The fresh-row guard had required Order Status to be blank; the default made
+it reject the row. Both inactive scenarios now require the exact default
+`New Submissions` in the fresh branch and invert that condition in the
+manual-review branch. The other 14 guard checks remain. This filter fix is
+**not retested**. A separately approved second controlled run would need to
+verify the detail/folder/closed-request path without exposing private request
+data. The runner remains inactive. Inspect only non-secret execution status,
+Airtable state and private folder paths; do not surface the request URL or ID.
 
 ## Durable claim and retry rule
 

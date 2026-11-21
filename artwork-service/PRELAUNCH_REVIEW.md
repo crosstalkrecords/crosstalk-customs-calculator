@@ -191,12 +191,20 @@ populated/mismatched claims return 409 and invalid preflight returns 422.
 No email, artwork bind, invoice, payment or public share module is wired, and
 the full route has **not run**. A separate inactive on-demand synthetic runner
 `8715455` has the same guarded route with a fixed `TEST JOSH 21.11` payload
-and no webhook, but an automatic approval review rejected opening its UI
-because it could expose a private file-request URL. **No runner execution
-occurred**, and that blocked action was not retried by another route.
+and no webhook. An initial UI step was blocked by automatic approval review.
+A later approved Run once (`a0b4c820eded4eeba0271aca17825d0e`) completed
+four operations: static JSON, Airtable claim, Get Record and manual-review
+marker. It created **one sparse test row only**, with Submission ID and
+Airtable's default Order Status `New Submissions`; no detail, Dropbox or
+email module ran. The fresh guard had required blank status. Both inactive
+scenarios now require the exact default and invert the manual-review test,
+but that fix awaits a separate controlled retest.
 The [Airtable-ledger draft](JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md) records stages,
 scenarios and the manual-stop design. Make incomplete execution storage stays
-off pending timeout/retry tests. The `JOSH TEST Customs intake ledger` Make
+off; both inactive scenarios now use Commit stop handlers. Eleven protected
+intake error routes were replaced and passed structural readback with zero
+Break directives, but have not been runtime tested. The
+`JOSH TEST Customs intake ledger` Make
 Data store (ID `267564`, 1 MB) remains empty and **unused**.
 The new Make Airtable connection 13265002 is Locked, and its grant was
 independently verified in Airtable Integrations as limited to the JOSH TEST
@@ -235,7 +243,8 @@ created record, second one updated record with the **same Airtable ID** and
 one row. A third controlled run added read-only Get Record and confirmed
 the output is a flat field-ID keyed collection, with absent fingerprint/state
 fields omitted. The full intake guards fresh rows and sets uncertain stages
-before side effects, with `Break retry:false` error routes; those guards and
+before side effects, with `Commit` stop error routes and incomplete execution
+storage off; those guards and
 forced timeout/replay behavior are **not runtime tested**. Airtable upsert is
 not a uniqueness constraint against other writers. The [sanitized intake
 plan](JOSH_TEST_INTAKE_PLAN.json) records the exact inactive scenario state.
@@ -253,7 +262,7 @@ queued/polling redesign.
 | 2i. Staff folder may become public | Medium / high | Dropbox `create_shared_link_with_settings` defaults to public visibility if no settings are supplied; the proposed module 16 did not set an explicit audience. | Do not create a default share link in JOSH TEST. Only store a verified team-only URL for staff; if that is unavailable, leave the Airtable URL blank and keep the private path in the test Airtable ledger for authorized staff. Test access as an unauthorised viewer before considering production. **Default link removed from test plan; sharing retest open.** |
 | 2h. Test preview reaches shared playlist lookup | Medium / medium | The copied calculator includes four calls to the separate production playlist importer. | A preview-only rewrite disables those network calls and presents manual synthetic track entry. Local focused tests pass and the change is deployed; hosted authenticated check remains. Test playlist import separately before go-live. **Code deployed; hosted retest open.** |
 | 2f. Different Dropbox app folders cannot share an order path | Low after read proof / high | The corrected Make metadata lookup found the exporter's unique ZIP at the exact test Uploads path, with matching 2,163,437-byte size; separate fixed folder/request probe returned the intended paths. | Verify an uploaded dummy file from an **open** request appears in that same Uploads namespace, then bind a new artwork job to its claimed record/folder. **Shared read namespace resolved; upload/write-to-exporter path open.** |
-| 2j. Automatic approval blocks private request inspection | Certain in this session / medium | Approval review rejected the UI step exposing a closed file-request ID/URL and the static runner 8715455 UI before Run once. No alternate execution was attempted. | Use an explicitly approved secure test method that inspects only non-secret state and keeps request URLs private. Until available, leave the runner and full intake inactive and report the stages untested. **Blocker; no full run.** |
+| 2j. Private request inspection and full-run gate | Medium / medium | Approval review rejected a UI step exposing a closed file-request ID/URL and initially blocked the static runner screen. A later approved Run once reached only Airtable claim/Get/manual-review; no private request output was generated. | Keep request data private and inspect only non-secret Airtable state and path. Retest the corrected fresh guard under a separately approved controlled run; keep full intake inactive. **Partial static run; open-request inspection still blocked.** |
 | 2g. Artist field semantics need confirmation | Medium / low | The current intake maps `Artist Order = Yes` to a boolean-like value in an Airtable single-line `Artist` field, rather than an artist name. | In the isolated record, compare the intended meaning of that field with staff expectations and map it explicitly; preserve the source behavior only if it is deliberately a yes/no flag. **Open; live unchanged.** |
 | 2d. Form values can disagree with the quoted price | Low after isolated fix / medium | The JOSH TEST server recalculates the displayed estimate from allowed format, quantity, colour, packaging, rush and shipping; tampered amounts fail locally. Production remains unchanged. | Exercise all pricing branches and tampered prices in the hosted test, then review live pricing parity before cutover. **Isolated code deployed; hosted parity open.** |
 | 2k. Artist eligibility and expired promotion | Medium / high if invoiced | The artist unlock string is client-side and a restored test draft could revive the expired Father's Day selection. Browser artist status does not prove eligibility. | The deployed JOSH TEST patch hides/disables the expired offer, blocks restoration and rejects its marker. Keep artist and final quote under staff approval before any invoice; implement trusted eligibility or remove automatic artist pricing in production. **Promotion retested locally and deployed; eligibility open.** |
@@ -270,8 +279,8 @@ queued/polling redesign.
 | Boundary | JOSH TEST | Live/current or proposed production |
 | --- | --- | --- |
 | Form | Basic gated isolated preview and designer | Current GitHub Pages form remains in use without this handoff |
-| Make | Artwork-only 8084300 inactive; full intake 8715068 inactive with protected hook, guarded test Airtable/Dropbox **closed-request** route and no email/bind; static on-demand runner 8715455 inactive/unexecuted; claim probe 8715169 and folder/request probes succeeded in isolation. Old broad Dropbox 13265327 unused. | Customer Intake 4762364 remains active; no integration change applied. |
-| Orders and billing | Test Airtable base has manually seeded fixture and sparse upsert probe row; no form-created order, invoice, payment or usable audio link. Copied invoice button omitted from staff interface. | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is separate. |
+| Make | Artwork-only 8084300 inactive; full intake 8715068 inactive with protected hook, guarded test Airtable/Dropbox **closed-request** route and no email/bind; static runner 8715455 inactive with one **partial** claim/Get run. Claim probe 8715169 and folder/request probes succeeded separately. Exact default-status guard is patched, not retested. Main intake now has 11 Commit stop handlers, zero Break directives and incomplete execution storage off; error routes are untested. Old broad Dropbox 13265327 unused. | Customer Intake 4762364 remains active; no integration change applied. |
+| Orders and billing | Test Airtable base has manually seeded fixture, claim probe row and one sparse static-runner row; no form-created order, invoice, payment or usable audio link. Copied invoice button omitted from staff interface. | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is separate. |
 | Dropbox | Fixed JOSH TEST root; verified exporter ZIP read by Make, fixed folder writes and a closed request. Open upload acceptance untested. | Separate production root/authorization and tested environment required. |
 | Exporter | JOSH TEST Railway service/volume, one worker; `3835d52` deployed successfully, delivery disabled; staff intake visibility needs its secret; no full intake binding. | No production exporter in this project yet. |
 | Secrets | Test hook key exists server-side in Make and is not in a blueprint/browser URL; JOSH TEST Railway webhook URL transfer was blocked, so hosted submission remains off. | New separate production credentials and staff recovery secret to provision securely. |
@@ -281,7 +290,7 @@ queued/polling redesign.
 | Gate | Evidence to present | Current state |
 | --- | --- | --- |
 | First-time form journey | Hosted desktop and phone runs with artwork and without artwork; product/price/options, upload, refresh, validation and completion screens match the submitted test order. | Local browser tests passed; hosted authenticated run and tester acceptance open. |
-| Isolated intake and recovery | One Airtable row per `TEST JOSH 21.11` Submission ID with mapped details, fingerprint, Make execution and stage history; repeat click/webhook and forced post-claim timeout leave one row and one set of side effects. | Separate upsert/Get probe passed create/reuse/read; full intake and static runner remain unexecuted after approval review blocked the runner UI. The 25-second contract is unmeasured. |
+| Isolated intake and recovery | One Airtable row per `TEST JOSH 21.11` Submission ID with mapped details, fingerprint, Make execution and stage history; repeat click/webhook and forced post-claim timeout leave one row and one set of side effects. | Separate upsert/Get probe passed create/reuse/read; static runner's first run created one sparse row then took manual review due Airtable's default status. Exact-status guard fix is untested; full intake is unexecuted and 25-second contract unmeasured. |
 | Audio, artwork and email | Test file-request link accepts a harmless upload into the verified test app folder; actual exporter bind uses the claimed record and same Uploads path; remote ZIP content/Photoshop/print review; Josh's customer and staff emails observed in inbox/Sent. | Fixed folders and a **closed** request created in a probe; open upload UI step blocked. Bind, new email, remote ZIP content and print review remain open. |
 | Security and operations | Confirm test-only OAuth/write boundary, no default public staff link, no invoice/payment/live recipient, protected hook and server-only key, failure alert/retry, volume headroom, retention and backup/restore. | Test-only connection read/fixed writes proven; old broad connection unused. No public share/email in intake. Recovery, operational alerts, open upload and token transfer still open. |
 | Release and reversal | Exact live form diff, Make blueprint and environment variable **names** (not values), deployment order, monitored smoke, saved live commit/blueprint, disabling switches and a rehearsed rollback/no-artwork regression result. | Plan below is preliminary; no live change or production activation authorized. |

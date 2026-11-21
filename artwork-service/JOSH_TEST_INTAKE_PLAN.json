@@ -1,7 +1,7 @@
 {
   "kind": "sanitized Make blueprint plan",
   "deployable": false,
-  "reason": "Protected hook 4151555 is attached to inactive JOSH TEST scenario 8715068. Fixed-identity preflight, Airtable claim/Get, fresh sparse-row detail guard, fixed test Dropbox order/Uploads folders and a CLOSED file request are wired behind 503/409/422 fail-closed responses; no email, invoice, payment, public share or exporter bind is wired. Full-route filters/error handlers remain unexecuted. Separate probes proved Airtable one-row upsert and same-namespace Dropbox read, fixed folder writes and closed file request. An inactive on-demand static runner 8715455 was prepared to test the route without the protected hook, but automatic approval review blocked its UI before Run once; no execution occurred and the blocked action was not retried. The UI step for open-request ID/URL was also blocked. Open upload acceptance, ambiguity recovery and the 25-second response deadline remain untested. Make may auto-retry timed-out side effects; incomplete execution storage awaits tested manual-stop handlers. No credential values or webhook URLs are included.",
+  "reason": "Protected hook 4151555 is attached to inactive JOSH TEST scenario 8715068. Fixed-identity preflight, Airtable claim/Get, fresh sparse-row detail guard, fixed test Dropbox order/Uploads folders and a CLOSED file request are wired behind 503/409/422 fail-closed responses; no email, invoice, payment, public share or exporter bind is wired. Separate probes proved Airtable one-row upsert and same-namespace Dropbox read, fixed folder writes and closed file request. Static runner 8715455 ran once after approval: four operations claimed and read one sparse Airtable row, then took manual-review because the fresh guard expected blank Order Status despite Airtable default New Submissions. The exact default-status check is patched in both inactive scenarios, pending retest. No detail or Dropbox module ran in the static runner. The UI step for open-request ID/URL was separately blocked. Open upload acceptance, ambiguity recovery and the 25-second response deadline remain untested. Both inactive scenarios use Commit stop handlers with incomplete execution storage off; the protected intake's eleven replaced error routes are structurally valid but untested at runtime. No credential values or webhook URLs are included.",
   "scope": "Crosstalk Customs JOSH TEST only",
   "make": {
     "organizationId": 6808399,
@@ -17,7 +17,7 @@
     "activateOnlyForControlledTests": true,
     "sequential": true,
     "incompleteExecutions": false,
-    "incompleteExecutionGate": "Add and test manual-stop handlers before enabling storage; default Make timeout/connection/rate-limit retries can duplicate file requests or emails."
+    "incompleteExecutionGate": "Commit stop handlers replace Break on eleven protected intake error routes, but await controlled runtime tests; default Make timeout/connection/rate-limit retries can duplicate file requests or emails."
   },
   "airtable": {
     "baseId": "appDz7CEL2KQWpzyC",
@@ -69,23 +69,24 @@
     "rejectBeforeAnyWrite": ["wrong test label", "wrong recipient", "missing or invalid submission id", "invalid mapped product fields"]
   },
   "currentScaffold": {
-    "flow": ["gateway:CustomWebHook / 1, protected hook 4151555", "builtin:BasicRouter / 2, preflight valid/rejected routes", "airtable:makeApiCall / 5, valid route: test-base performUpsert on Submission ID only", "airtable:ActionGetRecord / 6, valid route: read claimed record by structured body.records[1].id", "builtin:BasicRouter / 7, exact fresh sparse-row versus populated/mismatched claim", "airtable:ActionUpdateRecords / 8, fresh route: 27 normalized test order and initial ledger fields", "airtable:ActionUpdateRecords / 10, Folder uncertain", "dropbox:makeApiCall / 11/12/13, fixed order/Uploads folders and exact metadata", "builtin:BasicRouter / 20, exact status/path guard", "airtable:ActionUpdateRecords / 14/15, Folders ready then File request uncertain", "dropbox:makeApiCall / 16, CLOSED file request under exact Uploads path", "builtin:BasicRouter / 21, exact destination/closed/ID/URL guard", "airtable:ActionUpdateRecords / 17, persist request ID and Manual review only", "gateway:WebhookRespond / 3, fresh route static HTTP 503", "gateway:WebhookRespond / 9, populated/mismatched route HTTP 409", "gateway:WebhookRespond / 4, invalid preflight route HTTP 422", "Side-effect modules each have generic 503 then Break retry:false error route"],
+    "flow": ["gateway:CustomWebHook / 1, protected hook 4151555", "builtin:BasicRouter / 2, preflight valid/rejected routes", "airtable:makeApiCall / 5, valid route: test-base performUpsert on Submission ID only", "airtable:ActionGetRecord / 6, valid route: read claimed record by structured body.records[1].id", "builtin:BasicRouter / 7, exact fresh sparse-row versus populated/mismatched claim", "airtable:ActionUpdateRecords / 8, fresh route: 27 normalized test order and initial ledger fields", "airtable:ActionUpdateRecords / 10, Folder uncertain", "dropbox:makeApiCall / 11/12/13, fixed order/Uploads folders and exact metadata", "builtin:BasicRouter / 20, exact status/path guard", "airtable:ActionUpdateRecords / 14/15, Folders ready then File request uncertain", "dropbox:makeApiCall / 16, CLOSED file request under exact Uploads path", "builtin:BasicRouter / 21, exact destination/closed/ID/URL guard", "airtable:ActionUpdateRecords / 17, persist request ID and Manual review only", "gateway:WebhookRespond / 3, fresh route static HTTP 503", "gateway:WebhookRespond / 9, populated/mismatched route HTTP 409", "gateway:WebhookRespond / 4, invalid preflight route HTTP 422", "Eleven side-effect error routes have generic 503 followed by Commit stop; no Break and incomplete execution storage off"],
     "active": false,
     "valid": true,
     "sequential": true,
     "dlq": false,
     "scheduling": "Make retained immediately for the webhook; inactive state is the guard",
-    "sideEffects": "If deliberately executed, a valid fresh payload can create/reuse one test Airtable row, fixed app-folder Dropbox order/Uploads folders and a CLOSED file request; test base has no deployed/draft automations. Scenario remains inactive and has not run. No email, invoice, payment, public share or exporter module."
+    "sideEffects": "If deliberately executed, a valid fresh payload can create/reuse one test Airtable row, fixed app-folder Dropbox order/Uploads folders and a CLOSED file request; test base has no deployed/draft automations. Scenario remains inactive and has not run. Fresh guard now requires Airtable's exact default New Submissions status; the change is untested. Eleven protected intake error routes now use Commit, with zero Break and incomplete executions off; runtime error behavior is untested. No email, invoice, payment, public share or exporter module."
   },
   "staticRunner": {
     "scenarioId": 8715455,
     "name": "JOSH TEST static intake runner — CLOSED request",
-    "state": "inactive, valid, on-demand, sequential, no webhook; not executed",
+    "state": "inactive, valid, on-demand, sequential, no webhook; one partial four-operation execution",
     "submissionId": "b72ca4e5-0e82-4f75-9413-35568ae8ef0c",
     "testName": "TEST JOSH 21.11",
     "recipientDataOnly": "delousedcomatorium@gmail.com",
     "route": "Static JSON fixture feeds the guarded test Airtable and Dropbox closed-request route; webhook responses replaced by harmless Compose markers. No email, exporter, payment, invoice or public share module.",
-    "executionBlocker": "Automatic approval review rejected opening the runner UI because it could expose a private Dropbox file-request URL. No Run once occurred; do not retry the blocked action through another route."
+    "executionResult": "Approved Run once a0b4c820eded4eeba0271aca17825d0e completed four operations: Parse JSON, Airtable claim, Get Record, manual-review marker. One sparse test row was created with Submission ID and default New Submissions status. The fresh guard expected blank status, so no detail or Dropbox module ran. Exact-default guard patched in static runner and protected intake, awaiting separate approval and retest. Commit stop handlers remain on static runner; no Break directives there.",
+    "privateOutputBlocker": "The separate UI step to inspect an open-request ID/URL was rejected by automatic approval review. No open-request run occurred. Do not expose private request data."
   },
   "flow": [
     {"id": 1, "module": "gateway:CustomWebHook", "version": 1, "configuration": "existing dedicated test hook 4151555 with API-key authentication; matching key only in the JOSH TEST Railway server"},
