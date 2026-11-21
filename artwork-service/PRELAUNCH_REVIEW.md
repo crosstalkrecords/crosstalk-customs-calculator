@@ -25,9 +25,10 @@ targets `artwork-delivery-integration-20261018`, not the live form.
 - The running Railway revision is `1e8926690d7e48301381cb2fb7f9b0202569bae1`.
   The review branch now has the same-origin mobile draft and staff recovery
   fixes, but they have **not** been applied to Railway. A JOSH TEST deployment
-  approval returned cancelled. The pending source pin targets an older review
-  SHA; the current review head must be selected before deploying the final
-  candidate through a valid approval path.
+  approval returned cancelled. The pending JOSH TEST source change now pins
+  reviewed code SHA `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`, but it
+  has not been committed or deployed. It awaits a valid dashboard approval
+  path.
   Hosted mobile success cannot be claimed from the local test.
 
 ## Intended journey and what has been exercised
@@ -82,8 +83,8 @@ unauthenticated 401,
 wrong-origin 403, noindex). A prior GitHub Actions run failed one browser test
 with `spawn ETXTBSY`: concurrent tests extracted Chromium into the same
 `/tmp/chromium`. The serialized runner and updated UI fixture passed the full
-GitHub review gate on code commit `1b32d97b680f54b9f9522daea42aa60b6443b21a`
-([run 44849791028](https://github.com/crosstalkrecords/crosstalk-customs-calculator/actions/runs/44849791028)).
+GitHub review gate on final code commit `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`
+([run 44850487239](https://github.com/crosstalkrecords/crosstalk-customs-calculator/actions/runs/44850487239)).
 The final deployed SHA still requires a hosted smoke test.
 
 ## Prioritized risks and release gates
@@ -97,7 +98,7 @@ The final deployed SHA still requires a hosted smoke test.
 | 5. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST; test OAuth is app-folder scoped but the token's provider permissions are wider than the application root check. No production volume, backup, alert or ingress limiter is verified. | Provision a distinct production environment/service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore, monitored failure queue and separate provider authorization. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 6. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
 | 7. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 8. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Code commit `1b32d97` passed service, UI, acceptance and audit steps on GitHub. | CI runner and fixture fixes are verified on the review branch. Select and deploy the final JOSH TEST SHA, then repeat hosted smoke and mobile tests. **CI resolved; hosted retest open.** |
+| 8. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Final code commit `ecfa1547` passed service, UI, acceptance and audit steps on GitHub. | CI runner and fixture fixes are verified on the review branch. Deploy the staged JOSH TEST SHA, then repeat hosted smoke and mobile tests. **CI resolved; hosted retest open.** |
 
 ## Live and test configuration comparison
 
