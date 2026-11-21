@@ -40,7 +40,7 @@ targets `artwork-delivery-integration-20261018`, not the live form.
 | Submit | Test submission reaches only the isolated endpoint and Make; customer sees that the order was accepted separately from completed artwork delivery. | A synthetic `TEST JOSH 21.11` submission was accepted. Duplicate submission returned cached 200. A no-artwork test returned `not_supplied`. The test route does not create a real Airtable record. |
 | Confirmation email | Josh receives a clearly labelled test receipt acknowledgement. | The four-operation Make execution reports the Microsoft email send step succeeded to the fixed address. **Gmail inbox arrival has not been independently verified.** This email is not an artwork delivery notice. |
 | Bind, render and deliver | Trusted processing binds the reference to the actual order's Uploads folder, renders the PSDs/ZIP and verifies the Dropbox upload. | One test job reached `delivered` on its first attempt; the exporter checked Dropbox path, size and content hash against the local archive. Duplicate bind returned `already_bound` through the no-email route. The remote ZIP has not been downloaded, opened and independently inspected in Photoshop. |
-| Staff handling | Staff see an order, audio/assets, delivery or failure status and an actionable recovery path. | The isolated test intentionally has no Airtable record, staff email, invoice or real audio upload link. Production staff journey and failure alert are **not** end-to-end tested. The review code adds an authenticated failure list/retry route, pending deployment and operational verification. |
+| Staff handling | Staff see an order, audio/assets, delivery or failure status and an actionable recovery path. | The isolated test intentionally has no Airtable record, staff email or real audio upload link. The active intake has staff email, but no invoice module; invoicing is handled elsewhere. Production staff journey and failure alert are **not** end-to-end tested. The review code adds an authenticated failure list/retry route, pending deployment and operational verification. |
 
 Test identifiers retained for correlation: order
 `0f7ba405-0239-47fa-b17d-688458e2139a`, Make execution
@@ -89,16 +89,24 @@ The final deployed SHA still requires a hosted smoke test.
 
 ## Prioritized risks and release gates
 
+Read-only inspection of the active Make intake found webhook 1 → Airtable
+create 2/get 28 → Dropbox order folder 12 (`autorename=true`)/Uploads 27 →
+file-request steps 38/36 → share link 16 → Airtable updates 30/5 → customer
+email 29 → staff email 41 → response 40. The webhook has no Artwork Reference
+field. There is no duplicate check before module 2 and no invoice module in
+this scenario. These observations do not change the active scenario.
+
 | Priority / risk | Likelihood / impact | Evidence | Concrete resolution and retest status |
 | --- | --- | --- | --- |
 | 1. Production path is incomplete | Certain / high | Test scenario has no Airtable, real folder creation, audio link, invoice or staff notification; the live form and Customer Intake are unchanged. | Build an inactive copy of the current intake with isolated test base/folders, then bind using module 2's actual Airtable ID and module 27's returned Uploads path. Test artwork, no-artwork, customer/staff outcomes and error paths before cutover. **Open.** |
-| 2. Failed jobs could be missed or lost | Medium / high | Three delivery attempts previously ended in `failed`, worker tick errors were swallowed, failed data expired after seven days from creation; no staff alert or backup schedule. | Review code retains failures and their files, records failure stage and completed timestamp, lists them under a separate staff secret, and supports authenticated retry. Migration, forced failure, retention, low-space rejection and retry tests pass locally. Repeat on JOSH TEST, add an actual alert and backup/restore procedure. **Code fix verified locally; operational gate open.** |
-| 3. Printed files may differ from approved templates | Medium / high | Synthetic parser/render tests exist; actual remote ZIP and PSDs have not been opened/edit-saved/reopened in Photoshop or physically approved. | Download the delivered test ZIP, inspect source files and PSD layers/masks/fonts, edit/save/reopen, print covers and labels, and obtain engineer approval. **Open.** |
-| 4. Hosted phone and email experience unknown | Medium / medium | Local mobile test passed after a code fix not on Railway; Make email module succeeded but inbox arrival unverified; cloud browser could not use Basic auth. | Apply approved JOSH TEST source pin, have a human tester use desktop and phone with refresh/interruption/large image, and check Josh's inbox including spam for both test messages. **Open.** |
-| 5. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST; test OAuth is app-folder scoped but the token's provider permissions are wider than the application root check. No production volume, backup, alert or ingress limiter is verified. | Provision a distinct production environment/service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore, monitored failure queue and separate provider authorization. Verify with synthetic data before enabling customer delivery. **Open.** |
-| 6. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
-| 7. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 8. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Final code commit `ecfa1547` passed service, UI, acceptance and audit steps on GitHub. | CI runner and fixture fixes are verified on the review branch. Deploy the staged JOSH TEST SHA, then repeat hosted smoke and mobile tests. **CI resolved; hosted retest open.** |
+| 2. Duplicate intake may create a second real order | Medium / high | Active Make intake goes from webhook 1 to Airtable create 2 without a prior dedup/lookup. A repeated webhook can repeat record creation and customer/staff emails. Exporter and test-route idempotency do not prevent this. | Add a stable submission ID and durable intake dedup/recovery state before Airtable create in an inactive copy. Test repeat clicks, simultaneous/replayed webhooks and a failure after record creation; confirm one order, one set of emails and a recoverable response. **Open; active scenario untouched.** |
+| 3. Failed jobs could be missed or lost | Medium / high | Three delivery attempts previously ended in `failed`, worker tick errors were swallowed, failed data expired after seven days from creation; no staff alert or backup schedule. | Review code retains failures and their files, records failure stage and completed timestamp, lists them under a separate staff secret, and supports authenticated retry. Migration, forced failure, retention, low-space rejection and retry tests pass locally. Repeat on JOSH TEST, add an actual alert and backup/restore procedure. **Code fix verified locally; operational gate open.** |
+| 4. Printed files may differ from approved templates | Medium / high | Synthetic parser/render tests exist; actual remote ZIP and PSDs have not been opened/edit-saved/reopened in Photoshop or physically approved. | Download the delivered test ZIP, inspect source files and PSD layers/masks/fonts, edit/save/reopen, print covers and labels, and obtain engineer approval. **Open.** |
+| 5. Hosted phone and email experience unknown | Medium / medium | Local mobile test passed after a code fix not on Railway; Make email module succeeded but inbox arrival unverified; cloud browser could not use Basic auth. | Apply approved JOSH TEST source pin, have a human tester use desktop and phone with refresh/interruption/large image, and check Josh's inbox including spam for both test messages. **Open.** |
+| 6. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST; test OAuth is app-folder scoped but the token's provider permissions are wider than the application root check. No production volume, backup, alert or ingress limiter is verified. | Provision a distinct production environment/service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore, monitored failure queue and separate provider authorization. Verify with synthetic data before enabling customer delivery. **Open.** |
+| 7. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
+| 8. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
+| 9. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Final code commit `ecfa1547` passed service, UI, acceptance and audit steps on GitHub. | CI runner and fixture fixes are verified on the review branch. Deploy the staged JOSH TEST SHA, then repeat hosted smoke and mobile tests. **CI resolved; hosted retest open.** |
 
 ## Live and test configuration comparison
 
@@ -106,7 +114,7 @@ The final deployed SHA still requires a hosted smoke test.
 | --- | --- | --- |
 | Form | Basic gated isolated preview and designer | Current GitHub Pages form remains in use without this handoff |
 | Make | Scenario 8084300, test webhook, Josh-only receipt | Customer Intake 4762364 remains active; no integration change applied |
-| Orders and billing | No Airtable, invoice, payment or real audio link | Existing intake creates records/folders and performs its normal workflow; changes need inactive-copy tests |
+| Orders and billing | No Airtable, invoice, payment or real audio link | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is a separate downstream process. Changes need inactive-copy tests |
 | Dropbox | Fixed JOSH TEST root, verified test ZIP | Separate production root/authorization and tested environment required |
 | Exporter | JOSH TEST Railway service/volume, one worker | No production exporter in this project yet |
 | Secrets | Server-side test webhook, bind secret, encrypted Dropbox refresh token | New separate production credentials and staff recovery secret to provision securely |
@@ -122,11 +130,15 @@ The final deployed SHA still requires a hosted smoke test.
    Provision a **separate** production exporter, volume and credentials with
    delivery disabled. Configure restricted origins, ingress limits, retention,
    backup/restore and alerts. Verify health and a synthetic archive first.
-3. Prepare an **inactive** copy of Customer Intake. Preserve existing pricing,
-   tracklist, invoice, customer/staff email and no-artwork routes. Add optional
-   Artwork Reference input, branch after Dropbox Uploads creation, and trusted
-   bind to the actual Airtable record ID and returned Uploads path. Test normal,
-   absent-artwork, duplicate and failure/retry cases against isolated records.
+3. Prepare an **inactive** copy of Customer Intake with a new webhook, test
+   Airtable base, test Dropbox root and Josh-only email destinations. Preserve
+   pricing, tracklist, customer/staff email semantics and no-artwork response;
+   invoicing is not in this scenario. Add stable submission ID and durable
+   deduplication before Airtable create 2. Add optional Artwork Reference input,
+   branch after Dropbox Uploads creation 27, and trusted bind using Airtable
+   `2.id` and Dropbox `27.path_display`. Give each route one response and make
+   bind failures visible and recoverable. Test normal, absent-artwork,
+   simultaneous duplicate and partial-failure cases against isolated records.
 4. Present the exact form diff, Make blueprint diff, environment configuration,
    test evidence and rollback snapshots to Josh. **Stop here for explicit approval**
    of the live form change and production delivery activation.
