@@ -9,6 +9,8 @@
  const success=document.getElementById('success'),heading=success.querySelector('h2'),message=success.querySelector('p');
  const status=document.createElement('p');status.id='testDeliveryStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');success.append(status);
  document.getElementById('uploadWrap')?.remove();
+ document.querySelector('.promo')?.classList.add('hidden');
+ const promoButton=document.getElementById('promoStart');if(promoButton)promoButton.disabled=true;
  const playlistButton=document.getElementById('playlistTry'),playlistUrl=document.getElementById('playlistUrl');
  if(playlistButton)playlistButton.disabled=true;
  if(playlistUrl)playlistUrl.disabled=true;

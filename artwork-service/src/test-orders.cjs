@@ -16,7 +16,6 @@ const PRICE_CENTS=Object.freeze({
  regular:{base:{'7':8500,'10':10000,'12':12500},colour:1500,printed:4000,custom:5500},
  artist:{base:{'7':3700,'10':4250,'12':5810},colour:1000,printed:2500,custom:3500}
 });
-const PROMO_MARKER='FATHERS DAY SPECIAL - 1x CLEAR 12IN + PRINTED JACKET + LABELS';
 const LP_SIDES='ABCDEFGH';
 const SESSION_COOKIE='crosstalk_josh_session';
 const SESSION_SECONDS=24*60*60;
@@ -75,8 +74,7 @@ function intakeFields(fields,id,reference,config){
   mapped.Packaging==='Standard'?'':mapped.Packaging].filter(Boolean).join(' | ');
  if(mapped.Extras!==extras)throw Error('Order extras do not match the selected options');
  if(mapped['Side B Length']!=='')throw Error('Invalid Side B Length');
- const promo=mapped['Side A Length']===PROMO_MARKER;
- if(mapped['Side A Length']!==''&&!promo)throw Error('Invalid Side A Length');
+ if(mapped['Side A Length']!=='')throw Error('Promotions are unavailable in JOSH TEST');
  const size=mapped['Record Size'],speed=mapped.Speed,first=mapped.Tracklist.split('\n',1)[0];
  let discs=1;
  if(first.startsWith('FORMAT: >4LP')){
@@ -90,18 +88,15 @@ function intakeFields(fields,id,reference,config){
   if(first!==expected)throw Error('Invalid tracklist format');
  }else if(first!==`FORMAT: 1 disc | 1 disc | 2 sides (A-B) | ${size}in | ${speed}`)throw Error('Invalid tracklist format');
  if(size==='7'&&speed!=='45 RPM')throw Error('Invalid playback speed');
- if(promo&&(size!=='12'||speed!=='33 RPM'||quantity!=='1'||discs!==1||mapped['Artist Order']!=='No'||mapped['Vinyl Colour']!=='Clear'||mapped.Packaging!=='Printed Jacket + Labels'))throw Error('Invalid promotion options');
- if(discs>1&&(size!=='12'||quantity!=='1'||mapped['Artist Order']!=='No'||promo))throw Error('Invalid multi-LP options');
+ if(discs>1&&(size!=='12'||quantity!=='1'||mapped['Artist Order']!=='No'))throw Error('Invalid multi-LP options');
  let cents=null;
  if(discs<=2){
   const rates=PRICE_CENTS[mapped['Artist Order']==='Yes'?'artist':'regular'];
-  cents=promo?12000:discs===2?22500:rates.base[size]*Number(quantity);
-  if(!promo){
-   if(mapped.Packaging==='Custom Finish Pack')cents+=rates.custom;
-   else{
-    if(mapped['Vinyl Colour']!=='Clear')cents+=rates.colour;
-    if(mapped.Packaging==='Printed Jacket + Labels')cents+=discs===2?6000:rates.printed;
-   }
+  cents=discs===2?22500:rates.base[size]*Number(quantity);
+  if(mapped.Packaging==='Custom Finish Pack')cents+=rates.custom;
+  else{
+   if(mapped['Vinyl Colour']!=='Clear')cents+=rates.colour;
+   if(mapped.Packaging==='Printed Jacket + Labels')cents+=discs===2?6000:rates.printed;
   }
   if(mapped.Rush==='on')cents+=8000;
   if(shipping==='on')cents+=2000;
@@ -110,7 +105,9 @@ function intakeFields(fields,id,reference,config){
  return mapped;
 }
 function safeEqual(a,b){
- return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));
+ if(typeof a!=='string'||typeof b!=='string')return false;
+ const left=Buffer.from(a),right=Buffer.from(b);
+ return left.length===right.length&&crypto.timingSafeEqual(left,right);
 }
 function browserSessionHash(req,config){
  const pair=(req.get('Cookie')||'').split(';').map(value=>value.trim()).find(value=>value.startsWith(SESSION_COOKIE+'='));
@@ -171,6 +168,35 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
  // A request left in flight by a process restart has no trustworthy outcome.
  // Reconcile it against Make before any further submission with the same ID.
  store.db.prepare("UPDATE test_submissions SET state='unknown' WHERE state='sending'").run();
+ function staffAccess(req,res,next){
+  if(config.testLabel!=='JOSH TEST'||config.dropboxRoot!==ROOT)return res.status(503).json({error:'JOSH TEST staff view is unavailable'});
+  if(!config.staffSecret)return res.status(503).json({error:'Staff recovery access is not configured'});
+  if(!safeEqual(req.get('Authorization'),'Bearer '+config.staffSecret))return res.status(401).json({error:'Unauthorised'});
+  next();
+ }
+ function safeRow(row){return {testOrderId:row.id,createdAt:row.created,state:row.state,
+  hasArtwork:!!row.reference_id,artworkJobId:row.reference_id||null};}
+ app.get('/internal/test-submissions',staffAccess,(req,res)=>{
+  const limit=req.query.limit??'25',offset=req.query.offset??'0',state=req.query.state??'uncertain';
+  if(typeof limit!=='string'||!/^[1-9][0-9]*$/.test(limit)||Number(limit)>100||
+     typeof offset!=='string'||!/^(0|[1-9][0-9]*)$/.test(offset)||Number(offset)>100000||
+     typeof state!=='string'||!['uncertain','unknown','sending','complete'].includes(state))return res.status(422).json({error:'Invalid test submission query'});
+  const where=state==='uncertain'?"state IN ('unknown','sending')":'state=?';
+  const query=`SELECT id,created,state,reference_id FROM test_submissions WHERE ${where} ORDER BY created DESC,id DESC LIMIT ? OFFSET ?`;
+  const args=state==='uncertain'?[Number(limit)+1,Number(offset)]:[state,Number(limit)+1,Number(offset)];
+  const rows=store.db.prepare(query).all(...args);
+  res.json({items:rows.slice(0,Number(limit)).map(safeRow),nextOffset:rows.length>Number(limit)?Number(offset)+Number(limit):null});
+ });
+ app.get('/internal/test-submissions/:id',staffAccess,(req,res)=>{
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id))return res.status(422).json({error:'Invalid test order ID'});
+  const row=store.db.prepare(`SELECT s.id,s.created,s.state,s.reference_id,s.request_hash,
+    j.state AS artwork_state,CASE WHEN j.delivery_receipt IS NULL THEN 0 ELSE 1 END AS delivery_verified
+    FROM test_submissions s LEFT JOIN jobs j ON j.id=s.reference_id WHERE s.id=?`).get(req.params.id);
+  if(!row)return res.status(404).json({error:'Test submission not found'});
+  res.json({...safeRow(row),requestFingerprint:row.request_hash||null,
+   artworkState:row.artwork_state||null,deliveryVerified:!!row.delivery_verified,
+   needsReconciliation:row.state==='unknown'||row.state==='sending'});
+ });
  app.get('/v1/test-config',(_,res)=>{
   if(!testOnly(config))return res.status(503).json({error:'The JOSH TEST submission window is closed'});
   res.json({name:NAME,email:config.testRecipient,phone:'0400000000'});

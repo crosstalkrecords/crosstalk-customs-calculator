@@ -21,7 +21,7 @@
    name:row.querySelector('.tn')?.value.slice(0,200)||'',
    duration:row.querySelector('.td')?.value.slice(0,20)||''
   }));
-  const draft={version:1,savedAt:Date.now(),step:state.step,mode:state.mode,promo:state.promo,
+  const draft={version:1,savedAt:Date.now(),step:state.step,mode:state.mode,
    size:state.size,qty:state.qty,rpm:state.rpm,colour:state.colour,pack:state.pack,
    audio:state.audio,rush:state.rush,shipping:state.shipping,doubleLP:state.doubleLP,quoteOnly:state.quoteOnly,
    lpCount:state.lpCount,manual:document.getElementById('manual').value.slice(0,8000),tracks};
@@ -32,7 +32,8 @@
   try{draft=JSON.parse(sessionStorage.getItem(draftKey)||'null');}catch(_){return false;}
   if(!draft||draft.version!==1||!Number.isFinite(draft.savedAt)||Date.now()-draft.savedAt>24*60*60*1000)return false;
   state.mode=draft.mode==='artist'?'artist':'regular';
-  state.promo=draft.promo===true;
+  // A saved test draft must not revive the expired Father's Day offer.
+  state.promo=false;
   state.size=['7','10','12'].includes(draft.size)?draft.size:null;
   state.qty=Math.max(1,Math.min(100,Number.isInteger(draft.qty)?draft.qty:1));
   if(state.size==='12')state.qty=Math.min(5,state.qty);

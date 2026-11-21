@@ -1,7 +1,7 @@
 {
   "kind": "sanitized Make blueprint plan",
   "deployable": false,
-  "reason": "The preferred recovery design is the Airtable-only ledger in JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md: sequential Make execution, incomplete executions and performUpsert on Submission ID using test-only connection 13265002. Its configuration shape passed validation but runtime claim/recovery is untested. The Make Data store exists but is unused and optional. Dropbox app-folder connection 13265654 passed a controlled read-only API call; writes, file requests and exporter namespace are unverified. A separate protected webhook and runnable stage/error routes are still required. No credential values or webhook URLs are included.",
+  "reason": "Protected hook 4151555 is attached to inactive JOSH TEST scenario 8715068. Fixed-identity preflight, Airtable claim/Get, fresh sparse-row detail guard, fixed test Dropbox order/Uploads folders and a CLOSED file request are wired behind 503/409/422 fail-closed responses; no email, invoice, payment, public share or exporter bind is wired. Full-route filters/error handlers remain unexecuted. Separate probes proved Airtable one-row upsert and same-namespace Dropbox read, fixed folder writes and closed file request. An inactive on-demand static runner 8715455 was prepared to test the route without the protected hook, but automatic approval review blocked its UI before Run once; no execution occurred and the blocked action was not retried. The UI step for open-request ID/URL was also blocked. Open upload acceptance, ambiguity recovery and the 25-second response deadline remain untested. Make may auto-retry timed-out side effects; incomplete execution storage awaits tested manual-stop handlers. No credential values or webhook URLs are included.",
   "scope": "Crosstalk Customs JOSH TEST only",
   "make": {
     "organizationId": 6808399,
@@ -9,12 +9,15 @@
     "sourceScenarioId": 4762364,
     "sourceScenarioName": "Customer Intake",
     "relatedTestScenarioId": 8084300,
-    "targetName": "JOSH TEST Customer Intake",
+    "targetScenarioId": 8715068,
+    "targetName": "JOSH TEST Customer Intake — INCOMPLETE",
+    "protectedHookId": 4151555,
     "createInactive": true,
     "hookAuthentication": "new test-only Make API key via x-make-apikey, stored only in Railway ARTWORK_TEST_MAKE_API_KEY; no browser or URL credential",
     "activateOnlyForControlledTests": true,
     "sequential": true,
-    "incompleteExecutions": true
+    "incompleteExecutions": false,
+    "incompleteExecutionGate": "Add and test manual-stop handlers before enabling storage; default Make timeout/connection/rate-limit retries can duplicate file requests or emails."
   },
   "airtable": {
     "baseId": "appDz7CEL2KQWpzyC",
@@ -31,7 +34,7 @@
     "internalFolderLinkFieldId": "fldFsfOT7hf2Bg4ZO",
     "requiredConnection": "Make Airtable OAuth connection 13265002, Locked and independently verified in Airtable Integrations UI as JOSH TEST base only; verify runtime performUpsert and stage updates in an isolated probe",
     "ledgerDraft": "JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md",
-    "mergeKey": "Submission ID only; sequential Make scenario, incomplete executions enabled",
+    "mergeKey": "Submission ID only; sequential Make scenario; incomplete executions stay off pending manual-stop retry validation",
     "ledgerFieldIds": {
       "Request Fingerprint": "fldq46cNTtEpprcgN",
       "Intake State": "fldnYB8vJvo3b6ddu",
@@ -56,7 +59,7 @@
   "dropbox": {
     "fixedOrderRoot": "/Crosstalk Customs/JOSH TEST",
     "folderScopeConstraint": "If Make uses a Dropbox app-folder grant, its paths are relative to that app folder. The exporter must use the same isolated Dropbox app/account and folder namespace; do not bind to an existing full-Dropbox exporter destination by path alone.",
-    "requiredConnection": "Make app-folder connection 13265654 has file_requests.write, files.metadata.read, files.content.write, sharing.write, sharing.read and account_info.read. Controlled inactive read-only scenario 8714819 used OAuth-bound dropbox:makeApiCall with disablePathRoot=true to POST /2/files/list_folder and received 200 with the expected /Crosstalk Customs/JOSH TEST/JOSH TEST folder. The native listFolders picker RPC failed with 'path root is not supported for sandbox app'. Verify native folder/file-request/share modules or use OAuth-bound makeApiCall without raw secrets; prove test write behavior and shared exporter namespace before submission. Old 13265327 remains unused.",
+    "requiredConnection": "Make app-folder connection 13265654 has file_requests.write, files.metadata.read, files.content.write, sharing.write, sharing.read and account_info.read. Read-only scenario 8714819 returned HTTP 200 for the expected test folder and, after an exact-path correction, the unique exporter ZIP (2163437 bytes), proving shared read visibility. Separate inactive controlled write probe 8715276 returned HTTP 200 for fixed order and Uploads folders and a CLOSED file request with exact destination and is_open=false. No customer upload/open request was tested; its UI step was blocked by automatic approval review because private request details could be exposed. Native folder picker RPC fails for the sandbox app. Use OAuth-backed makeApiCall; old broad connection 13265327 remains unused.",
     "neverAcceptClientDestination": true
   },
   "preflight": {
@@ -65,21 +68,40 @@
     "submissionId": "server-validated UUID or equivalent unique opaque identifier",
     "rejectBeforeAnyWrite": ["wrong test label", "wrong recipient", "missing or invalid submission id", "invalid mapped product fields"]
   },
+  "currentScaffold": {
+    "flow": ["gateway:CustomWebHook / 1, protected hook 4151555", "builtin:BasicRouter / 2, preflight valid/rejected routes", "airtable:makeApiCall / 5, valid route: test-base performUpsert on Submission ID only", "airtable:ActionGetRecord / 6, valid route: read claimed record by structured body.records[1].id", "builtin:BasicRouter / 7, exact fresh sparse-row versus populated/mismatched claim", "airtable:ActionUpdateRecords / 8, fresh route: 27 normalized test order and initial ledger fields", "airtable:ActionUpdateRecords / 10, Folder uncertain", "dropbox:makeApiCall / 11/12/13, fixed order/Uploads folders and exact metadata", "builtin:BasicRouter / 20, exact status/path guard", "airtable:ActionUpdateRecords / 14/15, Folders ready then File request uncertain", "dropbox:makeApiCall / 16, CLOSED file request under exact Uploads path", "builtin:BasicRouter / 21, exact destination/closed/ID/URL guard", "airtable:ActionUpdateRecords / 17, persist request ID and Manual review only", "gateway:WebhookRespond / 3, fresh route static HTTP 503", "gateway:WebhookRespond / 9, populated/mismatched route HTTP 409", "gateway:WebhookRespond / 4, invalid preflight route HTTP 422", "Side-effect modules each have generic 503 then Break retry:false error route"],
+    "active": false,
+    "valid": true,
+    "sequential": true,
+    "dlq": false,
+    "scheduling": "Make retained immediately for the webhook; inactive state is the guard",
+    "sideEffects": "If deliberately executed, a valid fresh payload can create/reuse one test Airtable row, fixed app-folder Dropbox order/Uploads folders and a CLOSED file request; test base has no deployed/draft automations. Scenario remains inactive and has not run. No email, invoice, payment, public share or exporter module."
+  },
+  "staticRunner": {
+    "scenarioId": 8715455,
+    "name": "JOSH TEST static intake runner — CLOSED request",
+    "state": "inactive, valid, on-demand, sequential, no webhook; not executed",
+    "submissionId": "b72ca4e5-0e82-4f75-9413-35568ae8ef0c",
+    "testName": "TEST JOSH 21.11",
+    "recipientDataOnly": "delousedcomatorium@gmail.com",
+    "route": "Static JSON fixture feeds the guarded test Airtable and Dropbox closed-request route; webhook responses replaced by harmless Compose markers. No email, exporter, payment, invoice or public share module.",
+    "executionBlocker": "Automatic approval review rejected opening the runner UI because it could expose a private Dropbox file-request URL. No Run once occurred; do not retry the blocked action through another route."
+  },
   "flow": [
-    {"id": 1, "module": "gateway:CustomWebHook", "version": 1, "configuration": "new dedicated test hook with API-key authentication, never reuse live hook; bind the matching key only in the JOSH TEST Railway server"},
+    {"id": 1, "module": "gateway:CustomWebHook", "version": 1, "configuration": "existing dedicated test hook 4151555 with API-key authentication; matching key only in the JOSH TEST Railway server"},
     {"id": 49, "module": "builtin:BasicRouter", "version": 1, "purpose": "explicit test-only preflight accept/reject; rejected route responds without writes"},
     {"id": 50, "module": "airtable:makeApiCall", "version": 3, "purpose": "preferred claim: PATCH test table with performUpsert merging only Submission ID; inspect one returned record ID and createdRecords/updatedRecords; configuration shape validated, runtime untested"},
     {"id": 28, "module": "airtable:ActionGetRecord", "version": 3, "configuration": "test base/table; fetch the single record ID returned by claim 50, compare Request Fingerprint and existing stage before updates"},
     {"id": 2, "module": "airtable:ActionUpdateRecords", "version": 3, "configuration": "after claim/get/fingerprint check, fill immutable mapped details and ledger fields on the one claimed test record; never create a second row on retry"},
-    {"id": 12, "module": "dropbox:createFolder", "version": 5, "configuration": "proposed, native app-folder compatibility unverified; fixed JOSH TEST root, name={{2.`Job Number`}}, autorename=false; OAuth-bound makeApiCall fallback without raw secrets"},
-    {"id": 27, "module": "dropbox:createFolder", "version": 5, "configuration": "proposed, native app-folder compatibility unverified; path={{12.path_lower}}, name=Uploads"},
-    {"id": 51, "module": "dropbox:createFileRequest", "version": 5, "configuration": "proposed, native app-folder compatibility unverified; title uses test Job Number; destination={{27.path_display}}; open=true; replaces live HTTP 38 and 36"},
+    {"id": 12, "module": "dropbox:makeApiCall", "version": 5, "configuration": "validated shape for POST /2/files/create_folder_v2, OAuth connection 13265654, fixed test root plus server Submission ID, autorename=false, disablePathRoot=true; verify returned folder metadata at runtime"},
+    {"id": 27, "module": "dropbox:makeApiCall", "version": 5, "configuration": "validated shape for POST /2/files/create_folder_v2, same app-folder connection, nested Uploads, autorename=false; verify exact path via /2/files/get_metadata"},
+    {"id": 51, "module": "dropbox:makeApiCall", "version": 5, "configuration": "validated shape for POST /2/file_requests/create, deterministic test title, exact verified Uploads destination and open=true; set uncertain stage before call and stop default timeout retries"},
     {"id": 16, "module": "dropbox:createShareLink", "version": 5, "configuration": "do not run by default: Dropbox create_shared_link_with_settings defaults to public visibility when settings are omitted. Enable only after explicit team-only visibility is supported and verified; otherwise omit this module and retain private path in the ledger"},
-    {"id": 30, "module": "airtable:ActionUpdateRecords", "version": 3, "configuration": "test base/table; update ID={{2.id}}, Audio Upload fld5G2oHi9NL73kkn={{51.url}} after verifying native file request result"},
+    {"id": 30, "module": "airtable:ActionUpdateRecords", "version": 3, "configuration": "test base/table; update the one claimed Airtable record ID, Audio Upload fld5G2oHi9NL73kkn with the verified Dropbox file-request URL parsed from OAuth-backed API response"},
     {"id": 5, "module": "airtable:ActionUpdateRecords", "version": 3, "configuration": "test base/table; update ID={{2.id}}, Internal Folder Link fldFsfOT7hf2Bg4ZO only with a verified team-only URL; otherwise leave URL empty and show private Dropbox path to staff through a protected channel"},
     {"id": 52, "module": "builtin:BasicRouter", "version": 1, "purpose": "artwork present/absent/error; branches must each produce one response and constrained Josh-only email"},
     {"id": 53, "module": "http:MakeRequest", "version": 4, "configuration": "artwork branch only; isolated JOSH TEST exporter API key connection; orderId={{2.id}}, folder={{27.path_display}}, reference from validated inbound; never static synthetic values"},
-    {"id": 29, "module": "microsoft-email:createAndSendAMessage", "version": 2, "configuration": "test customer confirmation to Josh only, clearly marked TEST; only after native file request succeeded with a valid returned Dropbox upload URL {{51.url}}; never use inbound URL or shared-folder URL; send once per accepted submission"},
+    {"id": 29, "module": "microsoft-email:createAndSendAMessage", "version": 2, "configuration": "test customer confirmation to Josh only, clearly marked TEST; only after OAuth-backed file request succeeded with a verified URL; never use inbound URL or shared-folder URL; mark Uncertain before send and reconcile ambiguity manually"},
     {"id": 41, "module": "microsoft-email:createAndSendAMessage", "version": 2, "configuration": "test staff notice to Josh only, clearly marked TEST; send once per accepted submission"},
     {"id": 40, "module": "gateway:WebhookRespond", "version": 1, "configuration": "accurate stage/status and valid Dropbox file-request upload URL {{51.url}} only after module 51 succeeded; a 202 alone is not delivery proof"}
   ],
@@ -87,7 +109,7 @@
     "allAirtableModules": "50, 2, 28, 30, 5: bind test-only base appDz7CEL2KQWpzyC and connection 13265002; 50 is the preferred performUpsert claim, not a Make Data store claim",
     "module12": "replace production order root with fixed JOSH TEST root and disable autorename; collisions require recovery",
     "module38": "delete raw OAuth refresh module; it contains live secret values in blueprint",
-    "module36": "replace raw HTTP file request with native dropbox:createFileRequest using connection 13265654 if its app-folder compatibility is proved; otherwise use OAuth-bound dropbox:makeApiCall without raw secrets",
+    "module36": "replace raw HTTP file request with OAuth-bound dropbox:makeApiCall using app-folder connection 13265654 and no raw secrets; validate writes and response mapping in a controlled probe",
     "module30and5": "live module 30 writes file-request URL then module 5 overwrites the same Internal Folder Link with share URL; test module 30 writes Audio Upload and test module 5 writes Internal Folder Link only if the staff URL is verified team-only. Never create Dropbox's default public shared link.",
     "module29": "override any dynamic recipient with Josh-only fixed destination after explicit preflight, and use file-request URL for customer upload",
     "module41": "replace live staff recipient with Josh-only destination",
@@ -101,15 +123,15 @@
     "claim": "Preferred Airtable-only design: sequential Make execution and PATCH performUpsert with Submission ID as the sole merge field and sole claim body field. Inspect exactly one returned record ID, compare Request Fingerprint after fetch, and stop on mismatch or an unexpectedly populated claim. A test-server SQLite primary key also rejects changed retries. This is an API-level upsert, not a database uniqueness constraint against unrelated writers; runtime behavior is untested. See JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md. The Make Data store is an unused alternative.",
     "airtableCreate": "On ambiguous timeout, repeat the same performUpsert claim and fetch the one record by returned ID; never call Create record again. Multiple matching Submission IDs must stop for staff reconciliation. Force a timeout immediately after claim in an isolated probe and verify exactly one row before treating this as reliable.",
     "externalEffects": "Persist the returned order folder, Uploads folder, file-request ID/URL, optional verified team-only staff link and artwork bind result in the isolated Airtable row after each step. Dropbox create_shared_link_with_settings defaults to public when settings are omitted; do not request a default public link. If team-only is unavailable, retain a private folder path in Airtable and leave the staff URL empty. On recovery, verify existing resources match the claimed record and fixed test root before reuse; stop on a mismatch. Never autorename the order folder or silently create duplicates.",
-    "emails": "Send only to Josh after the upload link has been verified. Set separate Airtable Customer/Staff Email Status to Uncertain before each send, then Sent after provider confirmation. A provider send may succeed before the status update; pause for manual Sent/inbox inspection instead of blindly resending. Exactly-once email delivery is not guaranteed by status alone.",
+    "emails": "Send only to Josh after the upload link has been verified. Set separate Airtable Customer/Staff Email Status to Uncertain before each send, then Sent after provider confirmation. A provider send may succeed before the status update; pause for manual Sent/inbox inspection instead of blindly resending. Make's default incomplete-execution timeout retry must be suppressed and tested. Exactly-once email delivery is not guaranteed by status alone.",
     "response": "Return a persisted, accurate stage. The current isolated form accepts only bound/already_bound for artwork or not_supplied without artwork, and times out after 25 seconds; test the full route against that contract or revise the isolated code before activation. A timeout must remain recoverable by Submission ID.",
-    "failures": "Enable sequential execution and incomplete-execution storage, attach explicit error routes and staff-visible Airtable failure state, and force failures after performUpsert claim, folder/file request, bind and each email during controlled tests."
+    "failures": "Sequential execution is set in the inactive scaffold. Attach explicit manual-stop error routes and staff-visible Airtable failure state, force failures after each side effect, and only then consider incomplete-execution storage after default auto-retry behavior is proven controlled."
   },
   "validationBeforeActivation": [
     "Confirm new Airtable Make connection can read/write only test base",
     "Force timeout immediately after Airtable performUpsert and verify one row for repeated Submission ID; confirm fingerprint mismatch and duplicate-row handling",
     "Reject a call to the dedicated Make hook without x-make-apikey and accept only the server-held test key",
-    "Confirm connection 13265654 performs test-only writes in its app folder and native folder/file-request/share modules work (or use OAuth-bound makeApiCall); verify it shares the exporter's intended namespace",
+    "Confirm connection 13265654 performs test-only writes via OAuth-backed API calls in its app folder; verify it shares the exporter's intended namespace",
     "Do not create a default public Dropbox share link; verify explicit team-only sharing or use a private staff path with no shared URL",
     "Validate every Make module and route with bound connections",
     "Send duplicate test webhook with same Submission ID and verify one Airtable record and one email pair",

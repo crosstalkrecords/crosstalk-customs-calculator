@@ -10,7 +10,7 @@ const {installTestDelivery}=require('./test-delivery.cjs');
 const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
 const {protectPreview,installTestOrders,testOnly,browserSessionHash}=require('./test-orders.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
-function secureEqual(a,b){return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));}
+function secureEqual(a,b){if(typeof a!=='string'||typeof b!=='string')return false;const left=Buffer.from(a),right=Buffer.from(b);return left.length===right.length&&crypto.timingSafeEqual(left,right);}
 function makeApp(config,options={}){
  if(!config.bindSecret||config.bindSecret.length<32)throw Error('A separate 32-character or longer binding secret is required');
  if(config.staffSecret&&config.staffSecret.length<32)throw Error('Staff recovery secret must be at least 32 characters');

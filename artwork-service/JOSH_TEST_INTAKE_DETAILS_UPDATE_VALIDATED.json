@@ -1,0 +1,47 @@
+{
+  "kind": "Crosstalk Customs JOSH TEST Airtable order-detail update configuration",
+  "deployable": false,
+  "reason": "Strict Make module schema validation passed and this mapper is wired behind the fresh sparse-row guard in inactive scenario 8715068 and its static runner. The claim/Get output shape was confirmed in a separate probe, but the guard and detail update have not run in the full route. This updates only the claimed isolated Airtable test row; no invoice/payment or live record module is present.",
+  "scenarioId": 8715068,
+  "module": "airtable:ActionUpdateRecords",
+  "version": 3,
+  "parameters": {
+    "__IMTCONN__": 13265002
+  },
+  "mapper": {
+    "base": "appDz7CEL2KQWpzyC",
+    "table": "tbly1iXdcMvFuqCcY",
+    "id": "{{6.id}}",
+    "typecast": true,
+    "useColumnId": true,
+    "record": {
+      "fldKgbOba0zvKyWRt": "{{1.`Customer Name`}}",
+      "fldfkF6sDQsNpXdXk": "{{1.Email}}",
+      "fld2POlaG4bAY7SCQ": "{{1.`Custom Field 1`}}",
+      "fldYMxBMG5MubBQ5M": "New Submissions",
+      "fldXlei2WHnueVkFz": "{{1.`Artist Order`}}",
+      "fldwAXAFk0CWyp1Oy": "{{lower(toString(1.Rush)) = \"on\"}}",
+      "fld5F5mKkYYOAGQqD": "{{lower(toString(1.`Shipping Required`)) = \"on\"}}",
+      "fldN1FpgWdUHgqC5w": "{{1.`Delivery Method`}}",
+      "fldQnSLXlzyedrnIO": "{{1.Speed}}",
+      "flddgwWOugRimbwIw": "{{1.Sides}}",
+      "fldiDDxb2Aaz85Jjj": "{{1.Quantity}}",
+      "fldkvqgZfvpOlXaN3": "{{1.`Record Size`}}",
+      "fldrkJPDoAPG0kS7s": "{{1.`Estimated Price Given`}}",
+      "fldxlk24RQeHUAPcp": "{{1.Tracklist}}",
+      "flduI8PgnORR8I71d": "{{1.Tracklist}}",
+      "fldlipVWj9gGrEEVR": "{{if(lower(toString(1.`Shipping Required`)) = \"on\"; \"TEST JOSH 21.11, 1 TEST ONLY LANE TESTVILLE 0000 NSW\"; emptystring)}}",
+      "fldGqpmxYQBhWAFrp": "{{1.Extras}}",
+      "fldDCDuwYdQuWJDmR": "{{1.Packaging}}",
+      "fldzWWtP29T4sQYtv": "{{1.`Vinyl Colour`}}",
+      "fldsaBEXJkwNKkrPa": "{{1.`Side A Length`}}",
+      "fld4VpGvvfNlWQDxi": "{{1.`Side B Length`}}",
+      "fldZ3a2PYHZ7LKubs": "{{1.`Artwork Job ID`}}",
+      "fldC0OBNOiit8AltO": "{{if(empty(1.`Artwork Reference`); \"Not supplied\"; \"Queued\")}}",
+      "fldq46cNTtEpprcgN": "{{1.`Request Fingerprint`}}",
+      "fldnYB8vJvo3b6ddu": "Record ready",
+      "fldiHqm7xEMbVJLmg": "Pending",
+      "fldZJt4pfO1ldlOia": "Pending"
+    }
+  }
+}

@@ -19,6 +19,16 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   const outbound=[];page.on('request',request=>{if(request.method()==='POST')outbound.push({url:request.url(),origin:request.headers()['origin']||null,site:request.headers()['sec-fetch-site']||null,referer:request.headers()['referer']||null})});
   await page.goto(base+'/calculator-preview.html');
   assert.equal(await page.title(),'JOSH TEST — Crosstalk Customs');
+  assert.equal(await page.locator('.promo').isHidden(),true);
+  assert.equal(await page.locator('#promoStart').isDisabled(),true);
+  await page.evaluate(()=>sessionStorage.setItem('crosstalk-josh-test-form-draft-v1',JSON.stringify({
+   version:1,savedAt:Date.now(),step:0,mode:'regular',promo:true,size:'12',qty:1,rpm:'33 RPM',
+   colour:'Clear',pack:'Printed Jacket + Labels',audio:null,rush:false,shipping:false,
+   doubleLP:false,quoteOnly:false,lpCount:1,manual:'Synthetic test',tracks:{}
+  })));
+  await page.reload();
+  assert.equal(await page.evaluate(()=>state.promo),false,'an old draft cannot revive the expired offer');
+  assert.equal(await page.locator('.promo').isHidden(),true);
   assert.equal(await page.locator('#uploadWrap').count(),0);
   assert(!((await page.content()).includes("After submitting, you'll receive your private Dropbox link")));
   assert(!((await page.content()).includes("You'll upload them after ordering")));

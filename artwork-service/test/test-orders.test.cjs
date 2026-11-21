@@ -10,7 +10,7 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
  legacy.exec('CREATE TABLE test_submissions (id TEXT PRIMARY KEY, created INTEGER NOT NULL, reference_id TEXT NOT NULL, state TEXT NOT NULL, response TEXT)');
  legacy.close();
  const sent=[];let failNext=false;
- const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
+ const config={bindSecret:'b'.repeat(40),staffSecret:'staff-test-only-'.repeat(3),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
  const service=makeApp(config,{testOrders:{fetchImpl:async(url,options)=>{const payload=JSON.parse(options.body);sent.push({url,payload,headers:options.headers});if(failNext)throw Error('Ambiguous Make timeout');return {ok:true,json:async()=>({testLabel:'JOSH TEST',artwork_status:payload['Artwork Reference']?'bound':'not_supplied'})}}}});
  assert(service.store.db.prepare('PRAGMA table_info(test_submissions)').all().some(column=>column.name==='request_hash'));
  const server=service.app.listen(0,'127.0.0.1');
@@ -113,8 +113,9 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   const promoId='76f90e2f-6a80-4ac0-bb4e-258295f09802';
   const promoFields={...fields,'Artwork Reference':'','Estimated Price Given':'120.00',
    'Side A Length':'FATHERS DAY SPECIAL - 1x CLEAR 12IN + PRINTED JACKET + LABELS'};
-  assert.equal((await submit({testOrderId:promoId,artworkReference:'',fields:promoFields})).status,202);
-  assert.equal(sent.at(-1).payload['Estimated Price Given'],'120.00');
+  const beforePromo=sent.length;
+  assert.equal((await submit({testOrderId:promoId,artworkReference:'',fields:promoFields})).status,422);
+  assert.equal(sent.length,beforePromo,'expired promotion is not forwarded to Make');
   const artistId='86f90e2f-6a80-4ac0-bb4e-258295f09802';
   const artistFields={...fields,'Artwork Reference':'','Artist Order':'Yes','Estimated Price Given':'83.10',
    Tracklist:'FORMAT: 1xLP | 1 disc | 2 sides (A-B) | 12in | 33 RPM\nEXTRAS: Printed Jacket + Labels\n\nSynthetic artist track'};
@@ -141,10 +142,47 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal(retry.status,409);
   assert.equal((await retry.json()).outcomeUncertain,true);
   assert.equal(sent.length,attempts,'an unknown Make outcome must not be posted twice');
+  const staffHeaders={Authorization:'Bearer '+config.staffSecret};
+  const staffGet=(suffix='',headers=staffHeaders)=>fetch(base+'/internal/test-submissions'+suffix,{headers});
+  assert.equal((await staffGet('',{})).status,401);
+  assert.equal((await staffGet('',{Authorization:'Bearer '+config.bindSecret})).status,401,'binding secret does not grant staff access');
+  assert.equal((await staffGet('',{Authorization:'é'.repeat(('Bearer '+config.staffSecret).length)})).status,401,'multibyte malformed staff credentials are rejected cleanly');
+  const sendingId='26f90e2f-6a80-4ac0-bb4e-258295f09802';
+  service.store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state,request_hash) VALUES(?,?,?,'sending',?)").run(sendingId,Date.now(),'','f'.repeat(64));
+  const list=await staffGet('',staffHeaders);
+  assert.equal(list.status,200);assert.equal(list.headers.get('cache-control'),'no-store');
+  const listBody=await list.json();
+  assert.deepEqual(new Set(listBody.items.map(item=>item.testOrderId)),new Set([uncertainId,sendingId]));
+  assert.equal(listBody.nextOffset,null);
+  assert.equal(listBody.items.some(item=>item.testOrderId===id),false,'completed submissions are excluded from the uncertain queue');
+  assert.deepEqual(Object.keys(listBody.items[0]).sort(),['artworkJobId','createdAt','hasArtwork','state','testOrderId']);
+  const paged=await(await staffGet('?limit=1',staffHeaders)).json();
+  assert.equal(paged.items.length,1);assert.equal(paged.nextOffset,1);
+  assert.equal((await(await staffGet('?limit=1&offset=1',staffHeaders)).json()).items.length,1);
+  for(const query of ['?limit=101','?limit=0','?offset=-1','?state=all'])assert.equal((await staffGet(query,staffHeaders)).status,422);
+  assert.equal((await staffGet('/invalid',staffHeaders)).status,422);
+  assert.equal((await staffGet('/36f90e2f-6a80-4ac0-bb4e-258295f09802',staffHeaders)).status,404);
+  const uncertainView=await(await staffGet('/'+uncertainId,staffHeaders)).json();
+  assert.equal(uncertainView.state,'unknown');assert.equal(uncertainView.needsReconciliation,true);
+  assert.match(uncertainView.requestFingerprint,/^[a-f0-9]{64}$/);
+  const completeView=await(await staffGet('/'+id,staffHeaders)).json();
+  assert.equal(completeView.state,'complete');assert.equal(completeView.artworkJobId,draft.id);
+  assert.equal(completeView.artworkState,'delivered');assert.equal(completeView.needsReconciliation,false);
+  for(const view of [listBody,uncertainView,completeView]){
+   const serialized=JSON.stringify(view);
+   assert(!serialized.includes(reference),'staff view never exposes the full artwork capability');
+   assert(!serialized.includes(config.testWebhookUrl),'staff view never exposes the Make URL');
+   assert(!serialized.includes(config.testRecipient),'staff view omits the test recipient');
+  }
+  assert.equal((await fetch(base+'/internal/test-submissions/'+uncertainId,{method:'POST',headers:staffHeaders})).status,404,'staff view has no resend action');
+  assert.equal(service.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(uncertainId).state,'unknown');
   config.testMakeApiKey='';assert.equal((await fetch(base+'/v1/test-config',{headers:{Authorization:auth}})).status,503);
   assert.equal((await submit({...body,testOrderId:'a6f90e2f-6a80-4ac0-bb4e-258295f09802'})).status,503);
   config.testMakeApiKey='synthetic-make-api-key';
   config.mode='disabled';assert.equal((await submit({...body,testOrderId:'e6f90e2f-6a80-4ac0-bb4e-258295f09802'})).status,503);
+  assert.equal((await staffGet('/'+uncertainId,staffHeaders)).status,200,'staff can inspect uncertainty while delivery is disabled');
+  config.testLabel='';assert.equal((await staffGet('',staffHeaders)).status,503);
+  config.testLabel='JOSH TEST';config.staffSecret='';assert.equal((await staffGet('',staffHeaders)).status,503);
   config.testAccessCode='';
   assert.equal((await fetch(base+'/calculator-preview.html')).status,503);
   assert.equal((await fetch(base+'/designer.html')).status,503);
