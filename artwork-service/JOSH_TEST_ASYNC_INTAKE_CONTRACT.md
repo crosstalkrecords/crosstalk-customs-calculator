@@ -2,10 +2,17 @@
 
 This is an isolated Customs design. The protected Make scenario `8715068` is
 saved as a confidential 100-module ASYNC DRAFT, remains inactive and has not
-run end to end. The current hosted order endpoint
-implements a durable `queued` acknowledgement and same-session polling, but
-the server-only protected Make destination is not configured in JOSH TEST, so
-the hosted submission window is closed. The saved route corresponds to
+run end to end. The hosted order endpoint implements a durable `queued`
+acknowledgement and same-session polling. Josh privately configured its
+server-only protected Make destination in Railway JOSH TEST after automatic
+approval review blocked tool transfer. A controlled window briefly enabled
+Dropbox delivery and activated scenario 8715068; Railway `/health` reported
+`deliveryMode=dropbox`, `configured=true`. No successful preview visit, form
+submission or actual scenario execution occurred. Cloud browser Basic
+authentication failed and browser security policy prevented further
+observation. The scenario and delivery mode were switched off; `/health`
+returned `deliveryMode=disabled`, `configured=false`. Josh must use his own
+browser in a new controlled window. The saved route corresponds to
 `JOSH_TEST_FULL_INTAKE_BLUEPRINT_DRAFT.json` but has not completed an execution.
 Do not use this document as evidence that the customer journey is complete,
 and do not connect the live form.

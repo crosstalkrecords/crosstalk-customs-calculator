@@ -20,10 +20,19 @@ Railway now runs review commit `43be85b`, with durable queued intake and
 staff-only fixed-folder diagnostics. Its read-only staff recovery summary
 passed an authenticated hosted check; the summary found four older failed
 artwork jobs and no current queued or processing submissions. The 100-module
-full Make intake is saved **inactive and unexecuted**, and the server-only
-Make hook destination remains unconfigured after automatic approval review
-blocked its transfer. Therefore the preview is **not ready to send as a
-complete tester journey**. No live form or production-delivery change occurred.
+full Make intake is saved **inactive and unexecuted**. After automatic approval
+review blocked tool transfer of its protected hook address, Josh configured
+`ARTWORK_TEST_WEBHOOK_URL` privately in Railway JOSH TEST. The new deployment
+succeeded. In one controlled window, delivery mode was set to Dropbox and
+`/health` returned `deliveryMode=dropbox`, `configured=true`; Make 8715068 was
+activated. No successful preview visit, form submission, or actual Make
+execution occurred. The cloud browser received `ERR_INVALID_AUTH_CREDENTIALS`
+at the Basic gate, and browser security policy prevented further observation.
+Make 8715068 was deactivated and delivery mode disabled again; `/health`
+returned `deliveryMode=disabled`, `configured=false`. The next hosted form
+submission must be made in Josh's own browser during another controlled
+window. The preview is **not ready to send as a complete tester journey**.
+No live form or production-delivery change occurred.
 
 The isolated Airtable base `Crosstalk Customs — JOSH TEST`
 (`appDz7CEL2KQWpzyC`) is available through the ChatGPT Airtable connection
@@ -46,9 +55,10 @@ fields, and omits the invoice button.
 **Copied invoice button hazard:** the test base inherited a `Send Invoice`
 button that still computes an external invoice webhook URL. We did not click
 it, renamed the column `DO NOT CLICK — copied invoice button`, and excluded it
-from the staff page. The connected Airtable API cannot delete that field, and
-the separate browser session requires an Airtable sign-in. Remove the copied
-button in Airtable's base editor before granting any tester direct table
+from the staff page. The connected Airtable API cannot delete that field. The
+isolated Airtable UI confirmed the copied button has no dependencies, but
+warned that deleting the field cannot be undone; deletion was not confirmed.
+Remove it with action-time approval before granting any tester direct table
 access. The isolated form URL does not expose the Airtable table.
 
 ## Tester access and boundaries
@@ -80,8 +90,10 @@ access. The isolated form URL does not expose the Airtable table.
   code deployment; its resulting redeployment succeeded. The authenticated,
   read-only staff recovery summary returned HTTP 200, while unauthenticated
   access returned 401. The test form's server-only Make key guard is deployed,
-  but the protected webhook destination is not configured and the full intake
-  is inactive. Hosted authenticated form, mobile and recovery-action checks
+  and the protected hook destination is now configured. In a controlled window
+  Make 8715068 was activated with Dropbox delivery enabled, then deactivated
+  without a form-created submission or actual Make execution; delivery was
+  disabled again. Hosted authenticated form, mobile and recovery-action checks
   remain open; deployment success does not establish a completed order journey.
 
 ## Intended journey and what has been exercised
@@ -90,7 +102,7 @@ access. The isolated form URL does not expose the Airtable table.
 | --- | --- | --- |
 | Open and configure | Customer chooses product, format, packaging, audio and other options; sees a comprehensible price. | The isolated preview presents the form. Local desktop/mobile browser tests cover the guarded path. Pricing/options and actual first-time hosted tester feedback still need human acceptance. |
 | Design and upload | Customer uses front/back and label surfaces, adds source images, completes the designer, and sees an attached artwork reference on order review. | Local tests cover upload, attachment, failed submission retry, refresh/session isolation and mobile width. Hosted service returns the gated pages, but cloud browser authentication failed, so a human hosted pass is outstanding. |
-| Submit | Test submission reaches only the isolated endpoint and protected Make intake; customer sees an accurate order state. | Earlier synthetic `TEST JOSH 21.11` artwork-only submissions reached scenario 8084300 and returned `bound`/`not_supplied`, but did **not** create an Airtable order or audio request. The deployed server now durably queues and polls a validated request when configured. Full intake 8715068 is inactive and unexecuted, and the protected Make destination is not configured in Railway, so hosted form submission is closed. |
+| Submit | Test submission reaches only the isolated endpoint and protected Make intake; customer sees an accurate order state. | Earlier synthetic `TEST JOSH 21.11` artwork-only submissions reached scenario 8084300 and returned `bound`/`not_supplied`, but did **not** create an Airtable order or audio request. The deployed server now durably queues and polls a validated request when configured. The protected Make destination is configured, but the controlled window received no form submission and no actual 8715068 execution. Make and delivery were switched off afterward, so hosted submission is currently closed. |
 | Confirmation email | Josh receives a clearly labelled test receipt acknowledgement. | The separate Josh-only email probe 8716152 reported provider send success, and Josh confirmed its receipt. It was not triggered by a full form submission; integrated email and ambiguous-send recovery remain untested. |
 | Bind, render and deliver | Trusted processing binds the reference to the actual order's Uploads folder, renders the PSDs/ZIP and verifies the Dropbox upload. | One test job reached `delivered` on its first attempt; the exporter checked Dropbox path, size and content hash against the local archive. Duplicate bind returned `already_bound` through the no-email route. The remote ZIP has not been downloaded, opened and independently inspected in Photoshop. |
 | Audio upload | Customer follows a private request and uploads audio to the isolated order folder. | A separate probe opened the fixed request and populated its private Airtable link. Dropbox now reports two uploads at the exact isolated destination: a 1.75 MB GIF/photo and a harmless one-second 15.67 KB dummy WAV. **WAV transfer passed; audio policy and integrated journey untested.** |
@@ -323,9 +335,11 @@ The UI step to inspect the private request ID/URL for an open-update probe
 was rejected by automatic approval review; it was not retried elsewhere.
 
 The dedicated test hook is API-key protected. The isolated server sends the
-key only in a server-to-Make `x-make-apikey` header, but the JOSH TEST Railway
-webhook URL transfer was blocked by automatic approval review. The hosted
-form's full-intake submission remains unavailable. Old broad Dropbox
+key only in a server-to-Make `x-make-apikey` header. Automatic approval review
+blocked tool transfer of the hook address; Josh then configured it privately
+in the JOSH TEST Railway service and the deployment succeeded. A controlled
+Make/Dropbox delivery window opened, but no form submission or scenario
+execution arrived. Both switches were turned off again. Old broad Dropbox
 connection 13265327 stays unused. Artwork-only scenario 8084300 remains
 inactive and binds a static synthetic folder; it is not the full intake.
 The incomplete protected intake `8715068` now has Make's confidential-data
@@ -376,7 +390,7 @@ The actual protected Make route timing still needs a controlled measurement.
 | 6. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST. The replacement Make Dropbox grant is app-folder scoped; separate production credentials, volume, backup, alert and ingress limiter have not been verified. | Provision distinct production service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore and monitored failure queue. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 7. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
 | 8. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 9. Final CI and hosted gate | Low / medium | Railway reports successful JOSH TEST deployment of `43be85b`; its GitHub review gate passed build, service/UI tests, acceptance and audit. Staff summary and fixed-folder diagnostics passed, but hosted authenticated form/phone journey remains untested. | Complete the hosted form and isolated full intake after the protected hook is configured. **Code gate/deploy passed; end-to-end gate open.** |
+| 9. Final CI and hosted gate | Low / medium | Railway reports successful JOSH TEST deployment of `43be85b`; its GitHub review gate passed build, service/UI tests, acceptance and audit. The protected hook is now configured and a controlled window deployed with health true, but no form visit or intake execution occurred. Cloud browser Basic authentication failed and browser policy barred further observation. | Complete the hosted form and isolated full intake from Josh's browser in a new controlled window, then repeat on phone. **Code gate/deploy passed; end-to-end gate open.** |
 
 ## Live and test configuration comparison
 
@@ -387,7 +401,7 @@ The actual protected Make route timing still needs a controlled measurement.
 | Orders and billing | Test Airtable base has manually seeded fixture, claim probe row and one populated static-runner row; no form-created order, invoice or payment. The private request recorded two uploads: a GIF/photo and a dummy WAV. Copied invoice button omitted from staff interface. | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is separate. |
 | Dropbox | Fixed JOSH TEST root; verified exporter ZIP read by Make, fixed folder writes and an open request with URL stored privately in test Airtable. The exact new Uploads path contains a 1.75 MB GIF/photo and 15.67 KB one-second dummy WAV. | Separate production root/authorization and tested environment required. |
 | Exporter | JOSH TEST Railway service/volume, one worker; `43be85b` deployed successfully, delivery disabled; staff secret, read-only summary and fixed-folder diagnostics verified; no full intake binding. | No production exporter in this project yet. |
-| Secrets | Test hook key exists server-side in Make and is not in a blueprint/browser URL; JOSH TEST Railway webhook URL transfer was blocked, so hosted submission remains off. | New separate production credentials and staff recovery secret to provision securely. |
+| Secrets | Test hook key exists server-side in Make and is not in a blueprint/browser URL; after tool transfer was blocked, Josh entered the protected destination privately into Railway JOSH TEST. Submission is off because the controlled window ended without an order. | New separate production credentials and staff recovery secret to provision securely. |
 
 ## Evidence required before a live approval request
 
@@ -396,7 +410,7 @@ The actual protected Make route timing still needs a controlled measurement.
 | First-time form journey | Hosted desktop and phone runs with artwork and without artwork; product/price/options, upload, refresh, validation and completion screens match the submitted test order. | Local browser tests passed; hosted authenticated run and tester acceptance open. |
 | Isolated intake and recovery | One Airtable row per `TEST JOSH 21.11` Submission ID with mapped details, fingerprint, Make execution and stage history; repeat click/webhook and forced post-claim timeout leave one row and one set of side effects. | Third static run completed the guarded closed-request route, reused one row and populated details/fingerprint. Actual webhook intake, duplicate after side effects, forced timeout, email and 25-second contract remain untested. |
 | Audio, artwork and email | File request records a supported audio upload in the fixed test app folder; actual exporter bind uses the claimed record and same Uploads path; remote ZIP content/Photoshop/print review; Josh's customer and staff emails observed in inbox/Sent. | Josh confirmed both separate probe emails. Owner view confirmed the small dummy WAV and GIF/photo at the exact folder. Audio policy, actual staff routing, integrated bind, remote ZIP contents and print review remain open. |
-| Security and operations | Confirm test-only OAuth/write boundary, no default public staff link, no invoice/payment/live recipient, protected hook and server-only key, audio format/size/malware policy, failure alert/retry, volume headroom, retention and backup/restore. | Test-only connection read/fixed writes and small WAV transfer proven; old broad connection unused. Staff recovery summary authenticated and read-only; audio policy, alerting, reconciliation, restore drill and blocked hook transfer remain open. |
+| Security and operations | Confirm test-only OAuth/write boundary, no default public staff link, no invoice/payment/live recipient, protected hook and server-only key, audio format/size/malware policy, failure alert/retry, volume headroom, retention and backup/restore. | Test-only connection read/fixed writes and small WAV transfer proven; old broad connection unused. Protected hook transfer was resolved through Josh's private Railway entry. Staff recovery summary authenticated and read-only; audio policy, alerting, reconciliation and restore drill remain open. |
 | Release and reversal | Exact live form diff, Make blueprint and environment variable **names** (not values), deployment order, monitored smoke, saved live commit/blueprint, disabling switches and a rehearsed rollback/no-artwork regression result. | Plan below is preliminary; no live change or production activation authorized. |
 
 ## Proposed release sequence — approval boundary
@@ -405,9 +419,9 @@ The actual protected Make route timing still needs a controlled measurement.
    the private request's generic and small dummy WAV transfers to the exact
    destination are now verified. Establish audio type/size limits and a safe
    staff validation/quarantine procedure before accepting customer audio. Then
-   repeat hosted authenticated mobile and no-artwork journeys after a permitted
-   secure transfer of the protected Make hook destination to JOSH TEST Railway
-   and a reviewed activation window. Confirm both probe emails again in a
+   repeat hosted authenticated mobile and no-artwork journeys in a new
+   controlled activation window; Josh's private hook configuration is saved.
+   Confirm both probe emails again in a
    single form-created journey and obtain actual ZIP/Photoshop/print acceptance. Force a failed delivery and verify
    staff visibility, recovery and no double delivery.
 2. Snapshot the live form commit and export the active Customer Intake
@@ -427,7 +441,7 @@ The actual protected Make route timing still needs a controlled measurement.
 3. Remove the copied test-base invoice button in Airtable's editor before
    direct tester table access. Keep broad Dropbox connection 13265327 unused.
    Review and run the saved **inactive 100-module** intake 8715068 in a
-   controlled test only after the secure hook handoff is resolved. Verify
+   controlled test after reopening the JOSH TEST delivery window. Verify
    preflight/fingerprint, early 202 acknowledgement,
    final callback and manual-stop error handling; establish an **open** request
    actually accepts a harmless audio upload into the
