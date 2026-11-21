@@ -22,8 +22,10 @@ const {createCanvas}=require('../src/psd.cjs');
  try{
   for(const mobile of [false,true]){
    const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1365,height:900},isMobile:mobile,hasTouch:mobile});const page=await context.newPage();page.setDefaultTimeout(12000);console.log('Opening '+(mobile?'mobile':'desktop'));page.on('pageerror',e=>console.log('UI error: '+e.message));
-   if(!mobile)await page.route('**/calculator-preview.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
-   await page.goto(mobile?'http://127.0.0.1:4312/':'http://127.0.0.1:4311/calculator-preview.html');
+   // This fixture uses the legacy handoff on a non-preview URL. The actual
+   // JOSH TEST preview's server-held capability has its own browser test.
+   if(!mobile)await page.route('**/legacy-fixture.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
+   await page.goto(mobile?'http://127.0.0.1:4312/':'http://127.0.0.1:4311/legacy-fixture.html');
    assert.equal(await page.locator('#openArtworkDesigner').count(),1);
    assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
    await page.locator('#regularStart').click();
@@ -101,8 +103,8 @@ const {createCanvas}=require('../src/psd.cjs');
   }
   // A standard order completes without an artwork reference or a draft.
   const plainContext=await browser.newContext();const plain=await plainContext.newPage();
-  await plain.route('**/calculator-preview.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
-  await plain.goto('http://127.0.0.1:4311/calculator-preview.html');
+  await plain.route('**/legacy-fixture.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:preview}));
+  await plain.goto('http://127.0.0.1:4311/legacy-fixture.html');
   const plainJobs=service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n;
   await plain.locator('#regularStart').click();
   await plain.locator('#sizes [data-size="12"]').click();

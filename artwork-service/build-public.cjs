@@ -33,7 +33,12 @@ $('completeArtwork').onclick=async()=>{
   await saveNow();
   const project={format:'crosstalk-project',version:1,rendererVersion:'approved-d5b75f9-v1',surfaces:Object.fromEntries(Object.entries(state.surfaces).map(([id,layers])=>[id,layers.map(l=>({...l}))])),backgrounds:structuredClone(state.backgrounds)};
   const result=await window.CrosstalkHandoff.upload(project,message=>status.textContent=message);
-  if(window.opener&&session)window.opener.postMessage({type:'crosstalk-artwork-complete',reference:result.reference,session},returnOrigin);
+  if(window.opener&&session){
+   const testPreview=new URLSearchParams(location.search).get('testPreview')==='1';
+   window.opener.postMessage(testPreview
+    ?{type:'crosstalk-artwork-complete',artworkJobId:result.artworkJobId,session}
+    :{type:'crosstalk-artwork-complete',reference:result.reference,session},returnOrigin);
+  }
   status.textContent='Artwork uploaded. Submit JOSH TEST to queue its PSD delivery.';
   $('finishContent').style.display='none';$('finishSuccess').classList.add('show');
  }catch(error){status.textContent=error.message||'Artwork could not be uploaded. Your draft is still on this device.';}finally{button.disabled=false;}

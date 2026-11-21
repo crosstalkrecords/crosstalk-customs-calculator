@@ -17,14 +17,21 @@ window.CrosstalkHandoff=(()=>{
    const src=l.src;if(!sources.has(src)){onProgress('Checking source image '+(sources.size+1)+'…');const blob=await source(src);const hash=hex(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()));sources.set(src,hash);}l.src='asset:'+sources.get(src);
   }
   const json=JSON.stringify(project),fingerprint=hex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(json)));
-  let session;try{const saved=JSON.parse(localStorage.getItem(key));if(saved?.fingerprint===fingerprint)session=saved;}catch(_){}
-  if(session){try{const status=await request('/v1/drafts/'+session.id,{headers:{Authorization:'Bearer '+session.token}});if(status.state!=='draft')return {reference:session.id+'.'+session.token,state:status.state};}catch(e){if(e.status===404)session=null;else throw e;}}
+  let session;try{
+   const saved=JSON.parse(localStorage.getItem(key));
+   if(testPreview&&saved?.token)localStorage.removeItem(key);
+   else if(saved?.fingerprint===fingerprint)session=testPreview?{id:saved.id,fingerprint}:saved;
+  }catch(_){}
+  if(session){try{
+   const status=await request('/v1/drafts/'+session.id,testPreview?{}:{headers:{Authorization:'Bearer '+session.token}});
+   if(status.state!=='draft')return testPreview?{artworkJobId:session.id,state:status.state}:{reference:session.id+'.'+session.token,state:status.state};
+  }catch(e){if(e.status===404)session=null;else throw e;}}
   if(!session){
    const orderId=params.get('artworkSession');
    const draftOptions=testPreview?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({testOrderId:orderId})}:{method:'POST'};
    session={...await request('/v1/drafts',draftOptions),fingerprint};try{localStorage.setItem(key,JSON.stringify(session));}catch(_){}
   }
-  const headers={Authorization:'Bearer '+session.token};let n=0;
+  const headers=testPreview?{}:{Authorization:'Bearer '+session.token};let n=0;
   for(const [src,hash] of sources){
    onProgress('Uploading source image '+(++n)+' of '+sources.size+'…');const blob=await source(src);
    await request('/v1/drafts/'+session.id+'/assets/'+hash,{method:'PUT',headers:{...headers,'Content-Type':blob.type},body:blob});

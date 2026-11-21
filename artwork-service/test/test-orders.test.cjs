@@ -35,9 +35,10 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   const id='d6f90e2f-6a80-4ac0-bb4e-258295f09802';
   const created=await fetch(base+'/v1/drafts',{method:'POST',headers:{Origin:base,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({testOrderId:id})});
   assert.equal(created.status,201);
-  const draft=await created.json(),reference=draft.id+'.'+draft.token;
-  assert.equal((await fetch(base+'/v1/drafts/'+draft.id,{headers:{Authorization:'Bearer '+draft.token,Origin:base}})).status,404,'bearer alone cannot read a test draft');
-  assert.equal((await fetch(base+'/v1/drafts/'+draft.id,{headers:{Authorization:'Bearer '+draft.token,Origin:base,Cookie:cookie}})).status,200);
+  const draft=await created.json();
+  assert.match(draft.id,/^[a-f0-9]{32}$/);assert.deepEqual(Object.keys(draft),['id'],'test browser receives no draft capability');
+  assert.equal((await fetch(base+'/v1/drafts/'+draft.id,{headers:{Origin:base}})).status,404,'a job ID alone cannot read a test draft');
+  assert.equal((await fetch(base+'/v1/drafts/'+draft.id,{headers:{Origin:base,Cookie:cookie}})).status,200);
   service.store.db.prepare("UPDATE jobs SET state='ready' WHERE id=?").run(draft.id);
   const fields={
    'Artist Order':'No','Customer Name':'TEST JOSH 21.11',
@@ -47,31 +48,35 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
    'Record Size':'12',Rush:'off','Shipping Required':'off',
    'Side A Length':'','Side B Length':'',Sides:'Double',Speed:'33 RPM',
    State:'','Street Address':'',Suburb:'',Tracklist:'FORMAT: 1xLP | 1 disc | 2 sides (A-B) | 12in | 33 RPM\nEXTRAS: Printed Jacket + Labels\n\nSynthetic test only',
-   'Vinyl Colour':'Clear','Artwork Reference':reference
+   'Vinyl Colour':'Clear','Artwork Job ID':draft.id
   };
-  const body={testOrderId:id,artworkReference:reference,fields};
+  const body={testOrderId:id,artworkJobId:draft.id,fields};
   const submit=(value,headers={})=>fetch(base+'/v1/test-orders',{method:'POST',headers:{Authorization:auth,Origin:base,Cookie:cookie,'Content-Type':'application/json',...headers},body:JSON.stringify(value)});
   assert.equal((await submit(body,{Origin:'https://elsewhere.invalid'})).status,403);
   assert.equal((await submit({...body,fields:{...body.fields,Email:'real-customer@example.com'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,'Street Address':'REAL ADDRESS'}})).status,422);
-  assert.equal((await submit({...body,fields:{...fields,'Artwork Reference':'different'}})).status,422);
+  assert.equal((await submit({...body,fields:{...fields,'Artwork Job ID':'different'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,'Estimated Price Given':'1.00'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,Extras:'Custom Finish Pack'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,'Side A Length':'made-up promotion'}})).status,422);
-  assert.equal((await submit(body,{Cookie:''})).status,403,'an artwork capability alone cannot submit an order');
+  assert.equal((await submit(body,{Cookie:''})).status,403,'a job ID alone cannot submit an order');
   const other=await fetch(base+'/calculator-preview.html',{headers:{Authorization:auth}});
   const otherCookie=other.headers.get('set-cookie')?.split(';')[0];
-  assert.equal((await fetch(base+'/v1/drafts/'+draft.id,{headers:{Authorization:'Bearer '+draft.token,Origin:base,Cookie:otherCookie}})).status,404);
+  assert.equal((await fetch(base+'/v1/drafts/'+draft.id,{headers:{Origin:base,Cookie:otherCookie}})).status,404);
   assert.equal((await submit(body,{Cookie:otherCookie})).status,422,'a different browser session cannot attach this artwork');
   const otherId='16f90e2f-6a80-4ac0-bb4e-258295f09802';
   assert.equal((await submit({...body,testOrderId:otherId},{Cookie:cookie})).status,422,'a different order session cannot attach this artwork');
-  assert.equal((await submit({...body,artworkReference:draft.id+'.'+'B'.repeat(43),fields:{...fields,'Artwork Reference':draft.id+'.'+'B'.repeat(43)}})).status,422,'a forged artwork bearer cannot attach this draft');
+  assert.equal((await submit({...body,artworkJobId:'f'.repeat(32),fields:{...fields,'Artwork Job ID':'f'.repeat(32)}})).status,422,'a different artwork job cannot attach to this order');
+  assert.equal((await submit({...body,artworkReference:'forged'})).status,422,'unexpected browser capability fields are rejected');
   assert.equal((await submit({...body,fields:{...fields,'Request Fingerprint':'browser-forged'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,'Unknown Field':'surprise'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,Tracklist:'<script>alert(1)</script>'}})).status,422);
   assert.equal((await submit(body)).status,202);
+  const reference=sent[0].payload['Artwork Reference'];
+  assert.match(reference,/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/,'only the trusted server sends a full artwork capability to Make');
   service.store.db.prepare("UPDATE jobs SET state='delivered' WHERE id=?").run(draft.id);
   assert.equal((await submit(body)).status,200);
+  assert.equal((await submit(body,{Cookie:otherCookie})).status,409,'a completed order cannot be replayed from another browser session');
   assert.equal(sent.length,1);
   assert.equal(sent[0].headers['x-make-apikey'],config.testMakeApiKey);
   assert.equal(sent[0].payload.Email,'delousedcomatorium@gmail.com');
@@ -85,19 +90,19 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal(sent[0].payload['Artwork Job ID'],draft.id);
   const metadata=new Set(['testLabel','Artwork Reference','Submission ID','Request Fingerprint','Artwork Job ID','Test Order Name','Test Order ID','Test Summary']);
   const mapped=Object.fromEntries(Object.entries(sent[0].payload).filter(([key])=>!metadata.has(key)));
-  const expectedHash=crypto.createHash('sha256').update(JSON.stringify({mapped,reference})).digest('hex');
+  const expectedHash=crypto.createHash('sha256').update(JSON.stringify({mapped,artworkJobId:draft.id})).digest('hex');
   assert.equal(sent[0].payload['Request Fingerprint'],expectedHash);
   assert.equal(service.store.db.prepare('SELECT request_hash FROM test_submissions WHERE id=?').get(id).request_hash,expectedHash);
   assert.equal(sent[0].payload['Delivery Method'],'Pickup');
   assert.equal(sent[0].payload['Street Address'],'');
   assert.equal((await submit({...body,fields:{...fields,Tracklist:fields.Tracklist+'\nAnother synthetic track'}})).status,409);
   assert.equal(service.store.db.prepare('SELECT request_hash FROM test_submissions WHERE id=?').get(id).request_hash,expectedHash);
-  assert.equal((await submit({...body,artworkReference:'',fields:{...fields,'Artwork Reference':''}})).status,409);
+  assert.equal((await submit({...body,artworkJobId:'',fields:{...fields,'Artwork Job ID':''}})).status,409);
   const shippingId='e6f90e2f-6a80-4ac0-bb4e-258295f09802';
   const shippingFields={...fields,'Shipping Required':'on','Estimated Price Given':'185.00',
    'Street Address':'1 TEST ONLY LANE',Suburb:'TESTVILLE',Postcode:'0000',State:'NSW',
-   'Artwork Reference':''};
-  assert.equal((await submit({testOrderId:shippingId,artworkReference:'',fields:shippingFields})).status,202);
+   'Artwork Job ID':''};
+  assert.equal((await submit({testOrderId:shippingId,artworkJobId:'',fields:shippingFields})).status,202);
   assert.equal(sent.length,2);
   assert.equal(sent[1].payload['Delivery Method'],'Shipping');
   assert.equal(sent[1].payload['Street Address'],'1 TEST ONLY LANE');
@@ -106,30 +111,30 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal(sent[1].payload.State,'NSW');
   assert.equal(sent[1].payload['Artwork Reference'],'');
   const quoteId='f6f90e2f-6a80-4ac0-bb4e-258295f09802';
-  const quoteFields={...fields,'Artwork Reference':'','Estimated Price Given':'',
+  const quoteFields={...fields,'Artwork Job ID':'','Estimated Price Given':'',
    Tracklist:'FORMAT: 3xLP | 3 discs | 6 sides (A-F) | 12in | 33 RPM\nEXTRAS: Printed Jacket + Labels\n\nSynthetic long project'};
-  assert.equal((await submit({testOrderId:quoteId,artworkReference:'',fields:quoteFields})).status,202);
+  assert.equal((await submit({testOrderId:quoteId,artworkJobId:'',fields:quoteFields})).status,202);
   assert.equal(sent.at(-1).payload['Estimated Price Given'],'','a three-LP build stays quote-only');
   const promoId='76f90e2f-6a80-4ac0-bb4e-258295f09802';
-  const promoFields={...fields,'Artwork Reference':'','Estimated Price Given':'120.00',
+  const promoFields={...fields,'Artwork Job ID':'','Estimated Price Given':'120.00',
    'Side A Length':'FATHERS DAY SPECIAL - 1x CLEAR 12IN + PRINTED JACKET + LABELS'};
   const beforePromo=sent.length;
-  assert.equal((await submit({testOrderId:promoId,artworkReference:'',fields:promoFields})).status,422);
+  assert.equal((await submit({testOrderId:promoId,artworkJobId:'',fields:promoFields})).status,422);
   assert.equal(sent.length,beforePromo,'expired promotion is not forwarded to Make');
   const artistId='86f90e2f-6a80-4ac0-bb4e-258295f09802';
-  const artistFields={...fields,'Artwork Reference':'','Artist Order':'Yes','Estimated Price Given':'83.10',
+  const artistFields={...fields,'Artwork Job ID':'','Artist Order':'Yes','Estimated Price Given':'83.10',
    Tracklist:'FORMAT: 1xLP | 1 disc | 2 sides (A-B) | 12in | 33 RPM\nEXTRAS: Printed Jacket + Labels\n\nSynthetic artist track'};
-  assert.equal((await submit({testOrderId:artistId,artworkReference:'',fields:artistFields})).status,202);
+  assert.equal((await submit({testOrderId:artistId,artworkJobId:'',fields:artistFields})).status,202);
   assert.equal(sent.at(-1).payload['Estimated Price Given'],'83.10');
   const doubleId='96f90e2f-6a80-4ac0-bb4e-258295f09802';
-  const doubleFields={...fields,'Artwork Reference':'','Estimated Price Given':'285.00',
+  const doubleFields={...fields,'Artwork Job ID':'','Estimated Price Given':'285.00',
    Tracklist:'FORMAT: 2xLP | 2 discs | 4 sides (A-D) | 12in | 33 RPM\nEXTRAS: Printed Jacket + Labels\n\nSynthetic two-LP project'};
-  assert.equal((await submit({testOrderId:doubleId,artworkReference:'',fields:doubleFields})).status,202);
+  assert.equal((await submit({testOrderId:doubleId,artworkJobId:'',fields:doubleFields})).status,202);
   assert.equal(sent.at(-1).payload['Estimated Price Given'],'285.00');
-  assert.equal((await submit({testOrderId:'a6f90e2f-6a80-4ac0-bb4e-258295f09803',artworkReference:'',fields:{...doubleFields,'Estimated Price Given':'165.00'}})).status,422);
+  assert.equal((await submit({testOrderId:'a6f90e2f-6a80-4ac0-bb4e-258295f09803',artworkJobId:'',fields:{...doubleFields,'Estimated Price Given':'165.00'}})).status,422);
   failNext=true;
   const uncertainId='b6f90e2f-6a80-4ac0-bb4e-258295f09802';
-  const uncertainBody={testOrderId:uncertainId,artworkReference:'',fields:shippingFields};
+  const uncertainBody={testOrderId:uncertainId,artworkJobId:'',fields:shippingFields};
   const uncertain=await submit(uncertainBody);
   assert.equal(uncertain.status,502);
   assert.deepEqual(await uncertain.json(),{
@@ -177,9 +182,23 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal((await fetch(base+'/internal/test-submissions/'+uncertainId,{method:'POST',headers:staffHeaders})).status,404,'staff view has no resend action');
   assert.equal(service.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(uncertainId).state,'unknown');
   config.testMakeApiKey='';assert.equal((await fetch(base+'/v1/test-config',{headers:{Authorization:auth}})).status,503);
+  const disabledPreview=await fetch(base+'/calculator-preview.html',{headers:{Authorization:auth}});
+  const disabledCookie=disabledPreview.headers.get('set-cookie')?.split(';')[0];
+  assert.match(disabledCookie,/^crosstalk_josh_session=/,'disabled intake still starts a private preview session');
+  const disabledDraft=await fetch(base+'/v1/drafts',{method:'POST',headers:{Origin:base,Cookie:disabledCookie,'Content-Type':'application/json'},body:JSON.stringify({testOrderId:'36f90e2f-6a80-4ac0-bb4e-258295f09804'})});
+  assert.equal(disabledDraft.status,201,'artwork preview remains available while intake is disabled');
+  const disabledJob=await disabledDraft.json();assert.deepEqual(Object.keys(disabledJob),['id'],'disabled intake cannot expose a draft token');
+  assert.equal((await fetch(base+'/v1/drafts/'+disabledJob.id,{headers:{Origin:base,Cookie:disabledCookie}})).status,200);
+  assert.equal((await fetch(base+'/v1/drafts/'+disabledJob.id,{headers:{Origin:base}})).status,404);
   assert.equal((await submit({...body,testOrderId:'a6f90e2f-6a80-4ac0-bb4e-258295f09802'})).status,503);
   config.testMakeApiKey='synthetic-make-api-key';
   config.mode='disabled';assert.equal((await submit({...body,testOrderId:'e6f90e2f-6a80-4ac0-bb4e-258295f09802'})).status,503);
+  const deliveryDisabledPreview=await fetch(base+'/calculator-preview.html',{headers:{Authorization:auth}});
+  const deliveryDisabledCookie=deliveryDisabledPreview.headers.get('set-cookie')?.split(';')[0];
+  assert.match(deliveryDisabledCookie,/^crosstalk_josh_session=/);
+  const deliveryDisabledDraft=await fetch(base+'/v1/drafts',{method:'POST',headers:{Origin:base,Cookie:deliveryDisabledCookie,'Content-Type':'application/json'},body:JSON.stringify({testOrderId:'46f90e2f-6a80-4ac0-bb4e-258295f09804'})});
+  assert.equal(deliveryDisabledDraft.status,201);
+  assert.deepEqual(Object.keys(await deliveryDisabledDraft.json()),['id'],'disabled delivery still cannot expose a draft token');
   assert.equal((await staffGet('/'+uncertainId,staffHeaders)).status,200,'staff can inspect uncertainty while delivery is disabled');
   config.testLabel='';assert.equal((await staffGet('',staffHeaders)).status,503);
   config.testLabel='JOSH TEST';config.staffSecret='';assert.equal((await staffGet('',staffHeaders)).status,503);

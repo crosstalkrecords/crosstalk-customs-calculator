@@ -65,7 +65,7 @@ async function run(){
  const healthBody=await health.json();assert.equal(healthBody.deliveryMode,'dropbox');assert.equal(healthBody.configured,true);
  const cfg=await(await fetch(base+'/v1/client-config')).json();assert.deepEqual(cfg.returnOrigins,[base]);
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||await packaged.executablePath(),args:packaged.args.filter(a=>!['--single-process','--disable-web-security','--disable-site-isolation-trials'].includes(a)),...(proxy?{proxy}:{})});
- const result={base,health:'pass',cases:[],references:[]};
+ const result={base,health:'pass',cases:[],artworkJobIds:[]};
  async function guardedContext(options={}){
   const context=await browser.newContext({ignoreHTTPSErrors:true,...(httpCredentials?{httpCredentials}:{}),...options});
   // This script checks only browser behaviour. An unmocked submission is a
@@ -79,7 +79,7 @@ async function run(){
   const standard=await guardedContext();const plain=await standard.newPage();plain.setDefaultTimeout(45000);
   await prepare(plain,'Standard');
   let standardAttempts=0;
-  await customer(plain,async route=>{standardAttempts++;const data=route.request().postDataJSON();assert.equal(data.artworkReference,'');assert.equal('Artwork Reference' in data.fields,false);await new Promise(r=>setTimeout(r,350));await route.fulfill({status:202,contentType:'application/json',body:JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'not_supplied',deliveryPending:false})});});
+  await customer(plain,async route=>{standardAttempts++;const data=route.request().postDataJSON();assert.equal(data.artworkJobId,'');assert.equal('Artwork Job ID' in data.fields,false);await new Promise(r=>setTimeout(r,350));await route.fulfill({status:202,contentType:'application/json',body:JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'not_supplied',deliveryPending:false})});});
   await plain.locator('button[type="submit"]').evaluate(button=>{button.click();button.click()});await plain.locator('#success').waitFor({state:'visible'});
   assert.equal(standardAttempts,1);
   result.cases.push('Standard without artwork and duplicate submit suppression');await standard.close();
@@ -94,14 +94,14 @@ async function run(){
     await editor.locator('#imageInput').setInputFiles(image);
     await editor.locator('#finishBtn').click();await editor.locator('#completeArtwork').click();
     await editor.locator('#handoffStatus').filter({hasText:'JOSH TEST injected failure'}).waitFor();
-    assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'');
+    assert.equal(await page.locator('input[name="Artwork Job ID"]').inputValue(),'');
     await editor.unroute('**/v1/drafts');
     await editor.locator('#completeArtwork').click();await editor.locator('#finishSuccess.show').waitFor({timeout:60000});
     result.cases.push('failed upload and retry');
    }else await upload(editor,image,false);
    await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor();
-   const reference=await page.locator('input[name="Artwork Reference"]').inputValue();assert.match(reference,/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/);
-   result.references.push(reference);
+   const artworkJobId=await page.locator('input[name="Artwork Job ID"]').inputValue();assert.match(artworkJobId,/^[a-f0-9]{32}$/);
+   result.artworkJobIds.push(artworkJobId);
    await editor.close();editor=await openEditor(page);
    assert.equal(await editor.locator('#restoreRecovery').count(),1);
    await editor.locator('#restoreRecovery').click();
@@ -109,37 +109,38 @@ async function run(){
    await editor.locator('#finishBtn').click();await editor.locator('#completeArtwork').click();
    await editor.locator('#finishSuccess.show').waitFor({timeout:60000});
    const sessions=await editor.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('crosstalk-artwork-upload:')).map(k=>JSON.parse(localStorage.getItem(k))));
-   assert(sessions.some(s=>s.id===reference.split('.')[0]));
+   assert(sessions.some(s=>s.id===artworkJobId));
+   assert(sessions.every(s=>!('token' in s)),'test browser storage contains no draft token');
    result.cases.push((mobile?'mobile Custom Finish':'desktop Printed Jacket')+' upload, reopen and recovery');
    if(!mobile){
     await page.locator('#packs [data-pack="Standard"]').click();
-    assert.equal(await page.evaluate(()=>new FormData(document.querySelector('#orderForm')).has('Artwork Reference')),false);
+    assert.equal(await page.evaluate(()=>new FormData(document.querySelector('#orderForm')).has('Artwork Job ID')),false);
     await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
-    assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
+    assert.equal(await page.locator('input[name="Artwork Job ID"]').inputValue(),artworkJobId);
     result.cases.push('switch to Standard and restore artwork');
    }
    let attempts=0;
-   await customer(page,async route=>{attempts++;const data=route.request().postDataJSON();assert.equal(data.artworkReference,reference);await route.fulfill({status:attempts===1?503:202,contentType:'application/json',body:attempts===1?'{"error":"JOSH TEST injected submission error"}':JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'bound',deliveryPending:false})});});
+   await customer(page,async route=>{attempts++;const data=route.request().postDataJSON();assert.equal(data.artworkJobId,artworkJobId);await route.fulfill({status:attempts===1?503:202,contentType:'application/json',body:attempts===1?'{"error":"JOSH TEST injected submission error"}':JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'bound',deliveryPending:false})});});
    const old=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
    await page.locator('button[type="submit"]').click();
    await page.locator('#testSubmitError').filter({hasText:'JOSH TEST injected submission error'}).waitFor();
-   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
+   assert.equal(await page.locator('input[name="Artwork Job ID"]').inputValue(),artworkJobId);
    assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
    await page.locator('button[type="submit"]').click();await page.locator('#success').waitFor({state:'visible'});
-   assert.equal(attempts,2);assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'');
+   assert.equal(attempts,2);assert.equal(await page.locator('input[name="Artwork Job ID"]').inputValue(),'');
    assert.notEqual(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
    result.cases.push((mobile?'mobile':'desktop')+' failed submission retry and confirmed reset');
    if(!mobile){
     await editor.close();await prepare(page,'Printed Jacket + Labels');
     const next=await openEditor(page);await upload(next,image,false);
     await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor();
-    const second=await page.locator('input[name="Artwork Reference"]').inputValue();assert.notEqual(second,reference);
-    result.references.push(second);result.cases.push('separate consecutive orders in one browser session');
+    const second=await page.locator('input[name="Artwork Job ID"]').inputValue();assert.notEqual(second,artworkJobId);
+    result.artworkJobIds.push(second);result.cases.push('separate consecutive orders in one browser session');
     await next.close();
    }
    await context.close();
   }
-  assert.notEqual(result.references[0],result.references[1]);
+  assert.notEqual(result.artworkJobIds[0],result.artworkJobIds[1]);
   const forgedContext=await guardedContext();const form=await forgedContext.newPage();await form.goto(base+'/calculator-preview.html');
   const opened=form.waitForEvent('popup');await form.evaluate(origin=>window.open(origin+'/designer.html?artworkSession=forged&returnOrigin=https%3A%2F%2Fevil.test','forgedArtwork'),base);
   const forged=await opened;forged.setDefaultTimeout(45000);await forged.locator('#imageInput').setInputFiles(image);
@@ -147,8 +148,8 @@ async function run(){
   await forged.locator('#handoffStatus').filter({hasText:'not approved for artwork handoff'}).waitFor();
   result.cases.push('forged return origin rejected');await forgedContext.close();
   assert.deepEqual(failures,[]);
-  await fs.writeFile(path.join(output,'hosted-result.json'),JSON.stringify({...result,references:result.references.map(r=>r.split('.')[0])},null,2));
-  console.log(JSON.stringify({...result,references:result.references.map(r=>r.split('.')[0])},null,2));
+  await fs.writeFile(path.join(output,'hosted-result.json'),JSON.stringify(result,null,2));
+  console.log(JSON.stringify(result,null,2));
  }finally{await browser.close();}
 }
 run().catch(e=>{console.error(e);process.exitCode=1});

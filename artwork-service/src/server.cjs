@@ -8,7 +8,7 @@ const {startWorker}=require('./worker.cjs');
 const {prune}=require('./retention.cjs');
 const {installTestDelivery}=require('./test-delivery.cjs');
 const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
-const {protectPreview,installTestOrders,testOnly,browserSessionHash}=require('./test-orders.cjs');
+const {protectPreview,installTestOrders,testPreviewMode,browserSessionHash,sealDraftToken}=require('./test-orders.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
 function secureEqual(a,b){if(typeof a!=='string'||typeof b!=='string')return false;const left=Buffer.from(a),right=Buffer.from(b);return left.length===right.length&&crypto.timingSafeEqual(left,right);}
 function makeApp(config,options={}){
@@ -44,17 +44,25 @@ function makeApp(config,options={}){
   if(!origin&&req.get('Sec-Fetch-Site')==='same-origin'&&config.publicOrigin&&req.get('Host')===new URL(config.publicOrigin).host)return;
   throw error(403,'An allowed browser origin is required');
  }
- function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}
+ function auth(req){
+  if(testPreviewMode(config)){
+   const linked=store.db.prepare('SELECT browser_hash,token_sealed FROM test_draft_sessions WHERE job_id=?').get(req.params.id);
+   const j=linked?.token_sealed&&linked.browser_hash===browserSessionHash(req,config)&&store.get(req.params.id);
+   if(!j)throw error(404,'Artwork not found');return j;
+  }
+  const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));
+  if(!j)throw error(404,'Artwork not found');return j;
+ }
  function testDraftAuth(req,j){
-  if(!testOnly(config))return;
+  if(!testPreviewMode(config))return;
   const linked=store.db.prepare('SELECT browser_hash FROM test_draft_sessions WHERE job_id=?').get(j.id);
   if(!linked||linked.browser_hash!==browserSessionHash(req,config))throw error(404,'Artwork not found in this JOSH TEST browser session');
  }
  const testDraftBody=express.json({limit:'1kb'});
- app.post('/v1/drafts',(req,res,next)=>testOnly(config)?testDraftBody(req,res,next):next(),async(req,res)=>{
+ app.post('/v1/drafts',(req,res,next)=>testPreviewMode(config)?testDraftBody(req,res,next):next(),async(req,res)=>{
   browserOrigin(req);const key=req.socket.remoteAddress||'unknown',now=Date.now(),r=rates.get(key);if(!r||now-r.start>3600000)rates.set(key,{start:now,count:0});
   let testSession=null;
-  if(testOnly(config)){
+  if(testPreviewMode(config)){
    const id=req.body?.testOrderId;
    if(req.get('Host')!==new URL(config.publicOrigin).host||
       !(req.get('Origin')===config.publicOrigin||(!req.get('Origin')&&req.get('Sec-Fetch-Site')==='same-origin')))throw error(403,'Invalid test page origin');
@@ -72,7 +80,10 @@ function makeApp(config,options={}){
   const total=store.db.prepare("SELECT coalesce(sum(a.bytes),0) AS n FROM assets a JOIN jobs j ON j.id=a.job_id WHERE j.state NOT IN ('delivered','failed')").get().n;
   if(count>=100||total>=2*1024**3||disk.bavail*disk.bsize<1024**3)throw error(503,'Artwork service capacity reached');
   const draft=store.create();
-  if(testSession)store.db.prepare('INSERT INTO test_draft_sessions(job_id,order_id,browser_hash) VALUES(?,?,?)').run(draft.id,testSession.id,testSession.browserHash);
+  if(testSession){
+   store.db.prepare('INSERT INTO test_draft_sessions(job_id,order_id,browser_hash,token_sealed) VALUES(?,?,?,?)').run(draft.id,testSession.id,testSession.browserHash,sealDraftToken(draft.token,draft.id,config));
+   return res.status(201).json({id:draft.id});
+  }
   res.status(201).json(draft);
  });
  app.put('/v1/drafts/:id/assets/:hash',(req,res,next)=>{
@@ -96,14 +107,17 @@ function makeApp(config,options={}){
  });
  app.post('/v1/drafts/:id/commit',express.json({limit:LIMITS.projectBytes}),async(req,res)=>{
   browserOrigin(req);const j=auth(req);testDraftAuth(req,j);const assets=store.assets(j.id),project=validate(req.body,new Set(assets.map(a=>a.hash))),json=JSON.stringify(project),hash=digest(json);
-  if(j.state!=='draft'){if(j.digest===hash)return res.json({reference:j.id+'.'+req.get('Authorization').slice(7),state:j.state});throw error(409,'Artwork is already sealed');}
+  if(j.state!=='draft'){
+   if(j.digest===hash)return res.json(testPreviewMode(config)?{artworkJobId:j.id,state:j.state}:{reference:j.id+'.'+req.get('Authorization').slice(7),state:j.state});
+   throw error(409,'Artwork is already sealed');
+  }
   for(const asset of assets){const b=await fs.readFile(path.join(store.dir(j.id),'assets',asset.hash));if(digest(b)!==asset.hash)throw error(409,'Source upload has not completed');}
   // Recheck after disk I/O: concurrent commits must not replace a sealed design.
   const result=store.db.prepare("UPDATE jobs SET project=?,digest=?,state='ready' WHERE id=? AND state='draft'").run(json,hash,j.id);
   if(!result.changes)throw error(409,'Artwork was sealed by another request');
-  res.json({reference:j.id+'.'+req.get('Authorization').slice(7),state:'ready'});
+  res.json(testPreviewMode(config)?{artworkJobId:j.id,state:'ready'}:{reference:j.id+'.'+req.get('Authorization').slice(7),state:'ready'});
  });
- app.get('/v1/drafts/:id',(req,res)=>{const j=auth(req);testDraftAuth(req,j);res.json({id:j.id,state:j.state,attempts:j.attempts,error:j.error||null});});
+ app.get('/v1/drafts/:id',(req,res)=>{if(testPreviewMode(config))browserOrigin(req);const j=auth(req);testDraftAuth(req,j);res.json({id:j.id,state:j.state,attempts:j.attempts,error:j.error||null});});
  app.post('/internal/bind',express.json({limit:'4kb'}),(req,res)=>{
   if(!secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret))throw error(401,'Unauthorised binding');
   const {reference,orderId,folder}=req.body||{};if(typeof reference!=='string')throw error(422,'Artwork reference missing');const [id,token,...rest]=reference.split('.');if(rest.length)throw error(422,'Invalid reference');

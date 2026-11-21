@@ -13,11 +13,17 @@
  const box=document.createElement('section');box.className='help artwork-designer-choice';
  box.innerHTML='<strong>Make your cover and labels</strong><p>'+(testPreview?'Create and attach a synthetic design here before submitting JOSH TEST. No separate upload link is created.':'Create your printed artwork here, or upload finished files using the private link after ordering.')+'</p><button type="button" class="btn secondary" id="openArtworkDesigner">Open cover designer</button><p id="artworkOrderStatus" role="status" aria-live="polite">No designer artwork attached.</p>';
  artHelp.before(box);
- const input=document.createElement('input');input.type='hidden';input.name='Artwork Reference';form.append(input);
+ const input=document.createElement('input');input.type='hidden';input.name=testPreview?'Artwork Job ID':'Artwork Reference';form.append(input);
  const review=document.createElement('p');review.className='muted artwork-review';
  document.getElementById('review')?.after(review);
- const referenceKey='crosstalk-artwork-order-reference';
- const validReference=value=>/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/.test(value||'');
+ const referenceKey=testPreview?'crosstalk-test-artwork-job':'crosstalk-artwork-order-reference';
+ if(testPreview){
+  sessionStorage.removeItem('crosstalk-artwork-order-reference');
+  try{for(const key of Object.keys(localStorage))if(key.startsWith('crosstalk-artwork-upload:')){
+   try{if(JSON.parse(localStorage.getItem(key))?.token)localStorage.removeItem(key);}catch(_){}
+  }}catch(_){}
+ }
+ const validReference=value=>testPreview?/^[a-f0-9]{32}$/.test(value||''):/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/.test(value||'');
  let editor,session=sessionStorage.getItem('crosstalk-artwork-order-session')||crypto.randomUUID();sessionStorage.setItem('crosstalk-artwork-order-session',session);
  const status=document.getElementById('artworkOrderStatus');
  try{
@@ -46,8 +52,9 @@
   if(!editor)status.textContent='Allow this artwork window to open, then try again.';
  };
  addEventListener('message',event=>{
-  if(event.origin!==serviceOrigin||event.source!==editor||event.data?.type!=='crosstalk-artwork-complete'||event.data?.session!==session||!validReference(event.data?.reference))return;
-  input.value=event.data.reference;sessionStorage.setItem(referenceKey,JSON.stringify({session,reference:input.value}));
+  const attached=testPreview?event.data?.artworkJobId:event.data?.reference;
+  if(event.origin!==serviceOrigin||event.source!==editor||event.data?.type!=='crosstalk-artwork-complete'||event.data?.session!==session||!validReference(attached))return;
+  input.value=attached;sessionStorage.setItem(referenceKey,JSON.stringify({session,reference:input.value}));
   status.textContent=attachedCopy;updateAvailability();
  });
  // The live form must dispatch this only after Make confirms an actual order.

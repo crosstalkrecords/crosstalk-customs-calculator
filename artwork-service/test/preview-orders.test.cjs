@@ -120,6 +120,9 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   const requests=[],draftOrigins=[];context.on('request',request=>{requests.push(request.url());if(request.url().includes('/v1/drafts'))draftOrigins.push(request.headers()['origin']||null)});
   const page=await context.newPage();page.setDefaultTimeout(30000);
   await page.goto(base+'/calculator-preview.html');
+  await page.evaluate(()=>localStorage.setItem('crosstalk-artwork-upload:legacy-test',JSON.stringify({id:'f'.repeat(32),token:'B'.repeat(43)})));
+  await page.reload();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('crosstalk-artwork-upload:legacy-test')),null,'old test draft bearer storage is removed');
   await page.waitForFunction(()=>document.querySelector('input[name="Email"]')?.readOnly);
   assert.equal(await page.locator('input[name="Customer Name"]').inputValue(),'TEST JOSH 21.11');
   await page.locator('#regularStart').click();await page.locator('#sizes [data-size="12"]').click();
@@ -139,8 +142,10 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   ]);}
   catch(e){console.error('Mobile handoff status:',await editor.locator('#handoffStatus').textContent(),'draft origins:',draftOrigins);throw e;}
   await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor();
-  const reference=await page.locator('input[name="Artwork Reference"]').inputValue();
-  assert.match(reference,/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/);
+  const artworkJobId=await page.locator('input[name="Artwork Job ID"]').inputValue();
+  assert.match(artworkJobId,/^[a-f0-9]{32}$/);
+  const browserStorage=await page.evaluate(()=>JSON.stringify({local:Object.entries(localStorage),session:Object.entries(sessionStorage)}));
+  assert.doesNotMatch(browserStorage,/[a-f0-9]{32}\.[A-Za-z0-9_-]{43}/,'test browser storage has no artwork capability');
   await page.locator('[data-step="3"] [data-next="4"]').click();
   await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
   await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
@@ -150,11 +155,11 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   assert.match(confirmation,/No payment was taken on this page/);
   assert.match(confirmation,/Delivery is not yet confirmed|Delivery is still pending|delivered to the isolated Dropbox folder/);
   assert.equal(sent.length,1);assert.equal(sent[0].testLabel,'JOSH TEST');
-  assert.equal(sent[0]['Artwork Reference'],reference);
+  assert.match(sent[0]['Artwork Reference'],new RegExp('^'+artworkJobId+'\\.[A-Za-z0-9_-]{43}$'));
   assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
   assert(requests.some(url=>url===base+'/v1/test-orders'));
   assert(!requests.some(url=>url.includes('hook.eu1.make.com')));
-  assert.equal(service.store.get(reference.split('.')[0]).state,'ready','mocked Make did not bind or deliver artwork');
+  assert.equal(service.store.get(artworkJobId).state,'ready','mocked Make did not bind or deliver artwork');
   await context.close();
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
 });

@@ -23,10 +23,10 @@ const FORM_FIELDS=new Set([
  'Artist Order','Customer Name','Email','Custom Field 1','Estimated Price Given',
  'Extras','Packaging','Postcode','Quantity','Record Size','Rush',
  'Shipping Required','Side A Length','Side B Length','Sides','Speed','State',
- 'Street Address','Suburb','Tracklist','Vinyl Colour','Artwork Reference',
+ 'Street Address','Suburb','Tracklist','Vinyl Colour','Artwork Job ID',
  'Delivery Method','Submission ID'
 ]);
-function intakeFields(fields,id,reference,config){
+function intakeFields(fields,id,artworkJobId,config){
  if(!fields||typeof fields!=='object'||Array.isArray(fields)||
    Object.keys(fields).some(key=>!FORM_FIELDS.has(key)))throw Error('Invalid test order fields');
  function value(key,max=120){
@@ -46,7 +46,7 @@ function intakeFields(fields,id,reference,config){
  const delivery=shipping==='on'?'Shipping':'Pickup';
  if(fields['Delivery Method']!==undefined&&fields['Delivery Method']!==delivery)throw Error('Invalid Delivery Method');
  if(fields['Submission ID']!==undefined&&fields['Submission ID']!==id)throw Error('Invalid Submission ID');
- if(fields['Artwork Reference']!==undefined&&fields['Artwork Reference']!==reference)throw Error('Artwork reference does not match the design');
+ if(fields['Artwork Job ID']!==undefined&&fields['Artwork Job ID']!==artworkJobId)throw Error('Artwork job does not match the design');
  for(const [key,synthetic] of Object.entries(TEST_ADDRESS)){
   const entered=fields[key]===undefined?'':value(key);
   if(entered!==''&&entered!==synthetic)throw Error('Only the fixed synthetic test address is allowed');
@@ -109,6 +109,27 @@ function safeEqual(a,b){
  const left=Buffer.from(a),right=Buffer.from(b);
  return left.length===right.length&&crypto.timingSafeEqual(left,right);
 }
+// The test browser sees only a job ID. Keep its draft capability encrypted on
+// the server until a matching, signed browser session submits the same order.
+function sealDraftToken(token,id,config){
+ const key=crypto.createHash('sha256').update('JOSH TEST draft encryption:'+config.bindSecret).digest();
+ const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv);
+ cipher.setAAD(Buffer.from('JOSH TEST artwork job:'+id));
+ const bytes=Buffer.concat([cipher.update(token,'utf8'),cipher.final()]);
+ return [iv,bytes,cipher.getAuthTag()].map(part=>part.toString('base64url')).join('.');
+}
+function openDraftToken(sealed,id,config){
+ if(typeof sealed!=='string')return null;
+ const parts=sealed.split('.');if(parts.length!==3)return null;
+ try{
+  const [iv,bytes,tag]=parts.map(part=>Buffer.from(part,'base64url'));
+  if(iv.length!==12||tag.length!==16)return null;
+  const key=crypto.createHash('sha256').update('JOSH TEST draft encryption:'+config.bindSecret).digest();
+  const decipher=crypto.createDecipheriv('aes-256-gcm',key,iv);
+  decipher.setAAD(Buffer.from('JOSH TEST artwork job:'+id));decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(bytes),decipher.final()]).toString('utf8');
+ }catch(_){return null;}
+}
 function browserSessionHash(req,config){
  const pair=(req.get('Cookie')||'').split(';').map(value=>value.trim()).find(value=>value.startsWith(SESSION_COOKIE+'='));
  const raw=pair?.slice(SESSION_COOKIE.length+1)||'';
@@ -127,7 +148,10 @@ function issueBrowserSession(res,config){
  res.set('Set-Cookie',`${SESSION_COOKIE}=${issued}.${nonce}.${signature}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; SameSite=Strict${secure}`);
 }
 function testOnly(config){
- return config.testLabel==='JOSH TEST'&&config.dropboxRoot===ROOT&&config.testRecipient==='delousedcomatorium@gmail.com'&&config.mode==='dropbox'&&!!config.testWebhookUrl&&!!config.testAccessCode&&!!config.testMakeApiKey;
+ return testPreviewMode(config)&&config.mode==='dropbox'&&!!config.testWebhookUrl&&!!config.testMakeApiKey;
+}
+function testPreviewMode(config){
+ return config.testLabel==='JOSH TEST'&&config.dropboxRoot===ROOT&&config.testRecipient==='delousedcomatorium@gmail.com'&&!!config.testAccessCode;
 }
 function authorized(req,config){
  const match=/^Basic ([A-Za-z0-9+/=]+)$/.exec(req.get('Authorization')||'');
@@ -150,21 +174,25 @@ function protectPreview(app,config){
   if(!config.testAccessCode&&pathname==='/designer.html'&&config.testLabel!=='JOSH TEST')return next();
   if(!config.testAccessCode&&html)return res.status(503).json({error:'JOSH TEST preview access is closed'});
   if(!config.testAccessCode||!authorized(req,config))return res.status(401).set('WWW-Authenticate','Basic realm="Crosstalk Customs JOSH TEST", charset="UTF-8"').json({error:'Tester access required'});
-  if(pathname==='/calculator-preview.html'&&testOnly(config)&&!browserSessionHash(req,config))issueBrowserSession(res,config);
+  if(pathname==='/calculator-preview.html'&&testPreviewMode(config)&&!browserSessionHash(req,config))issueBrowserSession(res,config);
   next();
  });
 }
 function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
  store.db.exec(`CREATE TABLE IF NOT EXISTS test_submissions (
   id TEXT PRIMARY KEY, created INTEGER NOT NULL, reference_id TEXT NOT NULL,
-  state TEXT NOT NULL, response TEXT, request_hash TEXT
+  state TEXT NOT NULL, response TEXT, request_hash TEXT, browser_hash TEXT
  );
  CREATE TABLE IF NOT EXISTS test_draft_sessions (
   job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
-  order_id TEXT NOT NULL, browser_hash TEXT NOT NULL
+  order_id TEXT NOT NULL, browser_hash TEXT NOT NULL, token_sealed TEXT
  )`);
  if(!store.db.prepare('PRAGMA table_info(test_submissions)').all().some(column=>column.name==='request_hash'))
   store.db.exec('ALTER TABLE test_submissions ADD COLUMN request_hash TEXT');
+ if(!store.db.prepare('PRAGMA table_info(test_submissions)').all().some(column=>column.name==='browser_hash'))
+  store.db.exec('ALTER TABLE test_submissions ADD COLUMN browser_hash TEXT');
+ if(!store.db.prepare('PRAGMA table_info(test_draft_sessions)').all().some(column=>column.name==='token_sealed'))
+  store.db.exec('ALTER TABLE test_draft_sessions ADD COLUMN token_sealed TEXT');
  // A request left in flight by a process restart has no trustworthy outcome.
  // Reconcile it against Make before any further submission with the same ID.
  store.db.prepare("UPDATE test_submissions SET state='unknown' WHERE state='sending'").run();
@@ -207,35 +235,41 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
   if(!sameOrigin||req.get('Host')!==new URL(config.publicOrigin).host)return res.status(403).json({error:'Invalid test page origin'});
   const url=new URL(config.testWebhookUrl);
   if(url.protocol!=='https:'||url.hostname!=='hook.eu1.make.com'||url.username||url.password)return res.status(503).json({error:'The JOSH TEST webhook is not configured safely'});
-  const body=req.body||{},id=body.testOrderId,reference=body.artworkReference||'',fields=body.fields||{};
+  const body=req.body||{},id=body.testOrderId,artworkJobId=body.artworkJobId||'',fields=body.fields||{};
+  if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(key=>!['testOrderId','artworkJobId','fields'].includes(key)))return res.status(422).json({error:'Invalid test submission'});
   if(typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return res.status(422).json({error:'Invalid test order session'});
   const browserHash=browserSessionHash(req,config);
   if(!browserHash)return res.status(403).json({error:'JOSH TEST browser session is missing or expired. Reopen the test form and create new artwork.'});
-  if(typeof reference!=='string'||(reference&&!/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/.test(reference)))return res.status(422).json({error:'Invalid artwork reference'});
+  if(typeof artworkJobId!=='string'||(artworkJobId&&!/^[a-f0-9]{32}$/.test(artworkJobId)))return res.status(422).json({error:'Invalid artwork job'});
   if(fields['Customer Name']!==NAME||fields.Email!==config.testRecipient||fields['Custom Field 1']!=='0400000000')return res.status(422).json({error:'Only the fixed JOSH TEST identity is allowed'});
   if(Object.keys(fields).length>25||JSON.stringify(fields).length>10000)return res.status(422).json({error:'Test order is too large'});
   let mapped;
-  try{mapped=intakeFields(fields,id,reference,config);}
+  try{mapped=intakeFields(fields,id,artworkJobId,config);}
   catch(error){return res.status(422).json({error:error.message});}
-  const referenceId=reference?reference.split('.')[0]:'';
-  const requestHash=crypto.createHash('sha256').update(JSON.stringify({mapped,reference})).digest('hex');
+  const referenceId=artworkJobId;
+  const requestHash=crypto.createHash('sha256').update(JSON.stringify({mapped,artworkJobId})).digest('hex');
   const existing=store.db.prepare('SELECT * FROM test_submissions WHERE id=?').get(id);
   if(existing){
+   if(existing.browser_hash!==browserHash)return res.status(409).json({error:'Test session is already used by another browser session'});
    if(existing.reference_id!==referenceId)return res.status(409).json({error:'Test session already used for a different design'});
    if(existing.request_hash&&existing.request_hash!==requestHash)return res.status(409).json({error:'Test session already used for different order details'});
    if(existing.state==='complete')return res.json(JSON.parse(existing.response));
    if(existing.state==='sending')return res.status(409).json({error:'Test submission is still being processed. Keep this page open and ask Crosstalk to check the test order ID.',testOrderId:id,outcomeUncertain:true});
    if(existing.state==='unknown')return res.status(409).json({error:'Test submission outcome is uncertain. Ask Crosstalk to check the test order ID before trying again.',testOrderId:id,outcomeUncertain:true});
   }
-  if(reference){
-   const linked=store.db.prepare('SELECT order_id,browser_hash FROM test_draft_sessions WHERE job_id=?').get(referenceId);
-   const job=store.authorize(referenceId,reference.split('.')[1]);
-   if(!linked||linked.order_id!==id||linked.browser_hash!==browserHash||!job||job.state!=='ready')return res.status(422).json({error:'Artwork does not belong to this test order session or is not ready'});
+  let reference='';
+  if(artworkJobId){
+   const linked=store.db.prepare('SELECT order_id,browser_hash,token_sealed FROM test_draft_sessions WHERE job_id=?').get(referenceId);
+   if(!linked||linked.order_id!==id||linked.browser_hash!==browserHash)return res.status(422).json({error:'Artwork does not belong to this test order session or is not ready'});
+   const token=openDraftToken(linked.token_sealed,referenceId,config);
+   const job=token&&store.authorize(referenceId,token);
+   if(!job||job.state!=='ready')return res.status(422).json({error:'Artwork does not belong to this test order session or is not ready'});
+   reference=referenceId+'.'+token;
   }
   if(!existing){
    const count=store.db.prepare('SELECT count(*) AS n FROM test_submissions').get().n;
    if(count>=MAX_ORDERS)return res.status(429).json({error:'JOSH TEST has reached its submission limit'});
-   store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state,request_hash) VALUES(?,?,?,'sending',?)").run(id,Date.now(),referenceId,requestHash);
+   store.db.prepare("INSERT INTO test_submissions(id,created,reference_id,state,request_hash,browser_hash) VALUES(?,?,?,'sending',?,?)").run(id,Date.now(),referenceId,requestHash,browserHash);
   }
   store.db.prepare("UPDATE test_submissions SET state='sending',request_hash=coalesce(request_hash,?) WHERE id=?").run(requestHash,id);
   // The intake copy can map these live form field names to the isolated base.
@@ -252,7 +286,7 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
    const response=await fetchImpl(config.testWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json','x-make-apikey':config.testMakeApiKey},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
    if(!response.ok)throw Error('Make rejected the test submission');
    const result=await response.json();
-   const allowed=reference?['bound','already_bound']:['not_supplied'];
+   const allowed=artworkJobId?['bound','already_bound']:['not_supplied'];
    if(result.testLabel!=='JOSH TEST'||!allowed.includes(result.artwork_status))throw Error('Unexpected Make acknowledgement');
    const safe={testOrderId:id,artworkStatus:result.artwork_status,artworkId:referenceId,deliveryPending:!!reference};
    store.db.prepare("UPDATE test_submissions SET state='complete',response=? WHERE id=?").run(JSON.stringify(safe),id);
@@ -263,4 +297,4 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
   }
  });
 }
-module.exports={protectPreview,installTestOrders,NAME,testOnly,browserSessionHash};
+module.exports={protectPreview,installTestOrders,NAME,testOnly,testPreviewMode,browserSessionHash,sealDraftToken};

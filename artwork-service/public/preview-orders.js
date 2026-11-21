@@ -50,11 +50,10 @@
   setTestAddress();
  }catch(_){error.textContent='The JOSH TEST submission window is closed. Ask Crosstalk to reopen it before submitting.';submit.disabled=true;return;}
  function session(){return sessionStorage.getItem('crosstalk-artwork-order-session');}
- async function watch(reference){
-  const [id,token]=reference.split('.');
+ async function watch(id){
   for(let attempt=0;attempt<80;attempt++){
    try{
-    const response=await fetch('/v1/drafts/'+id,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    const response=await fetch('/v1/drafts/'+id,{cache:'no-store'});
     if(response.ok){const result=await response.json();
      if(result.state==='delivered'){status.textContent='JOSH TEST artwork ZIP delivered to the isolated Dropbox folder.';return;}
      if(result.state==='failed'){status.textContent='JOSH TEST artwork delivery failed. Give Crosstalk the test order ID below for follow-up.';return;}
@@ -69,11 +68,11 @@
   event.preventDefault();if(submit.disabled||!form.reportValidity())return;
   sync();error.textContent='';submit.disabled=true;submit.textContent='Submitting JOSH TEST…';
   const data=Object.fromEntries(new FormData(form));
-  const reference=data['Artwork Reference']||'';
+  const artworkJobId=data['Artwork Job ID']||'';
   const id=session();
   let uncertain=false;
   try{
-   const response=await fetch('/v1/test-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({testOrderId:id,artworkReference:reference,fields:data})});
+   const response=await fetch('/v1/test-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({testOrderId:id,artworkJobId,fields:data})});
    const result=await response.json();
    uncertain=!response.ok&&result.outcomeUncertain===true&&result.testOrderId===id;
    if(!response.ok)throw Error(result.error||'JOSH TEST submission failed.');
@@ -81,7 +80,7 @@
    heading.textContent='JOSH TEST submission accepted';
    message.textContent='TEST JOSH 21.11 was acknowledged by the isolated Make test route. This page does not confirm a staff record, test email, or exported ZIP; Crosstalk will check those separately. No payment was taken on this page.';
    const code=document.createElement('p');code.textContent='Test order ID: '+result.testOrderId;success.append(code);
-   if(reference&&result.deliveryPending)void watch(reference);
+   if(artworkJobId&&result.deliveryPending)void watch(artworkJobId);
    else status.textContent='No designer artwork was attached to this test.';
    dispatchEvent(new Event('crosstalk-order-success'));
   }catch(e){
