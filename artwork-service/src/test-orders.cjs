@@ -17,8 +17,8 @@ function authorized(req,config){
 }
 function protectPreview(app,config){
  app.use((req,res,next)=>{
-  if(!['/calculator-preview.html','/v1/test-orders','/v1/test-config'].includes(req.path))return next();
-  if(!config.testAccessCode&&req.path==='/calculator-preview.html')return next();
+  if(!['/calculator-preview.html','/designer.html','/v1/test-orders','/v1/test-config'].includes(req.path))return next();
+  if(!config.testAccessCode&&['/calculator-preview.html','/designer.html'].includes(req.path))return next();
   if(!config.testAccessCode||!authorized(req,config))return res.status(401).set('WWW-Authenticate','Basic realm="Crosstalk Customs JOSH TEST", charset="UTF-8"').json({error:'Tester access required'});
   next();
  });

@@ -1,7 +1,36 @@
 # Artwork delivery integration — isolated implementation
 
-This service is not deployed or wired into the live calculator. The production
-calculator, approved editor branch and Make scenarios are unchanged.
+## JOSH TEST tester route (21 November 2026)
+
+The generated `/calculator-preview.html` is an isolated, HTTP Basic gated
+test form. `/designer.html` uses the same gate; the access code is supplied
+separately, never embedded in the link or JavaScript. `ARTWORK_TEST_ACCESS_CODE`,
+`ARTWORK_TEST_WEBHOOK_URL` and `ARTWORK_TEST_RECIPIENT` are server-only variables.
+The preview replaces the production Make URL at build time and submits JSON to
+`/v1/test-orders`, which accepts only the fixed TEST JOSH 21.11 identity and
+Josh's test recipient, only in the JOSH TEST Dropbox root with delivery enabled.
+It forwards no shipping address or real customer contact fields. A persisted
+idempotency key limits the entire environment to 30 submissions; the UI shows
+the accepted Make response separately from eventual verified Dropbox delivery.
+The isolated Make scenario is the only recipient of its server-side webhook.
+Its test email is a receipt acknowledgement, not a delivery notification.
+No Airtable record, invoice, payment, staff email, or real audio link is made.
+
+The tester window consists of this guarded route, JOSH TEST exporter delivery,
+and the isolated Make scenario enabled together. Disable the Make scenario and
+delivery mode when the tester window is over. Setup mode stays disabled. The
+`/internal/dropbox/test-delivery` probe also requires setup mode explicitly,
+even when the regular delivery mode is disabled.
+
+The editor already supports front/back jackets and `labelA`/`labelB` surfaces.
+Those label surfaces are versioned project data and separate PSD outputs. A
+future dedicated custom-label UI can target those same surface IDs and project
+schema without changing the order reference or Make binding. Any new tools or
+geometry require renderer and Photoshop acceptance before rollout.
+
+This review branch is deployed in the isolated JOSH TEST Railway environment;
+it is not wired into the live calculator. The production calculator and live
+Make intake remain unchanged.
 
 ## Implemented flow
 
@@ -67,7 +96,7 @@ Open /calculator-preview.html. The preview removes the real Make endpoint;
 submitting cannot create a real order. /designer.html can also be opened directly.
 Completion uploads a project but does not queue it until trusted order binding.
 
-## Deployment configuration (not provisioned)
+## Production deployment configuration (not provisioned)
 
 Deploy a dedicated single-instance Node service, not a static GitHub Pages page.
 The long-lived SQLite worker needs a persistent disk, bounded concurrency and
@@ -124,17 +153,17 @@ uploading or returning a reference. Configure `ARTWORK_ORIGINS` with both the
 exact live form origin and the artwork service's own origin. Once the real Make
 submission succeeds, the production calculator must dispatch
 `crosstalk-order-success` to clear the prior order's reference and session.
-The generated preview still cannot submit an order; this is a browser handoff
-test, not a live form integration.
+The generated preview submits only to the isolated server-side JOSH TEST route;
+it does not submit to the production Make intake or create a real order.
 
 The proposed form handoff appears in Step 3 only for printed packaging, and the
 order review says whether designer artwork is attached. Switching to Standard
 packaging omits the reference from FormData without discarding the uploaded
 design if the customer switches back. The calculator source now dispatches the
 success event after a successful Make response, but does not load the designer
-script in the live form. Desktop and mobile preview tests intercept the disabled
-order endpoint locally: a failed submission retains the reference, and a
-confirmed submission clears it. No live order is created by those tests.
+script in the live form. Desktop and mobile acceptance tests also exercise
+failed submission/retry; a confirmed submission clears the reference. A
+separate guarded preview test exercises the real isolated server-side route.
 
 ## Proposed minimal Make change (not applied)
 
@@ -155,7 +184,9 @@ Never derive the folder from a client field or reconstruct its name: module 12
 has autorename enabled. Artwork-less orders must retain their existing route and
 response. Build/test an inactive copy before selecting the optional routing and
 error handling approach; a filter inserted into the existing linear flow can
-accidentally prevent its webhook response. Current Make permissions are read-only.
+accidentally prevent its webhook response. The isolated JOSH TEST scenario now
+has a dedicated test webhook and Josh-only email; this proposed live Make
+change has not been applied.
 
 The separate file-request/shared-link discrepancy and credential rotation found
 in the audit are not silently changed as part of this integration.
