@@ -5,7 +5,7 @@ const {makeApp}=require('../src/server.cjs');
 const {createCanvas}=require('../src/psd.cjs');
 test('guarded preview submits only to isolated JOSH TEST route and shows truthful confirmation',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-preview-orders-'));
- const sent=[],config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
+ const sent=[],config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
  const service=makeApp(config,{testOrders:{fetchImpl:async(_,options)=>{sent.push(JSON.parse(options.body));return {ok:true,json:async()=>({testLabel:'JOSH TEST',artwork_status:'not_supplied'})}}}});
  const server=service.app.listen(0,'127.0.0.1');let browser;
  try{
@@ -50,7 +50,7 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
 test('mobile guarded preview attaches synthetic art and acknowledges an isolated submission',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-mobile-preview-'));
  const sent=[];
- const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
+ const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
  const service=makeApp(config,{worker:{interval:999999},testOrders:{fetchImpl:async(url,options)=>{
   assert.equal(url,config.testWebhookUrl);
   const payload=JSON.parse(options.body);sent.push(payload);

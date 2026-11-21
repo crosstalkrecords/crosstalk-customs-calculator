@@ -67,7 +67,7 @@ function safeEqual(a,b){
  return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));
 }
 function testOnly(config){
- return config.testLabel==='JOSH TEST'&&config.dropboxRoot===ROOT&&config.testRecipient==='delousedcomatorium@gmail.com'&&config.mode==='dropbox'&&!!config.testWebhookUrl&&!!config.testAccessCode;
+ return config.testLabel==='JOSH TEST'&&config.dropboxRoot===ROOT&&config.testRecipient==='delousedcomatorium@gmail.com'&&config.mode==='dropbox'&&!!config.testWebhookUrl&&!!config.testAccessCode&&!!config.testMakeApiKey;
 }
 function authorized(req,config){
  const match=/^Basic ([A-Za-z0-9+/=]+)$/.exec(req.get('Authorization')||'');
@@ -131,7 +131,7 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
    'Submission ID':id,'Artwork Job ID':referenceId,'Test Order Name':NAME,
    'Test Order ID':id,'Test Summary':summary};
   try{
-   const response=await fetchImpl(config.testWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
+   const response=await fetchImpl(config.testWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json','x-make-apikey':config.testMakeApiKey},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
    if(!response.ok)throw Error('Make rejected the test submission');
    const result=await response.json();
    const allowed=reference?['bound','already_bound']:['not_supplied'];

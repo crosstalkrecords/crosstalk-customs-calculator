@@ -5,7 +5,12 @@
 The generated `/calculator-preview.html` is an isolated, HTTP Basic gated
 test form. `/designer.html` uses the same gate; the access code is supplied
 separately, never embedded in the link or JavaScript. `ARTWORK_TEST_ACCESS_CODE`,
-`ARTWORK_TEST_WEBHOOK_URL` and `ARTWORK_TEST_RECIPIENT` are server-only variables.
+`ARTWORK_TEST_WEBHOOK_URL`, `ARTWORK_TEST_MAKE_API_KEY` and
+`ARTWORK_TEST_RECIPIENT` are server-only variables. Configure the dedicated
+Make webhook to require its own API key in `x-make-apikey`, and store that key
+only as `ARTWORK_TEST_MAKE_API_KEY` in the JOSH TEST service environment. The
+test submission route stays closed without it; never put it in the preview
+page, a URL, or a Make blueprint.
 The preview replaces the production Make URL at build time and submits JSON to
 `/v1/test-orders`, which accepts only the fixed TEST JOSH 21.11 identity and
 Josh's test recipient, only in the JOSH TEST Dropbox root with delivery enabled.

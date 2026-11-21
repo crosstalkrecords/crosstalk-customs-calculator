@@ -9,8 +9,8 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
  const legacy=new DatabaseSync(path.join(dir,'jobs.sqlite'));
  legacy.exec('CREATE TABLE test_submissions (id TEXT PRIMARY KEY, created INTEGER NOT NULL, reference_id TEXT NOT NULL, state TEXT NOT NULL, response TEXT)');
  legacy.close();
- const sent=[],config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
- const service=makeApp(config,{testOrders:{fetchImpl:async(url,options)=>{const payload=JSON.parse(options.body);sent.push({url,payload});return {ok:true,json:async()=>({testLabel:'JOSH TEST',artwork_status:payload['Artwork Reference']?'bound':'not_supplied'})}}}});
+ const sent=[],config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
+ const service=makeApp(config,{testOrders:{fetchImpl:async(url,options)=>{const payload=JSON.parse(options.body);sent.push({url,payload,headers:options.headers});return {ok:true,json:async()=>({testLabel:'JOSH TEST',artwork_status:payload['Artwork Reference']?'bound':'not_supplied'})}}}});
  assert(service.store.db.prepare('PRAGMA table_info(test_submissions)').all().some(column=>column.name==='request_hash'));
  const server=service.app.listen(0,'127.0.0.1');
  try{
@@ -41,6 +41,7 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal((await submit(body)).status,202);
   assert.equal((await submit(body)).status,200);
   assert.equal(sent.length,1);
+  assert.equal(sent[0].headers['x-make-apikey'],config.testMakeApiKey);
   assert.equal(sent[0].payload.Email,'delousedcomatorium@gmail.com');
   assert.equal(sent[0].payload['Test Order Name'],'TEST JOSH 21.11');
   assert.equal(sent[0].payload['Customer Name'],'TEST JOSH 21.11');
@@ -65,6 +66,9 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal(sent[1].payload.Postcode,'0000');
   assert.equal(sent[1].payload.State,'NSW');
   assert.equal(sent[1].payload['Artwork Reference'],'');
+  config.testMakeApiKey='';assert.equal((await fetch(base+'/v1/test-config',{headers:{Authorization:auth}})).status,503);
+  assert.equal((await submit({...body,testOrderId:'a6f90e2f-6a80-4ac0-bb4e-258295f09802'})).status,503);
+  config.testMakeApiKey='synthetic-make-api-key';
   config.mode='disabled';assert.equal((await submit({...body,testOrderId:'e6f90e2f-6a80-4ac0-bb4e-258295f09802'})).status,503);
  }finally{await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
