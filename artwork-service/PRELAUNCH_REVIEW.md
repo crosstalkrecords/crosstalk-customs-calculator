@@ -50,8 +50,8 @@ access. The isolated form URL does not expose the Airtable table.
   successful isolated Railway redeploy, `/health` returned
   `deliveryMode=disabled` and `configured=false` on 21 November 2026.
 - Railway reports a successful **JOSH TEST only** deployment on 21 November
-  2026 of review commit `9ce68675c17dab38f2c22c24a8d6ca718d87f557`
-  (deployment `f8a1c8fc-d2a6-429e-8a60-2e050aaff556`). After deploy, `/health` returned
+  2026 of review commit `66a2cb911d4152167a3f20239cb9eeec25fc93b6`
+  (deployment `844a7ced-0891-4b52-8192-fc3f0aa5ab46`). After deploy, `/health` returned
   `deliveryMode=disabled` and `configured=false`; unauthenticated preview and
   test-config requests returned 401. The newer Airtable intake mapping and
   server-only Make API key guard are hosted, but the guarded form's submission
@@ -97,8 +97,11 @@ ignores the additional fields. A full intake copy must still be built and retest
 A further preview-only change disables public playlist lookup and import in
 JOSH TEST, so synthetic tester searches do not reach the separate shared
 playlist service. Testers can enter a manual synthetic tracklist. This change
-does not alter the current live form; it is deployed to JOSH TEST but the hosted
-authenticated smoke test is pending. Playlist import still needs its own prelaunch regression check in an
+does not alter the current live form. A further preview-only copy pass removes
+promises of a real order or audio upload link, and the inert fallback route
+returns 410 if the test handoff script is unavailable. The latest version is
+deployed to JOSH TEST; the hosted authenticated smoke test is pending. Playlist
+import still needs its own prelaunch regression check in an
 appropriately isolated environment. The isolated intake mapping also identified
 Packaging, Vinyl Colour, Side A Length and Side B Length as absent from the
 current Airtable intake map. Four matching fields now exist in the JOSH TEST
@@ -129,7 +132,7 @@ with `spawn ETXTBSY`: concurrent tests extracted Chromium into the same
 `/tmp/chromium`. The serialized runner and updated UI fixture passed the full
 GitHub review gate on final code commit `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`
 ([run 44850487239](https://github.com/crosstalkrecords/crosstalk-customs-calculator/actions/runs/44850487239)).
-The latest deployed SHA `9ce6867` still requires a hosted authenticated smoke test.
+The latest deployed SHA `66a2cb9` still requires a hosted authenticated smoke test.
 The new test-intake allowlist, fictional shipping, changed-details replay and
 server-only Make key guard passed the 15/15 local service suite, and the code
 was deployed to JOSH TEST. A GitHub Actions result for the latest SHA has not
@@ -217,7 +220,7 @@ now specifies those recovery paths, but no runnable stage modules exist yet.
 | 6. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST; test OAuth is app-folder scoped but the token's provider permissions are wider than the application root check. No production volume, backup, alert or ingress limiter is verified. | Provision a distinct production environment/service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore, monitored failure queue and separate provider authorization. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 7. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
 | 8. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 9. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Code commit `ecfa1547` passed service, UI, acceptance and audit steps on GitHub; Railway reports the latest successful JOSH TEST deployment at `9ce6867`. Its mapping and Make key guard passed 15 local service tests; a GitHub Actions result for that SHA has not been established in this report. | CI runner and fixture fixes are verified on the review branch. Run a hosted authenticated smoke and mobile test and the full isolated Make intake after credentials are scoped. **Deploy resolved; hosted retest open.** |
+| 9. Final CI and hosted gate | Low / medium | Earlier CI failed `ETXTBSY`, and the old UI fixture expected a retired route. Code commit `ecfa1547` passed service, UI, acceptance and audit steps on GitHub; Railway reports the latest successful JOSH TEST deployment at `66a2cb9`. Its mapping and Make key guard passed 15 local service tests, and the preview-only copy pass passed desktop/mobile checks; no GitHub Actions run was returned for the latest SHA. | CI runner and fixture fixes are verified on the review branch. Run a hosted authenticated smoke and mobile test and the full isolated Make intake after credentials are scoped. **Deploy resolved; hosted retest open.** |
 
 ## Live and test configuration comparison
 
