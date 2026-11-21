@@ -1,5 +1,5 @@
 {
-  "name": "JOSH TEST Customer Intake — INCOMPLETE",
+  "name": "JOSH TEST Customer Intake — ASYNC DRAFT (INACTIVE)",
   "flow": [
     {
       "id": 1,
@@ -1183,7 +1183,7 @@
                                                   }
                                                 ],
                                                 "subject": "TEST JOSH 21.11 — Crosstalk Customs JOSH TEST receipt",
-                                                "content": "TEST JOSH 21.11 — Crosstalk Customs JOSH TEST\n\nWe received the isolated test order details. This is a test only: no genuine customer order, payment, charge or invoice has been created.\n\nTest audio upload link: {{102.body.url}}\n\nPlease use this link only for the JOSH TEST review. Artwork and delivery are still being checked, and this message is not a production order confirmation.\n\nCrosstalk Customs — JOSH TEST",
+                                                "content": "TEST JOSH 21.11 — Crosstalk Customs JOSH TEST\n\nWe recorded the isolated test order details. This is a test only: no genuine customer order, payment, charge or invoice has been created.\n\nTest audio upload link: {{102.body.url}}\n\nTo provide audio, open the link, choose your file, then complete Dropbox's final Upload action. Wait until Dropbox confirms the upload has finished before closing the page. Having a link or selecting a file does not confirm that we received audio.\n\nThis message confirms the test order details, not receipt of audio or completed artwork delivery. If Dropbox does not show success, the upload is still pending.\n\nCrosstalk Customs — JOSH TEST",
                                                 "contentType": "text"
                                               },
                                               "onerror": [
@@ -1319,7 +1319,7 @@
                                             {
                                               "id": 110,
                                               "mapper": {
-                                                "content": "JOSH TEST staff notification — TEST JOSH 21.11\n\nThe isolated synthetic order reached Upload link ready. This is a test record only; no genuine customer order, invoice, payment or charge was created.\n\nAirtable test record: {{6.id}}\nSubmission ID: {{1.`Submission ID`}}\nCustomer test recipient: delousedcomatorium@gmail.com\nPrivate order folder path: /Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}\n\nCustomer receipt provider send was marked Sent in the test ledger; inbox arrival is still unverified. Open the restricted JOSH TEST Airtable record for status. Do not invoice or process this as a real order.",
+                                                "content": "JOSH TEST staff notification — TEST JOSH 21.11\n\nThe isolated synthetic order reached Upload link ready. This records an open Dropbox file request, not an audio upload. Do not mark audio received or files approved until the exact JOSH TEST Uploads folder has a verified file.\n\nThis is a test record only; no genuine customer order, invoice, payment or charge was created.\n\nAirtable test record: {{6.id}}\nSubmission ID: {{1.`Submission ID`}}\nCustomer test recipient: delousedcomatorium@gmail.com\nPrivate order folder path: /Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}\n\nCustomer email provider send was marked Sent in the test ledger. Confirm actual inbox arrival separately for this submission. Open the restricted JOSH TEST Airtable record for status. Do not invoice or process this as a real order.",
                                                 "subject": "TEST JOSH 21.11 — Crosstalk Customs JOSH TEST staff notice",
                                                 "contentType": "text",
                                                 "toRecipients": [

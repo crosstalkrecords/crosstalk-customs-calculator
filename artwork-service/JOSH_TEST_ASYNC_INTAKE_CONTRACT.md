@@ -1,11 +1,12 @@
 # JOSH TEST queued intake contract (draft)
 
-This is an isolated Customs design. The protected Make scenario `8715068`
-remains inactive and has not run end to end. The current hosted order endpoint
+This is an isolated Customs design. The protected Make scenario `8715068` is
+saved as a confidential 100-module ASYNC DRAFT, remains inactive and has not
+run end to end. The current hosted order endpoint
 implements a durable `queued` acknowledgement and same-session polling, but
 the server-only protected Make destination is not configured in JOSH TEST, so
-the hosted submission window is closed. The candidate Make route in
-`JOSH_TEST_FULL_INTAKE_BLUEPRINT_DRAFT.json` has not completed an execution.
+the hosted submission window is closed. The saved route corresponds to
+`JOSH_TEST_FULL_INTAKE_BLUEPRINT_DRAFT.json` but has not completed an execution.
 Do not use this document as evidence that the customer journey is complete,
 and do not connect the live form.
 
@@ -82,7 +83,7 @@ regresses `complete`. A trusted final callback can reconcile a prior
 `manual_review` only after downstream guards succeeded.
 
 An ambiguous Dropbox create/open or provider send must leave the Airtable stage
-`Uncertain` and prevents a duplicate run. If the callback itself fails, a
+`Uncertain` and prevent a duplicate run. If the callback itself fails, a
 timeout marks a stale `processing` submission for staff; neither Make's accepted
 response nor a generic success status can silently mark completion. A separate
 staff-secret-protected summary is now deployed and read-only: the authenticated
@@ -90,7 +91,8 @@ JOSH TEST check returned four older failed artwork jobs and no current queued
 or processing submissions. It does not send an alert or resolve a job. Staff
 must inspect the isolated ledger and provider/Dropbox evidence before any
 manual recovery. Josh observed both Josh-only probe emails arrive and reported
-a successful dummy upload through the private request page. The exact Dropbox
-destination and file contents still need independent verification. A controlled
+a success screen on the private upload request. Subsequent staff-only metadata
+checks found zero files in the fixed Uploads folder and zero uploads on the
+Dropbox request; the discrepancy must be reproduced and resolved. A controlled
 full webhook run, bound artwork ZIP inspection, and timeout/failure tests remain
 open.
