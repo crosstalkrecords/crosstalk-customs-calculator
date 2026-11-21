@@ -11,11 +11,12 @@ const base='https://josh-test-artwork-exporter-josh-test.up.railway.app';
 const output=path.resolve(__dirname,'../test-output/hosted');
 const proxyUrl=process.env.HTTPS_PROXY&&new URL(process.env.HTTPS_PROXY);
 const proxy=proxyUrl?{server:proxyUrl.origin,...(proxyUrl.username?{username:decodeURIComponent(proxyUrl.username),password:decodeURIComponent(proxyUrl.password)}:{})}:undefined;
+const httpCredentials=process.env.ARTWORK_TEST_ACCESS_CODE?{username:'tester',password:process.env.ARTWORK_TEST_ACCESS_CODE}:undefined;
 const failures=[];
 
 async function prepare(page,pack){
  await page.goto(base+'/calculator-preview.html');
- assert.match(await page.locator('body').innerText(),/ARTWORK TEST PREVIEW/);
+ assert.match(await page.locator('body').innerText(),/JOSH TEST — TEST JOSH 21\.11/);
  await page.locator('#regularStart').click();
  await page.locator('#sizes [data-size="12"]').click();
  await page.locator('[data-step="1"] [data-next="2"]').click();
@@ -29,11 +30,14 @@ async function customer(page,route){
  await page.locator('[data-step="3"] [data-next="4"]').click();
  await page.locator('.audio[data-audio="have"]').click();
  await page.locator('[data-step="4"] [data-next="5"]').click();
- await page.locator('input[name="Customer Name"]').fill('JOSH TEST');
- await page.locator('input[name="Email"]').fill('synthetic@example.invalid');
- await page.locator('input[name="Custom Field 1"]').fill('0400000000');
+ await page.waitForFunction(()=>document.querySelector('input[name="Customer Name"]')?.readOnly);
+ for(const [name,value] of [['Customer Name','TEST JOSH 21.11'],['Email','delousedcomatorium@gmail.com'],['Custom Field 1','0400000000']]){
+  const field=page.locator('input[name="'+name+'"]');
+  assert.equal(await field.getAttribute('readonly'),'');
+  assert.equal(await field.inputValue(),value);
+ }
  await page.locator('#terms').check();
- if(route)await page.route('**/order-submission-disabled',route);
+ if(route)await page.route('**/v1/test-orders',route);
 }
 async function openEditor(page){
  const popup=page.waitForEvent('popup');await page.locator('#openArtworkDesigner').click();
@@ -57,21 +61,31 @@ async function run(){
  const canvas=createCanvas(120,120),ctx=canvas.getContext('2d');ctx.fillStyle='#336b8a';ctx.fillRect(0,0,120,120);
  ctx.fillStyle='#f5b330';ctx.fillRect(20,20,80,80);
  const image=path.join(output,'JOSH-TEST-synthetic.png');await fs.writeFile(image,canvas.toBuffer('image/png'));
- const health=await fetch(base+'/health');assert.equal(health.status,200);assert.equal((await health.json()).deliveryMode,'disabled');
+ const health=await fetch(base+'/health');assert.equal(health.status,200);
+ const healthBody=await health.json();assert.equal(healthBody.deliveryMode,'dropbox');assert.equal(healthBody.configured,true);
  const cfg=await(await fetch(base+'/v1/client-config')).json();assert.deepEqual(cfg.returnOrigins,[base]);
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||await packaged.executablePath(),args:packaged.args.filter(a=>!['--single-process','--disable-web-security','--disable-site-isolation-trials'].includes(a)),...(proxy?{proxy}:{})});
  const result={base,health:'pass',cases:[],references:[]};
+ async function guardedContext(options={}){
+  const context=await browser.newContext({ignoreHTTPSErrors:true,...(httpCredentials?{httpCredentials}:{}),...options});
+  // This script checks only browser behaviour. An unmocked submission is a
+  // test failure, never a call to Make or the real isolated order endpoint.
+  await context.route('**/v1/test-orders',route=>{failures.push('Unmocked JOSH TEST submission');return route.abort()});
+  await context.route('**/order-submission-disabled',route=>{failures.push('Obsolete preview submission');return route.abort()});
+  await context.route('https://hook.eu1.make.com/**',route=>{failures.push('Unexpected Make request');return route.abort()});
+  return context;
+ }
  try{
-  const standard=await browser.newContext({ignoreHTTPSErrors:true});const plain=await standard.newPage();plain.setDefaultTimeout(45000);
+  const standard=await guardedContext();const plain=await standard.newPage();plain.setDefaultTimeout(45000);
   await prepare(plain,'Standard');
   let standardAttempts=0;
-  await customer(plain,async route=>{standardAttempts++;const data=route.request().postData()||'';assert.equal(data.includes('name="Artwork Reference"'),false);await new Promise(r=>setTimeout(r,350));await route.fulfill({status:200,contentType:'application/json',body:'{}'});});
+  await customer(plain,async route=>{standardAttempts++;const data=route.request().postDataJSON();assert.equal(data.artworkReference,'');assert.equal('Artwork Reference' in data.fields,false);await new Promise(r=>setTimeout(r,350));await route.fulfill({status:202,contentType:'application/json',body:JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'not_supplied',deliveryPending:false})});});
   await plain.locator('button[type="submit"]').evaluate(button=>{button.click();button.click()});await plain.locator('#success').waitFor({state:'visible'});
   assert.equal(standardAttempts,1);
   result.cases.push('Standard without artwork and duplicate submit suppression');await standard.close();
 
   for(const [mobile,pack] of [[false,'Printed Jacket + Labels'],[true,'Custom Finish Pack']]){
-   const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:mobile?{width:390,height:844}:{width:1365,height:900},isMobile:mobile,hasTouch:mobile});
+   const context=await guardedContext({viewport:mobile?{width:390,height:844}:{width:1365,height:900},isMobile:mobile,hasTouch:mobile});
    const page=await context.newPage();page.setDefaultTimeout(45000);page.on('pageerror',e=>failures.push(e.message));
    await prepare(page,pack);let editor=await openEditor(page);
    if(mobile){
@@ -105,10 +119,10 @@ async function run(){
     result.cases.push('switch to Standard and restore artwork');
    }
    let attempts=0;
-   await customer(page,async route=>{attempts++;await route.fulfill({status:attempts===1?503:200,contentType:'application/json',body:'{}'});});
-   page.on('dialog',d=>d.accept());
+   await customer(page,async route=>{attempts++;const data=route.request().postDataJSON();assert.equal(data.artworkReference,reference);await route.fulfill({status:attempts===1?503:202,contentType:'application/json',body:attempts===1?'{"error":"JOSH TEST injected submission error"}':JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'bound',deliveryPending:false})});});
    const old=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
    await page.getByRole('button',{name:'Place My Order'}).click();
+   await page.locator('#testSubmitError').filter({hasText:'JOSH TEST injected submission error'}).waitFor();
    assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
    assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
    await page.getByRole('button',{name:'Place My Order'}).click();await page.locator('#success').waitFor({state:'visible'});
@@ -126,7 +140,7 @@ async function run(){
    await context.close();
   }
   assert.notEqual(result.references[0],result.references[1]);
-  const forgedContext=await browser.newContext({ignoreHTTPSErrors:true});const form=await forgedContext.newPage();await form.goto(base+'/calculator-preview.html');
+  const forgedContext=await guardedContext();const form=await forgedContext.newPage();await form.goto(base+'/calculator-preview.html');
   const opened=form.waitForEvent('popup');await form.evaluate(origin=>window.open(origin+'/designer.html?artworkSession=forged&returnOrigin=https%3A%2F%2Fevil.test','forgedArtwork'),base);
   const forged=await opened;forged.setDefaultTimeout(45000);await forged.locator('#imageInput').setInputFiles(image);
   await forged.locator('#finishBtn').click();await forged.locator('#completeArtwork').click();
