@@ -1,13 +1,16 @@
 # JOSH TEST intake no-response-module candidate
 
-**Status: prepared, not applied.** Automatic approval review rejected the
-blueprint replacement because removing response/error handlers can change
-failure behavior and explicitly disallowed a workaround. The live Customs form,
-live Customer Intake, and isolated scenario 8715068 were not changed. This plan
-is for a specific approval of the isolated change and a new controlled test;
-it is not a go-live approval request.
+**Status: applied to inactive JOSH TEST; runtime retest pending.** Automatic
+approval review initially rejected the blueprint replacement because removing
+response/error handlers can change failure behavior. Josh then explicitly
+approved this exact isolated edit. The live Customs form and live Customer
+Intake were not changed. This is not a go-live approval.
 
-Scenario 8715068 is inactive, immediate, sequential, and confidential. The protected webhook, all other module mappings, connections, filters, Airtable claim, Dropbox checks, email modules, outcome callbacks, and scheduling remain unchanged.
+Scenario 8715068 was read back inactive, valid, immediate, sequential, and
+confidential with 94 modules and zero `WebhookRespond` modules. Exactly the six
+IDs below were removed. Commit handlers 41/43/45, the protected hook, all
+other mappings, connections, filters, Airtable claim, Dropbox checks, email
+modules, outcome callbacks and scheduling remain unchanged.
 
 | Location | Delete | Preserve |
 | --- | --- | --- |
@@ -27,10 +30,8 @@ HTTP 200 body `Accepted` as queued, with no Airtable claim; an authenticated
 final callback must pin the record. Focused tests passed 7/7. This code is
 deployed only in Railway JOSH TEST with delivery mode disabled.
 
-After explicit approval of this isolated Make edit, validate the scenario is
-still inactive, immediate, sequential and confidential. Apply the six removals,
-read back every route and connection, and run one new Josh-only hosted form
-order in a controlled window. Confirm a clean Make execution, exactly one
+The structural readback is complete. The next step is one new Josh-only hosted
+form order in a controlled window. Confirm a clean Make execution, exactly one
 isolated Airtable row and email pair, a verified ZIP, final status reconciliation,
 and no live, invoice or payment effect. Test rejected/duplicate payloads and
 stalled queue recovery. Keep the scenario inactive outside the test window.
