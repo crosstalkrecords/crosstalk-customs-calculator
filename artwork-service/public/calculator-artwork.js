@@ -12,8 +12,17 @@
  const input=document.createElement('input');input.type='hidden';input.name='Artwork Reference';form.append(input);
  const review=document.createElement('p');review.className='muted artwork-review';
  document.getElementById('review')?.after(review);
+ const referenceKey='crosstalk-artwork-order-reference';
+ const validReference=value=>/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/.test(value||'');
  let editor,session=sessionStorage.getItem('crosstalk-artwork-order-session')||crypto.randomUUID();sessionStorage.setItem('crosstalk-artwork-order-session',session);
  const status=document.getElementById('artworkOrderStatus');
+ try{
+  const saved=JSON.parse(sessionStorage.getItem(referenceKey));
+  if(saved?.session===session&&validReference(saved.reference)){
+   input.value=saved.reference;
+   status.textContent='Artwork uploaded and attached. Place your order to queue its PSD delivery.';
+  }else sessionStorage.removeItem(referenceKey);
+ }catch(_){sessionStorage.removeItem(referenceKey);}
  function updateAvailability(){
   const printed=!document.getElementById('promoLookSummary').classList.contains('hidden')||form.querySelector('#packs .choice.selected')?.dataset.pack!=='Standard';
   box.classList.toggle('hidden',!printed);input.disabled=!printed;
@@ -32,12 +41,14 @@
   if(!editor)status.textContent='Allow this artwork window to open, then try again.';
  };
  addEventListener('message',event=>{
-  if(event.origin!==serviceOrigin||event.source!==editor||event.data?.type!=='crosstalk-artwork-complete'||event.data?.session!==session||!/^\w{32}\.[A-Za-z0-9_-]{43}$/.test(event.data?.reference||''))return;
-  input.value=event.data.reference;status.textContent='Artwork uploaded and attached. Place your order to queue its PSD delivery.';updateAvailability();
+  if(event.origin!==serviceOrigin||event.source!==editor||event.data?.type!=='crosstalk-artwork-complete'||event.data?.session!==session||!validReference(event.data?.reference))return;
+  input.value=event.data.reference;sessionStorage.setItem(referenceKey,JSON.stringify({session,reference:input.value}));
+  status.textContent='Artwork uploaded and attached. Place your order to queue its PSD delivery.';updateAvailability();
  });
  // The live form must dispatch this only after Make confirms an actual order.
  addEventListener('crosstalk-order-success',()=>{
-  input.value='';session=crypto.randomUUID();sessionStorage.setItem('crosstalk-artwork-order-session',session);
+  input.value='';sessionStorage.removeItem(referenceKey);
+  session=crypto.randomUUID();sessionStorage.setItem('crosstalk-artwork-order-session',session);
   editor=null;status.textContent='No designer artwork attached.';updateAvailability();
  });
 })();

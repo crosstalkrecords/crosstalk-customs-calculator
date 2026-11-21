@@ -2,6 +2,12 @@
 const fs=require('node:fs'),path=require('node:path');
 const root=__dirname;
 let html=fs.readFileSync(path.join(root,'vendor/approved-editor.html'),'utf8');
+// A shared browser must never offer a different order's previous design.
+html=html.replaceAll("get('current')","get(artworkDraftKey())").replaceAll("delete('current')","delete(artworkDraftKey())");
+html=html.replaceAll("put(data,'current')","put(data,artworkDraftKey())");
+html=html.replace('<title>Crosstalk Customs Artwork Designer — Sandbox</title>','<title>Crosstalk Customs Artwork Designer — JOSH TEST</title>');
+html=html.replace('<div class="sandbox">Sandbox</div>','<div class="sandbox">JOSH TEST</div>');
+html=html.replace('Nothing leaves your browser','Draft saved on this device; Finish uploads to the JOSH TEST service');
 const css=[];
 for(const [family,base] of [['Crosstalk Sans','DejaVuSans'],['Crosstalk Serif','DejaVuSerif'],['Crosstalk Mono','DejaVuSansMono']])for(const [suffix,weight,style] of [['',400,'normal'],['-Bold',700,'normal'],['-Oblique',400,'italic'],['-BoldOblique',700,'italic']])if(fs.existsSync(path.join(root,'public/fonts',base+suffix+'.ttf')))css.push(`@font-face{font-family:'${family}';src:url('fonts/${base+suffix}.ttf');font-weight:${weight};font-style:${style};font-display:block}`);
 html=html.replace('</head>','<style>'+css.join('')+'.handoff-status{font-size:13px;font-weight:650;min-height:20px;color:#5c3322}.handoff-status:not(:empty){margin:12px 0}</style><script src="handoff.js"></script></head>');
@@ -10,8 +16,9 @@ html=html.replace('const FONTS=[',"const FONTS=[{label:'Crosstalk Sans (PSD text
 html=html.replace("return{font:'Arial, Helvetica, sans-serif',fontSize:5.8", "return{font:'Crosstalk Sans',fontSize:5.8");
 const hook=`
 // Delivery integration: source/state only; no print-size layer rasterization here.
+function artworkDraftKey(){const session=new URLSearchParams(location.search).get('artworkSession');return session&&/^[0-9a-f-]{36}$/i.test(session)?'order:'+session:'standalone'}
 for(const id of ['addTextBtn','mobileTextBtn'])$(id).onclick=async()=>{try{await document.fonts.load('700 32px "Crosstalk Sans"');addText()}catch(_){showToast('The artwork font could not load. Please retry.')}};
-saveNow=async function(){try{const db=await openDB();if(!db)throw Error();const data=JSON.parse(snapshot());data.version=4;data.savedAt=new Date().toISOString();await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data,'current');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});$('saveStatus').textContent='Saved on this device'}catch(_){$('saveStatus').textContent='Saved for this session'}};
+saveNow=async function(){try{const db=await openDB();if(!db)throw Error();const data=JSON.parse(snapshot());data.version=4;data.savedAt=new Date().toISOString();await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data,artworkDraftKey());tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});$('saveStatus').textContent='Saved on this device'}catch(_){$('saveStatus').textContent='Saved for this session'}};
 $('completeArtwork').onclick=async()=>{
  const button=$('completeArtwork'),status=$('handoffStatus');button.disabled=true;
  try{
@@ -41,7 +48,8 @@ fs.mkdirSync(path.join(root,'public/assets'),{recursive:true});fs.copyFileSync(p
 let calculator=fs.readFileSync(path.join(root,'../calculator.html'),'utf8');
 const before=calculator;calculator=calculator.replace(/https:\/\/hook\.eu1\.make\.com\/[a-zA-Z0-9]+/g,'/order-submission-disabled');
 if(calculator===before||calculator.includes('hook.eu1.make.com'))throw Error('Preview order endpoint replacement failed');
-calculator=calculator.replace('</body>','<script src="calculator-artwork.js"></script></body>');
-calculator=calculator.replace(/<body[^>]*>/,'$&<div style="padding:12px;background:#ffe89d;color:#111">ARTWORK TEST PREVIEW — order submission is disabled. This page cannot place real orders.</div>');
+calculator=calculator.replace('</head>','<meta name="robots" content="noindex,nofollow,noarchive"><title>JOSH TEST — Crosstalk Customs</title></head>');
+calculator=calculator.replace('</body>','<script src="calculator-artwork.js"></script><script src="preview-orders.js"></script></body>');
+calculator=calculator.replace(/<body[^>]*>/,'$&<div role="note" style="padding:12px;background:#ffe89d;color:#111;font-weight:700">JOSH TEST — TEST JOSH 21.11. This isolated form sends only a test notification to Crosstalk and a test artwork ZIP to the JOSH TEST Dropbox folder. No order, invoice, charge, or audio upload link is created. Use synthetic artwork and audio details only.</div>');
 fs.writeFileSync(path.join(root,'public/calculator-preview.html'),calculator);
 console.log('Built isolated artwork designer and calculator preview; live calculator unchanged');
