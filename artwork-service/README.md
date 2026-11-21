@@ -9,10 +9,13 @@ separately, never embedded in the link or JavaScript. `ARTWORK_TEST_ACCESS_CODE`
 The preview replaces the production Make URL at build time and submits JSON to
 `/v1/test-orders`, which accepts only the fixed TEST JOSH 21.11 identity and
 Josh's test recipient, only in the JOSH TEST Dropbox root with delivery enabled.
-It forwards no shipping address or real customer contact fields. A persisted
-idempotency key limits the entire environment to 30 submissions; the UI shows
+It forwards an allowlisted set of form fields with that fixed identity. The
+shipping test uses a clearly fictional, non-deliverable address; no tester's
+real shipping address is forwarded. A persisted idempotency key and normalized
+request fingerprint limit the entire environment to 30 submissions; the UI shows
 the accepted Make response separately from eventual verified Dropbox delivery.
-The isolated Make scenario is the only recipient of its server-side webhook.
+The isolated Make scenario is the only recipient of its server-side webhook;
+it is currently deactivated outside controlled tests.
 Its test email is a receipt acknowledgement, not a delivery notification.
 No Airtable record, invoice, payment, staff email, or real audio link is made.
 
@@ -28,9 +31,10 @@ future dedicated custom-label UI can target those same surface IDs and project
 schema without changing the order reference or Make binding. Any new tools or
 geometry require renderer and Photoshop acceptance before rollout.
 
-This review branch is deployed in the isolated JOSH TEST Railway environment;
-it is not wired into the live calculator. The production calculator and live
-Make intake remain unchanged.
+The isolated Railway environment reports a successful review-branch deployment
+containing the mobile and staff-recovery fixes. The newer Airtable intake
+mapping in this branch still requires a JOSH TEST deployment and hosted retest.
+The production calculator and live Make intake remain unchanged.
 
 ## Implemented flow
 

@@ -18,6 +18,29 @@
   if(!response.ok)throw Error();config=await response.json();
   for(const [name,key] of fields){const input=form.elements.namedItem(name);input.value=config[key];input.readOnly=true;input.setAttribute('aria-label',name+' — fixed JOSH TEST value');}
   const phone=form.elements.namedItem('Custom Field 1');phone.closest('.field')?.insertAdjacentHTML('beforeend','<small>Test identity only. No customer details will be used.</small>');
+  const delivery=document.getElementById('delivery'),address={
+   'Street Address':'1 TEST ONLY LANE',Suburb:'TESTVILLE',Postcode:'0000',State:'NSW'
+  };
+  const note=document.createElement('small');
+  note.textContent='JOSH TEST shipping uses a fictional address. Nothing will be shipped.';
+  delivery.closest('.field')?.append(note);
+  function setTestAddress(){
+   const shipping=delivery.value==='shipping';
+   for(const [name,synthetic] of Object.entries(address)){
+    const input=form.elements.namedItem(name);
+    input.value=shipping?synthetic:'';
+    if(name==='State'){
+     input.tabIndex=shipping?-1:0;
+     input.style.pointerEvents=shipping?'none':'';
+     input.setAttribute('aria-disabled',String(shipping));
+    }else input.readOnly=shipping;
+   }
+  }
+  form.elements.namedItem('State').addEventListener('change',event=>{
+   if(delivery.value==='shipping')event.target.value=address.State;
+  });
+  delivery.addEventListener('change',setTestAddress);
+  setTestAddress();
  }catch(_){error.textContent='The JOSH TEST submission window is closed. Ask Crosstalk to reopen it before submitting.';submit.disabled=true;return;}
  function session(){return sessionStorage.getItem('crosstalk-artwork-order-session');}
  async function watch(reference){

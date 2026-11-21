@@ -23,6 +23,15 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   await page.locator('[data-step="2"] [data-next="3"]').click();
   await page.locator('[data-step="3"] [data-next="4"]').click();
   await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
+  await page.locator('#delivery').selectOption('shipping');
+  assert.equal(await page.locator('input[name="Street Address"]').inputValue(),'1 TEST ONLY LANE');
+  assert.equal(await page.locator('input[name="Suburb"]').inputValue(),'TESTVILLE');
+  assert.equal(await page.locator('input[name="Postcode"]').inputValue(),'0000');
+  assert.equal(await page.locator('select[name="State"]').inputValue(),'NSW');
+  assert.equal(await page.locator('input[name="Street Address"]').getAttribute('readonly'),'');
+  assert.match(await page.locator('#delivery').locator('..').innerText(),/fictional address/);
+  await page.locator('#delivery').selectOption('pickup');
+  assert.equal(await page.locator('input[name="Street Address"]').inputValue(),'');
   await page.locator('#terms').check();await page.getByRole('button',{name:'Place My Order'}).click();
   try{await page.locator('#success').waitFor({state:'visible',timeout:5000});}catch(e){
    console.error('TEST PREVIEW STATE',JSON.stringify({error:await page.locator('#testSubmitError').innerText(),outbound,button:await page.getByRole('button',{name:/Place My Order|Submitting JOSH TEST/}).allTextContents()}));throw e;
@@ -30,6 +39,8 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   assert.match(await page.locator('#success').innerText(),/JOSH TEST submission accepted/);
   assert.match(await page.locator('#testDeliveryStatus').innerText(),/No designer artwork/);
   assert.equal(sent.length,1);assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
+  assert.equal(sent[0]['Delivery Method'],'Pickup');
+  assert.equal(sent[0]['Street Address'],'');
   assert(outbound.some(request=>request.url===base+'/v1/test-orders'));
   assert(!outbound.some(request=>request.url.includes('hook.eu1.make.com')));
   await context.close();

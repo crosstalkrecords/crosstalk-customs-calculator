@@ -1,0 +1,76 @@
+{
+  "kind": "sanitized Make blueprint plan",
+  "deployable": false,
+  "reason": "New test-only Airtable and Dropbox connections, a Data store, and a separate webhook must be bound and validated before a scenario can be created. No credential values or webhook URLs are included.",
+  "scope": "Crosstalk Customs JOSH TEST only",
+  "make": {
+    "organizationId": 6808399,
+    "teamId": 1173465,
+    "sourceScenarioId": 4762364,
+    "sourceScenarioName": "Customer Intake",
+    "relatedTestScenarioId": 8084300,
+    "targetName": "JOSH TEST Customer Intake",
+    "createInactive": true,
+    "activateOnlyForControlledTests": true,
+    "sequential": true,
+    "incompleteExecutions": true
+  },
+  "airtable": {
+    "baseId": "appDz7CEL2KQWpzyC",
+    "tableId": "tbly1iXdcMvFuqCcY",
+    "submissionIdFieldId": "fldro75kOQGnubjQR",
+    "artworkJobIdFieldId": "fldZ3a2PYHZ7LKubs",
+    "artworkDeliveryStatusFieldId": "fldC0OBNOiit8AltO",
+    "audioUploadFieldId": "fld5G2oHi9NL73kkn",
+    "internalFolderLinkFieldId": "fldFsfOT7hf2Bg4ZO",
+    "requiredConnection": "new Make Airtable OAuth grant restricted to JOSH TEST base"
+  },
+  "dropbox": {
+    "fixedOrderRoot": "/Crosstalk Customs/JOSH TEST",
+    "requiredConnection": "new isolated Dropbox connection with file_requests.write, files.metadata.read, files.content.write, sharing.write, sharing.read; ideally dedicated account or app folder",
+    "neverAcceptClientDestination": true
+  },
+  "preflight": {
+    "allowedTestLabel": "TEST JOSH 21.11",
+    "allowedEmail": "delousedcomatorium@gmail.com",
+    "submissionId": "server-validated UUID or equivalent unique opaque identifier",
+    "rejectBeforeAnyWrite": ["wrong test label", "wrong recipient", "missing or invalid submission id", "invalid mapped product fields"]
+  },
+  "flow": [
+    {"id": 1, "module": "gateway:CustomWebHook", "version": 1, "configuration": "new dedicated test hook, never reuse live hook"},
+    {"id": 49, "module": "builtin:BasicRouter", "version": 1, "purpose": "explicit test-only preflight accept/reject; rejected route responds without writes"},
+    {"id": 50, "module": "datastore:AddRecord", "version": 2, "purpose": "atomic claim keyed by Submission ID; overwrite disabled; duplicate error route returns existing result without Airtable create"},
+    {"id": 2, "module": "airtable:ActionCreateRecord", "version": 3, "configuration": "test base/table; preserve source field mappings and add Submission ID and initial Artwork Delivery Status"},
+    {"id": 28, "module": "airtable:ActionGetRecord", "version": 3, "configuration": "test base/table; id={{2.id}}"},
+    {"id": 12, "module": "dropbox:createFolder", "version": 5, "configuration": "fixed JOSH TEST root, name={{2.`Job Number`}}, autorename=false"},
+    {"id": 27, "module": "dropbox:createFolder", "version": 5, "configuration": "path={{12.path_lower}}, name=Uploads"},
+    {"id": 51, "module": "dropbox:createFileRequest", "version": 5, "configuration": "title uses test Job Number; destination={{27.path_display}}; open=true; replaces live HTTP 38 and 36"},
+    {"id": 16, "module": "dropbox:createShareLink", "version": 5, "configuration": "path={{27.path_display}}"},
+    {"id": 30, "module": "airtable:ActionUpdateRecords", "version": 3, "configuration": "test base/table; update ID={{2.id}}, Audio Upload fld5G2oHi9NL73kkn={{51.url}} after verifying native file request result"},
+    {"id": 5, "module": "airtable:ActionUpdateRecords", "version": 3, "configuration": "test base/table; update ID={{2.id}}, Internal Folder Link fldFsfOT7hf2Bg4ZO={{16.url}} for staff"},
+    {"id": 52, "module": "builtin:BasicRouter", "version": 1, "purpose": "artwork present/absent/error; branches must each produce one response and constrained Josh-only email"},
+    {"id": 53, "module": "http:MakeRequest", "version": 4, "configuration": "artwork branch only; isolated JOSH TEST exporter API key connection; orderId={{2.id}}, folder={{27.path_display}}, reference from validated inbound; never static synthetic values"},
+    {"id": 29, "module": "microsoft-email:createAndSendAMessage", "version": 2, "configuration": "test customer confirmation to Josh only, clearly marked TEST; only after native file request succeeded with a valid returned Dropbox upload URL {{51.url}}; never use inbound URL or shared-folder URL; send once per accepted submission"},
+    {"id": 41, "module": "microsoft-email:createAndSendAMessage", "version": 2, "configuration": "test staff notice to Josh only, clearly marked TEST; send once per accepted submission"},
+    {"id": 40, "module": "gateway:WebhookRespond", "version": 1, "configuration": "accurate stage/status and valid Dropbox file-request upload URL {{51.url}} only after module 51 succeeded; a 202 alone is not delivery proof"}
+  ],
+  "sourceModuleChanges": {
+    "allAirtableModules": "2, 28, 30, 5: replace production base with appDz7CEL2KQWpzyC and bind test-only connection",
+    "module12": "replace production order root with fixed JOSH TEST root and disable autorename; collisions require recovery",
+    "module38": "delete raw OAuth refresh module; it contains live secret values in blueprint",
+    "module36": "replace raw HTTP file request with native dropbox:createFileRequest using a new scoped connection",
+    "module30and5": "live module 30 writes file-request URL then module 5 overwrites the same Internal Folder Link with share URL; test module 30 writes Audio Upload and test module 5 writes Internal Folder Link",
+    "module29": "override any dynamic recipient with Josh-only fixed destination after explicit preflight, and use file-request URL for customer upload",
+    "module41": "replace live staff recipient with Josh-only destination",
+    "module40": "respond only after persisted stage, with explicit failure path"
+  },
+  "materialRisk": "Live module 30's file-request URL is overwritten in Internal Folder Link by module 5, while customer email 29 and response 40 use the shared-folder URL. The isolated version must verify the file request accepts a test upload before sending its URL to Josh or returning it to the tester.",
+  "validationBeforeActivation": [
+    "Confirm new Airtable Make connection can read/write only test base",
+    "Confirm new Dropbox connection cannot reach production folders",
+    "Validate every Make module and route with bound connections",
+    "Send duplicate test webhook with same Submission ID and verify one Airtable record and one email pair",
+    "Test no-artwork, artwork, bind error, timeout, retry, and incomplete-execution recovery",
+    "Verify generated file request and artwork exports stay under JOSH TEST root"
+  ]
+}
