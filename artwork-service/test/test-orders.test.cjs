@@ -65,6 +65,12 @@ test('queued artwork intake hides capability from Make; trusted bind and callbac
   assert.equal(p['Submission ID'],ID);assert.equal(p['Test Order Name'],'TEST JOSH 21.11');
   assert.match(p['Test Summary'],/Do not invoice/);assert.equal(p.Tracklist,form.Tracklist);
   const bind={testLabel:'JOSH TEST',submissionId:ID,requestFingerprint:hash,artworkJobId:job.id,airtableRecordId:RECORD,folder:ROOT+'/'+ID+'/Uploads'};
+  const deliveryQuery=Object.fromEntries(Object.entries(bind).filter(([key])=>key!=='folder'));
+  const delivery=async(body=deliveryQuery,key=f.config.bindSecret)=>f.trusted('/internal/test-delivery-status',body,key);
+  assert.equal((await delivery(deliveryQuery,'wrong-secret')).status,401);
+  assert.equal((await delivery({...deliveryQuery,folder:bind.folder})).status,422);
+  assert.equal((await delivery({...deliveryQuery,requestFingerprint:'f'.repeat(64)})).status,409);
+  assert.equal((await delivery()).status,409,'incomplete intake cannot be marked delivered');
   assert.equal((await f.trusted('/internal/test-bind',bind,'wrong-secret')).status,401);
   assert.equal((await f.trusted('/internal/test-bind',{...bind,folder:ROOT+'/other/Uploads'})).status,422);
   assert.equal((await f.trusted('/internal/test-bind',{...bind,requestFingerprint:'f'.repeat(64)})).status,409);
@@ -75,6 +81,12 @@ test('queued artwork intake hides capability from Make; trusted bind and callbac
   assert.equal((await f.trusted(route,done)).status,200,'final callback can race ahead of early ack');
   release();await until(()=>f.svc.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(ID).state==='complete');
   const final=await(await f.status(ID)).json();assert.equal(final.state,'complete');assert.equal(final.artworkStatus,'bound');assert.equal(final.deliveryPending,true);
+  const pendingStatus=await(await delivery()).json();
+  assert.deepEqual(pendingStatus,{testLabel:'JOSH TEST',submissionId:ID,airtableRecordId:RECORD,artworkJobId:job.id,
+   artworkStatus:'bound',deliveryPending:true,deliveryVerified:false,deliveryFailed:false});
+  assert.equal((await delivery()).headers.get('cache-control'),'private, no-store');
+  assert.equal((await delivery({...deliveryQuery,airtableRecordId:'recBBBBBBBBBBBBBB'})).status,409);
+  assert.equal((await delivery({...deliveryQuery,artworkJobId:'f'.repeat(32)})).status,409);
   assert.equal((await f.submit(body)).status,200);assert.equal(sent.length,1);
   assert.equal((await f.submit(body,foreign)).status,409);
   assert.equal((await f.submit({...body,fields:{...form,Tracklist:form.Tracklist+'\nchanged'}})).status,409);
@@ -83,12 +95,17 @@ test('queued artwork intake hides capability from Make; trusted bind and callbac
   assert.equal((await(await staff()).json()).deliveryPending,true);
   f.svc.store.db.prepare("UPDATE jobs SET state='delivered',delivery_receipt=? WHERE id=?").run(JSON.stringify({verified:true,bytes:2048,contentHash:'a'.repeat(64)}),job.id);
   const delivered=await(await f.status(ID)).json();assert.equal(delivered.artworkStatus,'delivered');assert.equal(delivered.deliveryPending,false);assert.equal(delivered.deliveryVerified,true);
+  const deliveryStatus=await(await delivery()).json();assert.equal(deliveryStatus.artworkStatus,'delivered');assert.equal(deliveryStatus.deliveryVerified,true);
+  assert.equal(JSON.stringify(deliveryStatus).includes(f.config.testRecipient),false);
+  assert.equal(JSON.stringify(deliveryStatus).includes(f.config.testWebhookUrl),false);
   const staffDelivered=await(await staff()).json();assert.equal(staffDelivered.artworkState,'delivered');assert.equal(staffDelivered.deliveryVerified,true);assert.equal(staffDelivered.deliveryPending,false);
   assert.equal((await(await f.submit(body)).json()).artworkStatus,'delivered','idempotent response reflects the worker, not the old bind callback');
   f.svc.store.db.prepare("UPDATE jobs SET delivery_receipt=NULL WHERE id=?").run(job.id);
   const unverified=await(await f.status(ID)).json();assert.equal(unverified.artworkStatus,'not_verifiable');assert.equal(unverified.deliveryVerified,false);assert.equal(unverified.deliveryPending,false);
+  assert.equal((await(await delivery()).json()).artworkStatus,'not_verifiable');
   f.svc.store.db.prepare("UPDATE jobs SET state='failed' WHERE id=?").run(job.id);
   const failed=await(await f.status(ID)).json();assert.equal(failed.artworkStatus,'failed');assert.equal(failed.deliveryFailed,true);assert.equal(failed.deliveryPending,false);
+  const failedStatus=await(await delivery()).json();assert.equal(failedStatus.artworkStatus,'failed');assert.equal(failedStatus.deliveryFailed,true);
  }finally{release();await f.close();}
 });
 

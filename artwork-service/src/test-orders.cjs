@@ -349,6 +349,27 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
   }
   res.status(202).json({id:job.id,artwork_status:'bound',state:'queued'});
  });
+ // Make can reconcile the worker's terminal outcome after its intake run has
+ // ended. This is a read-only, test-only query using the existing trusted
+ // connection; none of the identifiers or the request fingerprint go in a URL.
+ app.post('/internal/test-delivery-status',require('express').json({limit:'4kb'}),(req,res)=>{
+  if(!trusted(req))return res.status(401).json({error:'Unauthorised'});
+  const v=req.body||{};
+  if(typeof v!=='object'||Array.isArray(v)||
+    Object.keys(v).some(k=>!['testLabel','submissionId','requestFingerprint','artworkJobId','airtableRecordId'].includes(k))||
+    v.testLabel!=='JOSH TEST'||!uuid.test(v.submissionId||'')||!hash64.test(v.requestFingerprint||'')||
+    !/^[a-f0-9]{32}$/.test(v.artworkJobId||'')||!/^rec[A-Za-z0-9]{14}$/.test(v.airtableRecordId||''))
+   return res.status(422).json({error:'Invalid JOSH TEST delivery query'});
+  const row=store.db.prepare('SELECT id,state,request_hash,reference_id,airtable_id FROM test_submissions WHERE id=?').get(v.submissionId);
+  if(!row||row.state!=='complete'||row.request_hash!==v.requestFingerprint||
+    row.reference_id!==v.artworkJobId||row.airtable_id!==v.airtableRecordId)
+   return res.status(409).json({error:'Delivery query does not match a completed test order'});
+  const job=store.get(row.reference_id);
+  if(job?.binding!==JSON.stringify({orderId:row.airtable_id,folder:ROOT+'/'+row.id+'/Uploads'}))
+   return res.status(409).json({error:'Artwork is not bound to this test order'});
+  res.set('Cache-Control','private, no-store').json({testLabel:'JOSH TEST',submissionId:row.id,
+   airtableRecordId:row.airtable_id,artworkJobId:row.reference_id,...deliveryState(row.reference_id)});
+ });
  const reviewStages=new Set(['folder_uncertain','request_uncertain','open_uncertain','customer_email_uncertain','staff_email_uncertain','artwork_bind_uncertain','finalization_uncertain','callback_uncertain']);
  app.post('/internal/test-submissions/:id/outcome',require('express').json({limit:'4kb'}),(req,res)=>{
   if(!trusted(req))return res.status(401).json({error:'Unauthorised'});
