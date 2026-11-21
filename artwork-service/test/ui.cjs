@@ -14,7 +14,8 @@ const {createCanvas}=require('../src/psd.cjs');
  // isolated fixture before the handoff assertions run.
  const preview=(await fs.readFile(path.resolve(__dirname,'../public/calculator-preview.html'),'utf8'))
   .replace('<script src="calculator-artwork.js"></script>','<script src="http://127.0.0.1:4311/calculator-artwork.js"></script>')
-  .replace('<script src="preview-orders.js"></script>','');
+  .replace('<script src="preview-orders.js"></script>','')
+  .replace('<script src="preview-usability.js"></script>','<script src="http://127.0.0.1:4311/preview-usability.js"></script>');
  const formServer=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(preview)}).listen(4312,'127.0.0.1');
  await new Promise(r=>formServer.once('listening',r));
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||await packaged.executablePath(),args:packaged.args.filter(a=>!['--single-process','--disable-web-security','--disable-site-isolation-trials'].includes(a))});
@@ -28,6 +29,13 @@ const {createCanvas}=require('../src/psd.cjs');
    await page.locator('#regularStart').click();
    await page.locator('#sizes [data-size="12"]').click();
    await page.locator('[data-step="1"] [data-next="2"]').click();
+   await page.goBack();
+   assert.equal(await page.locator('.step.active').getAttribute('data-step'),'1');
+   assert.equal(await page.locator('#sizes [data-size="12"]').getAttribute('aria-pressed'),'true');
+   await page.goForward();
+   assert.equal(await page.locator('.step.active').getAttribute('data-step'),'2');
+   assert.equal(await page.locator('.step.active h2').evaluate(el=>document.activeElement===el),true);
+   assert.equal(await page.locator('#qty').getAttribute('id'),await page.locator('label').filter({hasText:'Quantity'}).getAttribute('for'));
    await page.getByText('Prefer to type a tracklist manually?').click();
    await page.locator('#manual').fill('A1 - JOSH TEST track');
    await page.locator('[data-step="2"] [data-next="3"]').click();
@@ -52,6 +60,14 @@ const {createCanvas}=require('../src/psd.cjs');
    await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
    assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
    assert.equal(await page.evaluate(()=>new FormData(document.getElementById('orderForm')).get('Artwork Reference')),reference);
+   await page.reload();
+   assert.equal(await page.locator('.step.active').getAttribute('data-step'),'3');
+   assert.equal(await page.locator('#packs [data-pack="Printed Jacket + Labels"]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('#manual').inputValue(),'A1 - JOSH TEST track');
+   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
+   const formDraft=await page.evaluate(()=>sessionStorage.getItem('crosstalk-josh-test-form-draft-v1'));
+   assert(!formDraft.includes(reference),'form draft must not contain artwork capability');
+   assert(!formDraft.includes('josh-test@example.invalid'),'form draft must not contain test identity');
    await editor.screenshot({path:path.join(root,mobile?'mobile-uploaded.png':'desktop-uploaded.png'),fullPage:false});
    const before=service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n;
    await editor.reload();await editor.locator('#restoreRecovery').count();
@@ -80,6 +96,7 @@ const {createCanvas}=require('../src/psd.cjs');
    assert.equal(attempts,2);
    assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'');
    assert.notEqual(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),oldSession);
+   assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-josh-test-form-draft-v1')),null);
    await context.close();console.log((mobile?'Mobile':'Desktop')+' upload, opener handoff, retry and confirmed-order reset passed');
   }
   // A standard order completes without an artwork reference or a draft.

@@ -41,6 +41,7 @@
   const url=new URL('/designer.html',serviceOrigin);
   url.searchParams.set('artworkSession',session);
   url.searchParams.set('returnOrigin',location.origin);
+  if(testPreview)url.searchParams.set('testPreview','1');
   editor=window.open(url.href,'crosstalkArtwork');
   if(!editor)status.textContent='Allow this artwork window to open, then try again.';
  };

@@ -51,12 +51,43 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
    console.error('TEST PREVIEW STATE',JSON.stringify({error:await page.locator('#testSubmitError').innerText(),outbound,button:await page.locator('button[type="submit"]').allTextContents()}));throw e;
   }
   assert.match(await page.locator('#success').innerText(),/JOSH TEST submission accepted/);
+  assert.match(await page.locator('#success').innerText(),/does not confirm a staff record, test email, or exported ZIP/);
   assert.match(await page.locator('#testDeliveryStatus').innerText(),/No designer artwork/);
   assert.equal(sent.length,1);assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
   assert.equal(sent[0]['Delivery Method'],'Pickup');
   assert.equal(sent[0]['Street Address'],'');
   assert(outbound.some(request=>request.url===base+'/v1/test-orders'));
   assert(!outbound.some(request=>request.url.includes('hook.eu1.make.com')));
+  await context.close();
+ }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('uncertain Make intake freezes the test form and supplies the reconciliation ID',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'customs-uncertain-preview-'));
+ const config={bindSecret:'b'.repeat(40),dataDir:dir,origins:[],publicOrigin:'',mode:'dropbox',dropboxRoot:'/Crosstalk Customs/JOSH TEST',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testWebhookUrl:'https://hook.eu1.make.com/josh-test',testMakeApiKey:'synthetic-make-api-key',testAccessCode:'test-access-only',refreshToken:'test-refresh',clientId:'test-client',clientSecret:'test-secret'};
+ let attempts=0;
+ const service=makeApp(config,{testOrders:{fetchImpl:async()=>{attempts++;throw Error('Ambiguous Make timeout');}}});
+ const server=service.app.listen(0,'127.0.0.1');let browser;
+ try{
+  await new Promise(resolve=>server.once('listening',resolve));
+  const base='http://127.0.0.1:'+server.address().port;config.publicOrigin=base;config.origins.push(base);
+  browser=await chromium.launch({headless:true,executablePath:await packaged.executablePath(),args:packaged.args.filter(x=>x!=='--single-process')});
+  const context=await browser.newContext({httpCredentials:{username:'tester',password:'test-access-only'}}),page=await context.newPage();
+  await page.goto(base+'/calculator-preview.html');
+  await page.locator('input[name="Email"]').waitFor({state:'attached'});
+  await page.locator('#regularStart').click();await page.locator('#sizes [data-size="12"]').click();
+  await page.locator('[data-step="1"] [data-next="2"]').click();
+  await page.getByText('Prefer to type a tracklist manually?').click();await page.locator('#manual').fill('A1 - synthetic uncertain track');
+  await page.locator('[data-step="2"] [data-next="3"]').click();
+  await page.locator('[data-step="3"] [data-next="4"]').click();
+  await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
+  await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
+  const message=page.locator('#testSubmitError');
+  await message.filter({hasText:'Do not submit again'}).waitFor();
+  assert.match(await message.innerText(),/Test order ID: [0-9a-f-]{36}/);
+  assert.equal(await page.locator('button[type="submit"]').isDisabled(),true);
+  assert.equal(await page.locator('button[type="submit"]').innerText(),'Awaiting Crosstalk review');
+  assert.equal(attempts,1);
   await context.close();
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await service.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
@@ -106,7 +137,7 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   await page.locator('#success').waitFor({state:'visible'});
   const confirmation=await page.locator('#success').innerText();
   assert.match(confirmation,/JOSH TEST submission accepted/);
-  assert.match(confirmation,/No customer order or invoice was created/);
+  assert.match(confirmation,/No payment was taken on this page/);
   assert.match(confirmation,/Delivery is not yet confirmed|Delivery is still pending|delivered to the isolated Dropbox folder/);
   assert.equal(sent.length,1);assert.equal(sent[0].testLabel,'JOSH TEST');
   assert.equal(sent[0]['Artwork Reference'],reference);

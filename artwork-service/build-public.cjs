@@ -95,7 +95,7 @@ for(const [source,replacement] of testCopy){
 }
 calculator=calculator.replace(/<title>[^<]*<\/title>/,'<title>JOSH TEST — Crosstalk Customs</title>');
 calculator=calculator.replace('</head>','<meta name="robots" content="noindex,nofollow,noarchive"></head>');
-calculator=calculator.replace('</body>','<script src="calculator-artwork.js"></script><script src="preview-orders.js"></script></body>');
+calculator=calculator.replace('</body>','<script src="calculator-artwork.js"></script><script src="preview-orders.js"></script><script src="preview-usability.js"></script></body>');
 calculator=calculator.replace(/<body[^>]*>/,'$&<div role="note" style="padding:12px;background:#ffe89d;color:#111;font-weight:700">JOSH TEST — TEST JOSH 21.11. This isolated form can send a test notification to Crosstalk and, if artwork is attached, a test ZIP to the JOSH TEST Dropbox folder. No order, invoice, charge, or audio upload link is created. Use synthetic artwork and audio details only.</div>');
 fs.writeFileSync(path.join(root,'public/calculator-preview.html'),calculator);
 console.log('Built isolated artwork designer and calculator preview; live calculator unchanged');

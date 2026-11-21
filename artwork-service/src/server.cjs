@@ -8,7 +8,7 @@ const {startWorker}=require('./worker.cjs');
 const {prune}=require('./retention.cjs');
 const {installTestDelivery}=require('./test-delivery.cjs');
 const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
-const {protectPreview,installTestOrders}=require('./test-orders.cjs');
+const {protectPreview,installTestOrders,testOnly,browserSessionHash}=require('./test-orders.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
 function secureEqual(a,b){return typeof a==='string'&&typeof b==='string'&&a.length===b.length&&crypto.timingSafeEqual(Buffer.from(a),Buffer.from(b));}
 function makeApp(config,options={}){
@@ -45,8 +45,24 @@ function makeApp(config,options={}){
   throw error(403,'An allowed browser origin is required');
  }
  function auth(req){const j=store.authorize(req.params.id,(req.get('Authorization')||'').replace(/^Bearer /,''));if(!j)throw error(404,'Artwork not found');return j;}
- app.post('/v1/drafts',async(req,res)=>{
+ function testDraftAuth(req,j){
+  if(!testOnly(config))return;
+  const linked=store.db.prepare('SELECT browser_hash FROM test_draft_sessions WHERE job_id=?').get(j.id);
+  if(!linked||linked.browser_hash!==browserSessionHash(req,config))throw error(404,'Artwork not found in this JOSH TEST browser session');
+ }
+ const testDraftBody=express.json({limit:'1kb'});
+ app.post('/v1/drafts',(req,res,next)=>testOnly(config)?testDraftBody(req,res,next):next(),async(req,res)=>{
   browserOrigin(req);const key=req.socket.remoteAddress||'unknown',now=Date.now(),r=rates.get(key);if(!r||now-r.start>3600000)rates.set(key,{start:now,count:0});
+  let testSession=null;
+  if(testOnly(config)){
+   const id=req.body?.testOrderId;
+   if(req.get('Host')!==new URL(config.publicOrigin).host||
+      !(req.get('Origin')===config.publicOrigin||(!req.get('Origin')&&req.get('Sec-Fetch-Site')==='same-origin')))throw error(403,'Invalid test page origin');
+   if(typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))throw error(422,'Invalid test order session');
+   const browserHash=browserSessionHash(req,config);
+   if(!browserHash)throw error(403,'JOSH TEST browser session is missing or expired');
+   testSession={id,browserHash};
+  }
   if(++rates.get(key).count>20)throw error(429,'Too many artwork sessions; try later');
   if(rates.size>10000)for(const [k,v] of rates)if(now-v.start>3600000)rates.delete(k);
   // Retained failures stay available for staff without consuming active-job
@@ -55,10 +71,12 @@ function makeApp(config,options={}){
   const count=store.db.prepare("SELECT count(*) AS n FROM jobs WHERE state NOT IN ('delivered','failed')").get().n;
   const total=store.db.prepare("SELECT coalesce(sum(a.bytes),0) AS n FROM assets a JOIN jobs j ON j.id=a.job_id WHERE j.state NOT IN ('delivered','failed')").get().n;
   if(count>=100||total>=2*1024**3||disk.bavail*disk.bsize<1024**3)throw error(503,'Artwork service capacity reached');
-  res.status(201).json(store.create());
+  const draft=store.create();
+  if(testSession)store.db.prepare('INSERT INTO test_draft_sessions(job_id,order_id,browser_hash) VALUES(?,?,?)').run(draft.id,testSession.id,testSession.browserHash);
+  res.status(201).json(draft);
  });
  app.put('/v1/drafts/:id/assets/:hash',(req,res,next)=>{
-  try{browserOrigin(req);const j=auth(req);if(j.state!=='draft')throw error(409,'Artwork is sealed');if(!/^[a-f0-9]{64}$/.test(req.params.hash))throw error(422,'Invalid asset identifier');if(uploads>=2)throw error(429,'Upload busy; retry shortly');uploads++;res.once('finish',()=>uploads--);res.once('close',()=>{if(!res.writableFinished)uploads--;});next();}catch(e){next(e);}
+  try{browserOrigin(req);const j=auth(req);testDraftAuth(req,j);if(j.state!=='draft')throw error(409,'Artwork is sealed');if(!/^[a-f0-9]{64}$/.test(req.params.hash))throw error(422,'Invalid asset identifier');if(uploads>=2)throw error(429,'Upload busy; retry shortly');uploads++;res.once('finish',()=>uploads--);res.once('close',()=>{if(!res.writableFinished)uploads--;});next();}catch(e){next(e);}
  },express.raw({type:()=>true,limit:LIMITS.assetBytes}),async(req,res)=>{
   const j=auth(req),hash=req.params.hash,bytes=req.body;
   if(!Buffer.isBuffer(bytes)||digest(bytes)!==hash)throw error(422,'Source image checksum mismatch');
@@ -77,7 +95,7 @@ function makeApp(config,options={}){
   res.json({hash,bytes:bytes.length});
  });
  app.post('/v1/drafts/:id/commit',express.json({limit:LIMITS.projectBytes}),async(req,res)=>{
-  browserOrigin(req);const j=auth(req),assets=store.assets(j.id),project=validate(req.body,new Set(assets.map(a=>a.hash))),json=JSON.stringify(project),hash=digest(json);
+  browserOrigin(req);const j=auth(req);testDraftAuth(req,j);const assets=store.assets(j.id),project=validate(req.body,new Set(assets.map(a=>a.hash))),json=JSON.stringify(project),hash=digest(json);
   if(j.state!=='draft'){if(j.digest===hash)return res.json({reference:j.id+'.'+req.get('Authorization').slice(7),state:j.state});throw error(409,'Artwork is already sealed');}
   for(const asset of assets){const b=await fs.readFile(path.join(store.dir(j.id),'assets',asset.hash));if(digest(b)!==asset.hash)throw error(409,'Source upload has not completed');}
   // Recheck after disk I/O: concurrent commits must not replace a sealed design.
@@ -85,7 +103,7 @@ function makeApp(config,options={}){
   if(!result.changes)throw error(409,'Artwork was sealed by another request');
   res.json({reference:j.id+'.'+req.get('Authorization').slice(7),state:'ready'});
  });
- app.get('/v1/drafts/:id',(req,res)=>{const j=auth(req);res.json({id:j.id,state:j.state,attempts:j.attempts,error:j.error||null});});
+ app.get('/v1/drafts/:id',(req,res)=>{const j=auth(req);testDraftAuth(req,j);res.json({id:j.id,state:j.state,attempts:j.attempts,error:j.error||null});});
  app.post('/internal/bind',express.json({limit:'4kb'}),(req,res)=>{
   if(!secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret))throw error(401,'Unauthorised binding');
   const {reference,orderId,folder}=req.body||{};if(typeof reference!=='string')throw error(422,'Artwork reference missing');const [id,token,...rest]=reference.split('.');if(rest.length)throw error(422,'Invalid reference');
@@ -122,7 +140,7 @@ function makeApp(config,options={}){
  // The copied form handler is present if the JOSH TEST integration script
  // fails to load. Its inert endpoint must never acknowledge a customer order.
  app.post('/order-submission-disabled',(_,res)=>res.status(410).json({error:'Use the JOSH TEST submission flow'}));
- app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control','public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
+ app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control',res.locals.privatePreview?'private, no-store':'public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
  return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await worker.close();store.close();}};
 }

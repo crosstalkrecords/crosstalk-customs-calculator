@@ -69,17 +69,27 @@
   const data=Object.fromEntries(new FormData(form));
   const reference=data['Artwork Reference']||'';
   const id=session();
+  let uncertain=false;
   try{
    const response=await fetch('/v1/test-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({testOrderId:id,artworkReference:reference,fields:data})});
    const result=await response.json();
+   uncertain=!response.ok&&result.outcomeUncertain===true&&result.testOrderId===id;
    if(!response.ok)throw Error(result.error||'JOSH TEST submission failed.');
    document.getElementById('wrap').style.display='none';success.style.display='block';
    heading.textContent='JOSH TEST submission accepted';
-   message.textContent='TEST JOSH 21.11 was sent through the isolated Make test route. A test notification is directed only to Crosstalk’s test inbox. No customer order or invoice was created.';
+   message.textContent='TEST JOSH 21.11 was acknowledged by the isolated Make test route. This page does not confirm a staff record, test email, or exported ZIP; Crosstalk will check those separately. No payment was taken on this page.';
    const code=document.createElement('p');code.textContent='Test order ID: '+result.testOrderId;success.append(code);
    if(reference&&result.deliveryPending)void watch(reference);
    else status.textContent='No designer artwork was attached to this test.';
    dispatchEvent(new Event('crosstalk-order-success'));
-  }catch(e){error.textContent=(e.message||'Test submission failed.')+' Keep this page open and retry, or give Crosstalk your test order ID: '+id;submit.disabled=false;submit.textContent='Submit JOSH TEST';}
+  }catch(e){
+   if(uncertain){
+    error.textContent=(e.message||'Test submission outcome is uncertain.')+' Test order ID: '+id+'. Do not submit again until Crosstalk has reconciled this test.';
+    submit.textContent='Awaiting Crosstalk review';
+   }else{
+    error.textContent=(e.message||'Test submission failed.')+' Keep this page open and retry, or give Crosstalk your test order ID: '+id;
+    submit.disabled=false;submit.textContent='Submit JOSH TEST';
+   }
+  }
  };
 })();
