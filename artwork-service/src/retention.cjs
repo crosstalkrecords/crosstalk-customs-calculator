@@ -10,10 +10,18 @@ async function prune(store,now=Date.now()){
   SELECT 1 FROM test_submissions s WHERE s.reference_id=jobs.id
   AND s.state IN ('queued','dispatching','processing','unknown','manual_review')
  )`:'';
- const expired=store.db.prepare(`SELECT id FROM jobs WHERE
-  ((state='draft' OR state='ready') AND created<?${pendingIntake})
-  OR (state='delivered' AND coalesce(completed_at,created)<?)`).all(now-86400000,now-7*86400000);
- for(const {id} of expired){await fs.rm(store.dir(id),{recursive:true,force:true});store.db.prepare('DELETE FROM jobs WHERE id=?').run(id);}
- return expired.length;
+ const due=`(((state='draft' OR state='ready') AND created<?${pendingIntake})
+  OR (state='delivered' AND coalesce(completed_at,created)<?))`;
+ const cutoff=now-86400000,deliveredCutoff=now-7*86400000;
+ const expired=store.db.prepare(`SELECT id FROM jobs WHERE ${due}`).all(cutoff,deliveredCutoff);
+ const remove=store.db.prepare(`DELETE FROM jobs WHERE id=? AND ${due}`);
+ let count=0;
+ for(const {id} of expired){
+  // Binding or intake may change after the scan. The final conditional delete
+  // is atomic; never remove the files of a job that became active meanwhile.
+  if(!remove.run(id,cutoff,deliveredCutoff).changes)continue;
+  await fs.rm(store.dir(id),{recursive:true,force:true});count++;
+ }
+ return count;
 }
 module.exports={prune};

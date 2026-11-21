@@ -44,6 +44,35 @@ test('retention keeps artwork for unresolved JOSH TEST intake beyond a day',asyn
  }finally{await service.close();await fs.rm(root,{recursive:true,force:true});}
 });
 
+test('retention rechecks queued state and new intake claims after selecting expiry candidates',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-retention-race-'));
+ const service=makeApp({dataDir:root,bindSecret:'bind-only-'.repeat(4),origins:[],mode:'disabled',dropboxRoot:'/Crosstalk Customs/JOSH TEST'},{worker:{interval:999999}});
+ const db=service.store.db,originalPrepare=db.prepare;
+ try{
+  await new Promise(resolve=>setImmediate(resolve)); // Let the service's startup cleanup finish.
+  const queued=service.store.create(),claimed=service.store.create(),expired=service.store.create();
+  const old=Date.now()-2*86400000,id='b72ca4e5-0e82-4f75-9413-35568ae8ef0c';
+  db.prepare("UPDATE jobs SET state='ready',created=? WHERE id IN (?,?,?)").run(old,queued.id,claimed.id,expired.id);
+  db.prepare=function(sql){
+   const statement=originalPrepare.call(db,sql);
+   if(!sql.startsWith('SELECT id FROM jobs WHERE'))return statement;
+   return {all(...args){
+    const candidates=statement.all(...args);
+    assert.equal(candidates.length,3,'all three were selected before the concurrent changes');
+    originalPrepare.call(db,"UPDATE jobs SET state='queued' WHERE id=?").run(queued.id);
+    originalPrepare.call(db,"INSERT INTO test_submissions(id,created,reference_id,state) VALUES(?,?,?,'unknown')").run(id,old,claimed.id);
+    return candidates;
+   }};
+  };
+  assert.equal(await prune(service.store,Date.now()),1);
+  assert.equal(service.store.get(queued.id).state,'queued');
+  assert.equal(service.store.get(claimed.id).state,'ready');
+  await fs.stat(service.store.dir(queued.id));await fs.stat(service.store.dir(claimed.id));
+  assert.equal(service.store.get(expired.id),undefined);
+  await assert.rejects(fs.stat(service.store.dir(expired.id)),{code:'ENOENT'});
+ }finally{db.prepare=originalPrepare;await service.close();await fs.rm(root,{recursive:true,force:true});}
+});
+
 test('JOSH TEST recovery summary is staff-only, read-only and contains no private references',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-summary-'));
  const config={dataDir:root,bindSecret:'bind-only-'.repeat(4),staffSecret:'staff-only-'.repeat(4),origins:['https://synthetic.test'],publicOrigin:'https://synthetic.test',testLabel:'JOSH TEST',testRecipient:'delousedcomatorium@gmail.com',testAccessCode:'test-access',mode:'disabled',dropboxRoot:'/Crosstalk Customs/JOSH TEST'};

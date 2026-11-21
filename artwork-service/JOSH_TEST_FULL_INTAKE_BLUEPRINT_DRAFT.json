@@ -337,7 +337,7 @@
                           "fldlipVWj9gGrEEVR": "{{if(lower(toString(1.`Shipping Required`)) = \"on\"; \"TEST JOSH 21.11, 1 TEST ONLY LANE TESTVILLE 0000 NSW\"; emptystring)}}",
                           "fldnYB8vJvo3b6ddu": "Record ready",
                           "fldq46cNTtEpprcgN": "{{1.`Request Fingerprint`}}",
-                          "fldrkJPDoAPG0kS7s": "{{parseNumber(1.`Estimated Price Given`; \".\")}}",
+                          "fldrkJPDoAPG0kS7s": "{{if(trim(ifempty(1.`Estimated Price Given`; emptystring)) = emptystring; erase; parseNumber(1.`Estimated Price Given`; \".\"))}}",
                           "fldsaBEXJkwNKkrPa": "{{1.`Side A Length`}}",
                           "flduI8PgnORR8I71d": "{{1.Tracklist}}",
                           "fldwAXAFk0CWyp1Oy": "{{lower(toString(1.Rush)) = \"on\"}}",
@@ -838,7 +838,7 @@
                                     {
                                       "id": 17,
                                       "filter": {
-                                        "name": "Closed test file request verified; manual upload test pending",
+                                        "name": "Closed test file request verified; continue to open",
                                         "conditions": [
                                           [
                                             {
@@ -875,8 +875,7 @@
                                         "table": "tbly1iXdcMvFuqCcY",
                                         "record": {
                                           "fld9AkpYIBIfCgeMv": "{{16.body.id}}",
-                                          "fldbYG3ngxEuBTjQS": "Closed JOSH TEST file request. Upload acceptance verification pending; do not email.",
-                                          "fldnYB8vJvo3b6ddu": "Manual review"
+                                          "fldnYB8vJvo3b6ddu": "File request uncertain"
                                         },
                                         "typecast": false,
                                         "useColumnId": true
@@ -1035,7 +1034,8 @@
                                                 "table": "tbly1iXdcMvFuqCcY",
                                                 "record": {
                                                   "fld5G2oHi9NL73kkn": "{{102.body.url}}",
-                                                  "fldnYB8vJvo3b6ddu": "Upload link ready"
+                                                  "fldnYB8vJvo3b6ddu": "Upload link ready",
+                                                  "fldbYG3ngxEuBTjQS": ""
                                                 },
                                                 "typecast": false,
                                                 "useColumnId": true

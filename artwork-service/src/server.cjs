@@ -9,6 +9,7 @@ const {prune}=require('./retention.cjs');
 const {installTestDelivery}=require('./test-delivery.cjs');
 const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
 const {protectPreview,installTestOrders,testPreviewMode,browserSessionHash,sealDraftToken}=require('./test-orders.cjs');
+const {testUploadSummary}=require('./test-upload-diagnostic.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
 function secureEqual(a,b){if(typeof a!=='string'||typeof b!=='string')return false;const left=Buffer.from(a),right=Buffer.from(b);return left.length===right.length&&crypto.timingSafeEqual(left,right);}
 function makeApp(config,options={}){
@@ -166,6 +167,14 @@ function makeApp(config,options={}){
     oldestAgeMs:age(byState(submissions,state).oldest)
    }])),
    volumeFreeBytes:disk.bavail*disk.bsize});
+ });
+ // Read only the one static JOSH TEST file-request destination. Neither the
+ // caller nor the browser can select a Dropbox path or see names and links.
+ app.get('/internal/test-upload-summary',async(req,res)=>{
+  if(!testPreviewMode(config))throw error(404,'Not found');
+  if(!config.staffSecret||!config.refreshToken||!config.clientId||!config.clientSecret)throw error(503,'Test upload diagnostic is not configured');
+  if(!secureEqual(req.get('Authorization'),'Bearer '+config.staffSecret))throw error(401,'Unauthorised');
+  res.json(await testUploadSummary(config,options.dropboxApiRequest));
  });
  app.post('/internal/retry/:id',(req,res)=>{
   const binder=secureEqual(req.get('Authorization'),'Bearer '+config.bindSecret);

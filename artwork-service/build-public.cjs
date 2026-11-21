@@ -10,14 +10,15 @@ html=html.replace('<div class="sandbox">Sandbox</div>','<div class="sandbox">JOS
 html=html.replace('Nothing leaves your browser','Draft saved on this device; Finish uploads to the JOSH TEST service');
 const css=[];
 for(const [family,base] of [['Crosstalk Sans','DejaVuSans'],['Crosstalk Serif','DejaVuSerif'],['Crosstalk Mono','DejaVuSansMono']])for(const [suffix,weight,style] of [['',400,'normal'],['-Bold',700,'normal'],['-Oblique',400,'italic'],['-BoldOblique',700,'italic']])if(fs.existsSync(path.join(root,'public/fonts',base+suffix+'.ttf')))css.push(`@font-face{font-family:'${family}';src:url('fonts/${base+suffix}.ttf');font-weight:${weight};font-style:${style};font-display:block}`);
-html=html.replace('</head>','<style>'+css.join('')+'.handoff-status{font-size:13px;font-weight:650;min-height:20px;color:#5c3322}.handoff-status:not(:empty){margin:12px 0}</style><script src="handoff.js"></script></head>');
+html=html.replace('</head>','<style>'+css.join('')+'.handoff-status{font-size:13px;font-weight:650;min-height:20px;color:#5c3322}.handoff-status:not(:empty){margin:12px 0}.standalone-notice{margin:0;padding:10px 16px;background:#fff2df;color:#643719;font-weight:650}.standalone-notice[hidden]{display:none}</style><script src="handoff.js"></script></head>');
+html=html.replace('  </header>\n  <nav class="surface-tabs"','  </header>\n  <p class="standalone-notice" id="standaloneNotice" role="status" hidden>Explore here; open from the JOSH TEST form to attach or upload artwork.</p>\n  <nav class="surface-tabs"');
 html=html.replace('      <div class="modal-actions">','      <p class="handoff-status" id="handoffStatus" role="status" aria-live="polite"></p>\n      <div class="modal-actions">');
 html=html.replace('const FONTS=[',"const FONTS=[{label:'Crosstalk Sans (PSD text)',value:'Crosstalk Sans'},{label:'Crosstalk Serif (PSD text)',value:'Crosstalk Serif'},{label:'Crosstalk Mono (PSD text)',value:'Crosstalk Mono'},");
 html=html.replace("return{font:'Arial, Helvetica, sans-serif',fontSize:5.8", "return{font:'Crosstalk Sans',fontSize:5.8");
 const hook=`
 // Delivery integration: source/state only; no print-size layer rasterization here.
 function artworkDraftKey(){const session=new URLSearchParams(location.search).get('artworkSession');return session&&/^[0-9a-f-]{36}$/i.test(session)?'order:'+session:'standalone'}
-if(!window.opener||!new URLSearchParams(location.search).get('artworkSession'))$('saveStatus').textContent='Explore here; open from the JOSH TEST form to attach or upload artwork';
+if(!window.opener||!new URLSearchParams(location.search).get('artworkSession'))$('standaloneNotice').hidden=false;
 for(const id of ['addTextBtn','mobileTextBtn'])$(id).onclick=async()=>{try{await document.fonts.load('700 32px "Crosstalk Sans"');addText()}catch(_){showToast('The artwork font could not load. Please retry.')}};
 saveNow=async function(){try{const db=await openDB();if(!db)throw Error();const data=JSON.parse(snapshot());data.version=4;data.savedAt=new Date().toISOString();await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data,artworkDraftKey());tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});$('saveStatus').textContent='Saved on this device'}catch(_){$('saveStatus').textContent='Saved for this session'}};
 $('completeArtwork').onclick=async()=>{
