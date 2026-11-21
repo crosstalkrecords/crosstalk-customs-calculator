@@ -263,7 +263,21 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
     const payload=makePayload(row);
     const response=await fetchImpl(config.testWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json','x-make-apikey':config.testMakeApiKey},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
     if(!response.ok)throw Error('Make did not accept the test submission');
-    const result=await response.json();
+    // A sequential Make webhook may acknowledge its queue before any Airtable
+    // claim exists. Its documented default response is exactly 200 Accepted.
+    // Treat it only as queue acceptance; the authenticated final callback
+    // supplies and pins the actual Airtable record ID. Never retry an uncertain
+    // dispatch, including when the queue later stalls.
+    let result;
+    if(response.status===200&&typeof response.text==='function'){
+     const body=await response.text();
+     if(body==='Accepted'){
+      store.db.prepare("UPDATE test_submissions SET state='processing',accepted_at=?,updated=? WHERE id=? AND state='dispatching'")
+       .run(Date.now(),Date.now(),row.id);
+      return;
+     }
+     result=JSON.parse(body);
+    }else result=await response.json();
     if(result.testLabel!=='JOSH TEST'||result.submissionId!==row.id||result.requestFingerprint!==row.request_hash||result.state!=='accepted'||
       !/^rec[A-Za-z0-9]{14}$/.test(result.airtableRecordId))
      throw Error('Unexpected Make acknowledgement');

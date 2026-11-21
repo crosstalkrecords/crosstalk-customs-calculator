@@ -140,6 +140,54 @@ test('no-artwork callback, ambiguous timeout and manual-review recovery never ca
  }finally{await f.close();}
 });
 
+test('exact Make queue acknowledgement remains unclaimed until authenticated callback; timeout and races do not redispatch',async()=>{
+ let release;const gate=new Promise(r=>{release=r;}),sent=[];
+ const f=await fixture(async(_url,opt)=>{sent.push(JSON.parse(opt.body));if(sent.length===1)await gate;return new Response('Accepted',{status:200});});
+ try{
+  const body={testOrderId:ID,artworkJobId:'',fields:fields('')};
+  assert.equal((await f.submit(body)).status,202);
+  await until(()=>sent.length===1);
+  const hash=sent[0]['Request Fingerprint'],route='/internal/test-submissions/'+ID+'/outcome';
+  assert.equal((await f.trusted(route,outcome(ID,hash,'complete',{artwork_status:'not_supplied'}))).status,200,
+   'final callback may claim the Airtable record before the queued response arrives');
+  release();await until(()=>f.svc.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(ID).state==='complete');
+  let row=f.svc.store.db.prepare('SELECT state,airtable_id FROM test_submissions WHERE id=?').get(ID);
+  assert.equal(row.state,'complete');assert.equal(row.airtable_id,RECORD);
+  assert.equal((await f.submit(body)).status,200);assert.equal(sent.length,1);
+
+  const second='e6f90e2f-6a80-4ac0-bb4e-258295f09802';
+  assert.equal((await f.submit({...body,testOrderId:second})).status,202);
+  await until(()=>f.svc.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(second)?.state==='processing');
+  row=f.svc.store.db.prepare('SELECT state,airtable_id,accepted_at FROM test_submissions WHERE id=?').get(second);
+  assert.equal(row.airtable_id,null,'queue acceptance is not an Airtable claim');assert(Number.isSafeInteger(row.accepted_at));
+  assert.equal((await f.submit({...body,testOrderId:second})).status,202);assert.equal(sent.length,2);
+  f.svc.store.db.prepare('UPDATE test_submissions SET accepted_at=? WHERE id=?').run(Date.now()-10*60*1000-1000,second);
+  await until(()=>f.svc.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(second).state==='unknown');
+  assert.equal((await f.submit({...body,testOrderId:second})).status,409);assert.equal(sent.length,2);
+  const hash2=sent[1]['Request Fingerprint'];
+  assert.equal((await f.trusted('/internal/test-submissions/'+second+'/outcome',outcome(second,hash2,'complete',{artwork_status:'not_supplied'}))).status,200,
+   'late verified callback may recover an uncertain queue');
+  assert.equal((await(await f.status(second)).json()).state,'complete');
+ }finally{release();await f.close();}
+});
+
+test('Make queue rejection or nonexact acceptance never triggers blind retry',async()=>{
+ const sent=[],ids=['e6f90e2f-6a80-4ac0-bb4e-258295f09802','f6f90e2f-6a80-4ac0-bb4e-258295f09802',
+  '86f90e2f-6a80-4ac0-bb4e-258295f09802','96f90e2f-6a80-4ac0-bb4e-258295f09802'];
+ const responses=[new Response('Queue is full',{status:400}),new Response('Too many requests',{status:429}),
+  new Response('Accepted\n',{status:200}),new Response('Accepted',{status:202})];
+ const f=await fixture(async(_url,opt)=>{const p=JSON.parse(opt.body);sent.push(p);return responses[ids.indexOf(p['Submission ID'])];});
+ try{
+  const body={artworkJobId:'',fields:fields('')};
+  for(let i=0;i<ids.length;i++){
+   assert.equal((await f.submit({...body,testOrderId:ids[i]})).status,202);
+   await until(()=>f.svc.store.db.prepare('SELECT state FROM test_submissions WHERE id=?').get(ids[i])?.state==='unknown');
+   assert.equal((await f.submit({...body,testOrderId:ids[i]})).status,409);
+  }
+  await pause(100);assert.deepEqual(sent.map(p=>p['Submission ID']),ids);
+ }finally{await f.close();}
+});
+
 test('intake preserves synthetic shipping, artist, two-LP, quote and price guards; staff sees pending and uncertain ages',async()=>{
  const sent=[];const f=await fixture(async(_url,opt)=>{const payload=JSON.parse(opt.body);sent.push(payload);return ack(payload);});
  try{
