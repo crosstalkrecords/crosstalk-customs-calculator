@@ -49,8 +49,8 @@ access. The isolated form URL does not expose the Airtable table.
   at 04:05 UTC for review-branch commit
   `9522fa522641adb81a7a59e7fc3f9f2c415df880`, which includes reviewed code
   `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`. Its source config pins that
-  reviewed code and has no staged patch. The newer Airtable intake mapping in
-  this review is still **local only**. A hosted mobile and staff-recovery smoke
+  reviewed code and has no staged patch. The newer Airtable intake mapping is
+  published on the review branch but remains **unhosted**. A hosted mobile and staff-recovery smoke
   test of the deployed revision is still required; deployment success alone
   does not prove those journeys.
 
@@ -83,7 +83,7 @@ versioned project and separate PSD outputs so a later approved custom label
 designer can use them without changing the order binding. It does **not** claim
 that a new custom label interface has been designed or approved.
 
-The latest local patch maps actual allowlisted Customs form fields into the
+The latest review-branch patch maps actual allowlisted Customs form fields into the
 test-only server-side payload, derives pickup/shipping, fixes identity, replaces
 shipping with an explicitly fictional address and fingerprints normalized
 details so the same Submission ID cannot silently change an order. It remains
@@ -96,10 +96,9 @@ Dropbox probe on setup mode, retains failed jobs for staff recovery, stores
 verified delivery metadata without provider paths, and exposes a separate
 authenticated paginated failure list. New uploads check remaining disk space;
 staff and binding secrets must differ; migrated delivered records receive a
-completion-based retention window. The staff route needs a separately
-provisioned server-side secret and an operational test. These newer changes
-are not yet deployed to JOSH TEST. Staff failure alerting and backup/restore
-are still open.
+completion-based retention window. Those code changes are deployed, but the
+staff route still needs a separately provisioned server-side secret and an
+operational test. Staff failure alerting and backup/restore are still open.
 
 Local verification: `npm test` passed 15/15, including migrated-volume,
 terminal-failure, low-space upload rejection, staff recovery and strict Dropbox
