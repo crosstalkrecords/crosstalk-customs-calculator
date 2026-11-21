@@ -13,8 +13,10 @@ with access to that base only. Make now has a separate Locked OAuth connection
 only the JOSH TEST base for this new grant, not V1.0 or the whole workspace.
 The base copied
 the Customs table and four table views; no Airtable automations were present.
-Three test-only fields now track Submission ID, the non-secret Artwork Job ID,
-and Artwork Delivery Status. A manually seeded fixture record
+Submission ID, the non-secret Artwork Job ID and Artwork Delivery Status were
+added to the test table, followed by nine Airtable intake-ledger fields for
+fingerprint, state, folder paths, file-request ID, separate email states, last
+error and update time. A manually seeded fixture record
 `recyMzmi7CqKApYeW`, labelled **TEST JOSH 21.11**, proves that the record and
 computed job number appear in the published [JOSH TEST Staff Review](https://airtable.com/appDz7CEL2KQWpzyC/pag5DGRXAl6D5FKVE)
 interface. It is explicitly marked as a fixture: it was not submitted through
@@ -160,27 +162,36 @@ the staff folder URL in `Internal Folder Link`, and verify each before emailing.
 The [sanitized JOSH TEST intake plan](JOSH_TEST_INTAKE_PLAN.json) documents
 the proposed route without credential values or webhook addresses.
 
-No safe, runnable inactive intake copy exists yet. In Make, the dedicated
-`JOSH TEST Customs intake ledger` Data store (ID `267564`, 1 MB) and strict
-`JOSH TEST Customs intake state` structure have been created and are empty.
-They contain slots for the Airtable record, Dropbox folders and links, artwork
-job, separate email flags, error and update time; no scenario uses them yet.
+No safe, runnable inactive intake copy exists yet. The preferred recovery
+design now keeps the claim and stage ledger in the isolated Airtable table:
+sequential Make execution, incomplete executions and `performUpsert` merging
+on Submission ID alone. The [Airtable-ledger draft](JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md)
+lists the nine field IDs and failure stages. The API-call configuration shape
+passed strict Make validation, but no runtime claim, timeout or retry has been
+tested. The previously created `JOSH TEST Customs intake ledger` Make Data
+store (ID `267564`, 1 MB) remains empty and **unused** as an alternate; its
+mapper currently hits a `datastores:read` limitation.
 The new Make Airtable connection 13265002 is Locked, and its grant was
 independently verified in Airtable Integrations as limited to the JOSH TEST
-base. No broad workspace grant was made. A new Make connection
-`JOSH TEST Dropbox app` (13265327) exists with `account_info.read`,
-`file_requests.write`, `files.content.write`, `files.metadata.read`,
-`sharing.read` and `sharing.write`. Make lists it as scoped and team-visible,
-under `custom@crosstalkrecords.com`. Josh accepts team read access outside the
-test app folder; the critical question is where this connection can write.
-A read-only root folder listing
-through this connection exposed `Crosstalk Customs`, `File requests` and `Apps`
-at the top level, outside the expected JOSH TEST app folder. That fails the
-read-only isolation check; **do not bind or use connection 13265327 pending
-write-boundary verification**. This observation does not establish which
-individual folders are writable. If its write grant reaches outside JOSH TEST,
-replace it with a custom-app connection whose write scope is test-folder-only.
-The chosen connection must share the exporter's intended namespace. Make still needs a
+base. No broad workspace grant was made. The first new Make Dropbox connection
+13265327 is **unused**: its root listing exposed `Crosstalk Customs`,
+`File requests` and `Apps` outside the expected app folder, and its write
+boundary was not established. Its team visibility was acceptable for read
+access, but this did not prove test-only writes.
+
+Replacement connection 13265654 uses the JOSH TEST Dropbox app-folder grant
+with `account_info.read`, `file_requests.write`, `files.content.write`,
+`files.metadata.read`, `sharing.read` and `sharing.write`. A controlled
+read-only Make scenario (8714819, now inactive) used the connection through
+`dropbox:makeApiCall` with `disablePathRoot=true` to call Dropbox
+`/2/files/list_folder`; it returned HTTP 200 and the expected
+`/Crosstalk Customs/JOSH TEST/JOSH TEST` folder. The native `listFolders`
+picker RPC failed with “path root is not supported for sandbox app.” That is
+consistent with app-folder isolation, but it does not prove native
+`createFolder`, `createFileRequest` or `createShareLink` compatibility, actual
+test writes, or a shared namespace with the exporter. Use OAuth-bound
+`dropbox:makeApiCall` if those native modules cannot handle the sandbox app;
+never put OAuth values in a blueprint. Make still needs a
 dedicated API-key-protected webhook. The isolated form code now sends the test
 key only in a server-to-Make `x-make-apikey` header and refuses submission
 without it; the key has not been created or configured, and this guard has
@@ -193,25 +204,29 @@ different app folders. Existing scenario 8084300 binds a
 static synthetic order/folder and is not a substitute for the real intake
 handoff.
 
-The ledger claim alone cannot make intake idempotent. An Airtable create can
-succeed before Make records its ID or returns an HTTP response. The inactive
-copy must search the test table for the exact Submission ID before any recovery
-create, persist each external side effect, and reconcile a timed-out execution
-against the ledger, Airtable and Dropbox. A successful email send followed by
-a failed state update is ambiguous; pause that stage for provider/inbox review
-instead of blindly resending. The [sanitized intake plan](JOSH_TEST_INTAKE_PLAN.json)
-now specifies those recovery paths, but no runnable stage modules exist yet.
+An Airtable create can succeed before Make returns an HTTP response. The
+preferred draft uses `performUpsert` with Submission ID as the sole merge key
+and sole claim-body field; under sequential execution, a repeat claim should
+reuse the row. This is not a database uniqueness constraint against other
+writers. A forced timeout after claim must verify one row and one stable ID
+before relying on it. The scenario must compare the server-supplied Request
+Fingerprint, persist and reconcile each external effect, and stop on ambiguous
+file-request or email stages for staff inspection rather than resend blindly.
+The [sanitized intake plan](JOSH_TEST_INTAKE_PLAN.json) references that draft,
+but no runnable stage/error routes exist yet. The 25-second test-server timeout
+still needs measurement or a persisted queued/polling redesign.
 
 | Priority / risk | Likelihood / impact | Evidence | Concrete resolution and retest status |
 | --- | --- | --- | --- |
 | 1. Production path is incomplete | Certain / high | Test scenario has no Airtable, real folder creation, audio link, invoice or staff notification; the live form and Customer Intake are unchanged. | Build an inactive copy of the current intake with isolated test base/folders, then bind using module 2's actual Airtable ID and module 27's returned Uploads path. Test artwork, no-artwork, customer/staff outcomes and error paths before cutover. **Open.** |
-| 2. Duplicate intake may create a second real order | Medium / high | Active Make intake goes from webhook 1 to Airtable create 2 without a prior dedup/lookup. A repeated webhook can repeat record creation and customer/staff emails. The isolated ledger exists but is empty and unbound; a claim alone cannot resolve a create that succeeded before its state update. | Claim a stable Submission ID before create, search Airtable by that ID on ambiguous recovery, and persist/reconcile each later side effect. Test repeat clicks, simultaneous/replayed webhooks, timeout and failures after record creation; confirm one order, one set of emails and a recoverable response. **Ledger created; scenario and retest open; active scenario untouched.** |
+| 2. Duplicate intake may create a second real order | Medium / high | Active Make intake goes from webhook 1 to Airtable create 2 without a prior dedup/lookup. Repeated delivery may repeat records and emails. The isolated Airtable ledger fields and `performUpsert` claim shape exist, but no runnable scenario or retry execution has verified them. The Make Data store is unused. | In the isolated sequential scenario, upsert solely by Submission ID, fetch the one row, compare Request Fingerprint and stage, and reconcile each side effect. Force ambiguous timeout after claim, simultaneous/replayed webhooks and email uncertainty; confirm one row, one file request, one email pair and recovery. **Airtable draft/fields prepared; runtime retest open; active scenario untouched.** |
 | 2e. Ambiguous email delivery on retry | Medium / medium | A provider send can succeed before Make saves a sent flag or responds, leaving a retry unable to know whether an email arrived. | Keep separate customer and staff sent states; stop automatic retries at ambiguous sends, inspect provider/inbox evidence and resume deliberately. Test forced failures on either side of both sends. **Open; exactly-once email is not yet established.** |
 | 2a. Copied invoice action in the test base | Low for form-only tester, high impact if clicked | A seeded test record computed a `Send Invoice` button pointing at an external invoice webhook. | Button was **not clicked**; field renamed with a warning and omitted from published staff interface. Remove the column in Airtable's base editor before broader direct table access. **Contained for form/staff-interface testing; deletion open.** |
-| 2b. Customer audio link overwritten in current intake | Medium / high | Live Make module 30 writes the file-request URL to `Internal Folder Link`; module 5 overwrites it with a share URL and module 29 emails that share URL. | In isolated copy, native file request URL goes to `Audio Upload`, staff share URL to `Internal Folder Link`; verify customer can upload before proposing any live fix. **Open; live unchanged.** |
-| 2c. Secret-bearing Make blueprint and broad Dropbox connection | Medium / high | Live module 38 contains OAuth material in blueprint; existing broad Make Dropbox connection lacks `file_requests.write`. New connection 13265327 has the required scopes, but its read-only root listing exposed unrelated top-level folders and its write boundary remains unverified. | Do not clone module 38 or bind connection 13265327 until its write boundary is proved test-only; replace it with a custom-app connection if the grant is broad. Verify the chosen connection shares the exporter namespace and use native file request; keep credentials out of blueprint and logs. Josh accepts team read access outside the app folder. **New connection unused; write-boundary check and test copy open.** |
+| 2b. Customer audio link overwritten in current intake | Medium / high | Live Make module 30 writes the file-request URL to `Internal Folder Link`; module 5 overwrites it with a share URL and module 29 emails that share URL. | In the isolated copy, the file-request URL goes to `Audio Upload`; staff retain a private folder path or a verified team-only link, with `Internal Folder Link` empty unless that link is safe. Verify customer upload before proposing any live fix. **Open; live unchanged.** |
+| 2c. Secret-bearing Make blueprint and broad Dropbox connection | Medium / high | Live module 38 contains OAuth material in blueprint; existing broad Make Dropbox connection lacks `file_requests.write`. Connection 13265327 exposed unrelated top-level folders and remains unused. Replacement app-folder connection 13265654 passed a read-only OAuth-bound folder listing in inactive scenario 8714819; the native folder picker fails on sandbox app root. | Do not clone module 38 or bind 13265327. Test folder creation, file request and sharing with 13265654; if native modules fail, use OAuth-bound `dropbox:makeApiCall` without raw secrets. Verify the customer upload and exporter namespace before sending links. **App-folder read proven; write/module compatibility and test copy open.** |
+| 2i. Staff folder may become public | Medium / high | Dropbox `create_shared_link_with_settings` defaults to public visibility if no settings are supplied; the proposed module 16 did not set an explicit audience. | Do not create a default share link in JOSH TEST. Only store a verified team-only URL for staff; if that is unavailable, leave the Airtable URL blank and keep the private path in the test Airtable ledger for authorized staff. Test access as an unauthorised viewer before considering production. **Default link removed from test plan; sharing retest open.** |
 | 2h. Test preview reaches shared playlist lookup | Medium / medium | The copied calculator includes four calls to the separate production playlist importer. | A preview-only rewrite disables those network calls and presents manual synthetic track entry. Local focused tests pass and the change is deployed; hosted authenticated check remains. Test playlist import separately before go-live. **Code deployed; hosted retest open.** |
-| 2f. Different Dropbox app folders cannot share an order path | High / high | Make can accept a custom app-folder OAuth grant, while the currently verified exporter writes to its own existing test root. App-folder paths are relative to the app, so equal path strings do not prove a shared destination. Connection 13265327 was created but failed the read-only root-isolation check. | Verify write scope and use a test-only Dropbox app for both components (reauthorizing the exporter if the app changes), or one dedicated test Dropbox account; probe folder/file-request visibility from both ends before a customer test. **Open; existing new grant is unused pending write-boundary proof or replacement.** |
+| 2f. Different Dropbox app folders cannot share an order path | High / high | App-folder paths are relative to the app. Replacement Make connection 13265654 sees the expected JOSH TEST folder, but exporter visibility into the same namespace has not been proved. | Compare a harmless test-only folder or file from both Make and exporter using their authorized app credentials, and verify the file-request destination; reauthorize exporter to the same test app if needed. **Open; same-namespace and write proof pending.** |
 | 2g. Artist field semantics need confirmation | Medium / low | The current intake maps `Artist Order = Yes` to a boolean-like value in an Airtable single-line `Artist` field, rather than an artist name. | In the isolated record, compare the intended meaning of that field with staff expectations and map it explicitly; preserve the source behavior only if it is deliberately a yes/no flag. **Open; live unchanged.** |
 | 2d. Form values can disagree with the quoted price | Medium / medium | The current form supplies its price and options as browser fields; the isolated allowlist checks type/range but does not independently recalculate the quote. | Compare chosen options, quoted amount and staff-approved price against a server-side price rule or trusted staff review before invoicing; test tampered input in the isolated intake. **Open.** |
 | 3. Failed jobs could be missed or lost | Medium / high | Three delivery attempts previously ended in `failed`, worker tick errors were swallowed, failed data expired after seven days from creation; no staff alert or backup schedule. | Review code retains failures and their files, records failure stage and completed timestamp, lists them under a separate staff secret, and supports authenticated retry. Migration, forced failure, retention, low-space rejection and retry tests pass locally; Railway reports successful deployment of that revision. Repeat operationally on JOSH TEST, add an actual alert and backup/restore procedure. **Code deployed; operational gate open.** |
@@ -227,8 +242,8 @@ now specifies those recovery paths, but no runnable stage modules exist yet.
 | Boundary | JOSH TEST | Live/current or proposed production |
 | --- | --- | --- |
 | Form | Basic gated isolated preview and designer | Current GitHub Pages form remains in use without this handoff |
-| Make | Scenario 8084300 inactive, test webhook, Josh-only receipt; empty intake ledger 267564; JOSH TEST-only Locked Airtable connection 13265002; connection 13265327 failed read-only root-isolation check and is unused pending write-boundary verification or replacement; no runnable full intake copy | Customer Intake 4762364 remains active; no integration change applied |
-| Orders and billing | No Airtable, invoice, payment or real audio link | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is a separate downstream process. Changes need inactive-copy tests |
+| Make | Scenario 8084300 inactive, test webhook, Josh-only receipt; preferred Airtable-only ledger fields/performUpsert draft, empty unused Make Data store 267564; JOSH TEST-only Locked Airtable connection 13265002; app-folder Dropbox connection 13265654 passed read-only API listing in inactive probe 8714819; native modules/writes untested; old 13265327 unused; no runnable full intake copy | Customer Intake 4762364 remains active; no integration change applied |
+| Orders and billing | Test Airtable base has a manually seeded fixture and ledger fields, but no form-created order, invoice, payment or real audio link | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is a separate downstream process. Changes need inactive-copy tests |
 | Dropbox | Fixed JOSH TEST root, verified test ZIP | Separate production root/authorization and tested environment required |
 | Exporter | JOSH TEST Railway service/volume, one worker; review code and intake mapping deployed; delivery disabled | No production exporter in this project yet |
 | Secrets | Server-side test webhook, bind secret, encrypted Dropbox refresh token | New separate production credentials and staff recovery secret to provision securely |
@@ -247,20 +262,21 @@ now specifies those recovery paths, but no runnable stage modules exist yet.
 3. Remove the copied test-base invoice button in Airtable's editor. The new
    JOSH TEST-only Make Airtable grant is verified; exercise its read/write in
    the isolated scenario.
-   Keep connection 13265327 unused until its write boundary is proved test-only;
-   replace it with a custom-app Dropbox connection if broader. Prove the chosen
-   connection's write grant is limited to the JOSH TEST app folder and shares the
-   exporter's intended namespace. Use the already-created JOSH TEST
-   Data store. Do not copy the
+   Keep connection 13265327 unused. Test app-folder connection 13265654's
+   native folder/file-request/share modules or OAuth-bound API equivalents,
+   and prove its test writes and shared namespace with the exporter. Use the
+   isolated Airtable ledger and `performUpsert` claim with sequential execution;
+   leave the Make Data store as an unused alternative. Do not copy the
    live raw OAuth module. Prepare an **inactive** Customer Intake copy with a
    new webhook, test base/root and Josh-only customer/staff email destinations.
    Preserve pricing, tracklist, email semantics and no-artwork response;
-   invoicing is not in this scenario. Claim a stable Submission ID before
-   Airtable create, search Airtable by Submission ID after an ambiguous create,
-   persist each side-effect stage, and handle duplicates, email-send ambiguity
-   and partial failures. Use the native file-request URL for customer audio uploads
-   and a separate shared-folder URL for staff. Bind optional artwork with
-   Airtable `2.id` and Dropbox `27.path_display`. Test normal, absent-artwork,
+   invoicing is not in this scenario. Claim a stable Submission ID by Airtable
+   `performUpsert`, compare the Request Fingerprint, reconcile an ambiguous
+   claim without creating a second row, persist each side-effect stage, and
+   handle duplicates, email-send ambiguity and partial failures. Use the
+   verified file-request URL for customer audio uploads; give staff a private
+   path or verified team-only link. Bind optional artwork with the claimed
+   Airtable record ID and verified Dropbox Uploads path. Test normal, absent-artwork,
    simultaneous duplicate and partial-failure cases against isolated records.
 4. Present the exact form diff, Make blueprint diff, environment configuration,
    test evidence and rollback snapshots to Josh. **Stop here for explicit approval**

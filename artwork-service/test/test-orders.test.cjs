@@ -1,5 +1,5 @@
 'use strict';
-const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {DatabaseSync}=require('node:sqlite');
 const {makeApp}=require('../src/server.cjs');
 test('test-only order intake maps bounded Customs fields and rejects real identity or address',async()=>{
@@ -36,6 +36,7 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal((await submit({...body,fields:{...body.fields,Email:'real-customer@example.com'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,'Street Address':'REAL ADDRESS'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,'Artwork Reference':'different'}})).status,422);
+  assert.equal((await submit({...body,fields:{...fields,'Request Fingerprint':'browser-forged'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,'Unknown Field':'surprise'}})).status,422);
   assert.equal((await submit({...body,fields:{...fields,Tracklist:'<script>alert(1)</script>'}})).status,422);
   assert.equal((await submit(body)).status,202);
@@ -50,9 +51,15 @@ test('test-only order intake maps bounded Customs fields and rejects real identi
   assert.equal(sent[0].payload['Tracklist'],'Synthetic test only');
   assert.equal(sent[0].payload['Submission ID'],id);
   assert.equal(sent[0].payload['Artwork Job ID'],'a'.repeat(32));
+  const metadata=new Set(['testLabel','Artwork Reference','Submission ID','Request Fingerprint','Artwork Job ID','Test Order Name','Test Order ID','Test Summary']);
+  const mapped=Object.fromEntries(Object.entries(sent[0].payload).filter(([key])=>!metadata.has(key)));
+  const expectedHash=crypto.createHash('sha256').update(JSON.stringify({mapped,reference})).digest('hex');
+  assert.equal(sent[0].payload['Request Fingerprint'],expectedHash);
+  assert.equal(service.store.db.prepare('SELECT request_hash FROM test_submissions WHERE id=?').get(id).request_hash,expectedHash);
   assert.equal(sent[0].payload['Delivery Method'],'Pickup');
   assert.equal(sent[0].payload['Street Address'],'');
   assert.equal((await submit({...body,fields:{...fields,Tracklist:'different test track'}})).status,409);
+  assert.equal(service.store.db.prepare('SELECT request_hash FROM test_submissions WHERE id=?').get(id).request_hash,expectedHash);
   assert.equal((await submit({...body,artworkReference:'',fields:{...fields,'Artwork Reference':''}})).status,409);
   const shippingId='e6f90e2f-6a80-4ac0-bb4e-258295f09802';
   const shippingFields={...fields,'Shipping Required':'on',

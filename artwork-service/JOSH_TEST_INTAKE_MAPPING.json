@@ -1,7 +1,7 @@
 {
   "kind": "Crosstalk Customs isolated intake mapping and validation record",
   "deployable": false,
-  "reason": "A dedicated protected hook, a Dropbox connection with verified test-only write scope, and idempotent recovery routes are still required. Connection 13265327 must stay unused pending write-boundary verification or replacement: its read-only root listing exposed top-level folders outside the expected JOSH TEST app folder. Josh accepts team read access outside the app folder. This is not a Make scenario blueprint.",
+  "reason": "The preferred claim/recovery design is the Airtable-only performUpsert ledger in JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md, with sequential Make execution and incomplete executions. Its shape passed validation but runtime is untested. The older CreateRecord/SearchRecords mappings below are validation records only, not the selected claim path. A dedicated protected hook and runnable stage/error routes are still required. Dropbox connection 13265654 passed a controlled read-only listing, but writes/file requests/exporter namespace remain unverified. Old 13265327 stays unused. This is not a Make scenario blueprint.",
   "scope": {
     "testLabel": "JOSH TEST",
     "customerName": "TEST JOSH 21.11",
@@ -13,11 +13,33 @@
     "makeScenarioName": "JOSH TEST Customer Intake"
   },
   "moduleValidation": {
-    "airtableCreate": "The test-only field map, including Packaging, Vinyl Colour, Side A/B Length, Extras, Submission ID, Artwork Job ID and Artwork Delivery Status, validated against the test base and connection with zero errors or warnings on 2026-11-21. This validates configuration shape, not record creation or a full scenario execution.",
-    "airtableSearch": "ActionSearchRecords using an exact Submission ID formula and maxRecords=2 validated with zero errors or warnings on 2026-11-21.",
-    "dropboxFileRequest": "Verified module identifier dropbox:createFileRequest version 5. It requires title and destination path and returns a distinct customer upload URL. Its connection and destination are not bound or tested."
+    "airtableCreate": "Legacy CreateRecord field map, including Packaging, Vinyl Colour, Side A/B Length, Extras, Submission ID, Artwork Job ID and Artwork Delivery Status, validated with zero errors or warnings on 2026-11-21. It is not the preferred recovery path and has not created a record.",
+    "airtableSearch": "Legacy ActionSearchRecords exact Submission ID formula and maxRecords=2 validated with zero errors or warnings on 2026-11-21; preferred claim uses performUpsert.",
+    "airtableClaim": "Airtable makeApiCall PATCH performUpsert with only Submission ID as merge field/body passed strict configuration validation. Runtime claim response, one-row retry and 25-second timing remain untested; see JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md.",
+    "dropboxFileRequest": "Verified module identifier dropbox:createFileRequest version 5. It requires title and destination path and returns a distinct customer upload URL. New connection 13265654 is available but this native module and destination have not been tested with it; an OAuth-bound dropbox:makeApiCall may be needed if native modules are incompatible with the app-folder grant."
   },
-  "airtableCreateRecord": {
+  "preferredAirtableLedger": {
+    "draft": "JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md",
+    "claimModule": "airtable:makeApiCall",
+    "claimConnection": 13265002,
+    "claimMethod": "PATCH",
+    "claimPath": "v0/appDz7CEL2KQWpzyC/tbly1iXdcMvFuqCcY",
+    "claimBody": { "performUpsert": { "fieldsToMergeOn": ["Submission ID"] }, "records": [{ "fields": { "Submission ID": "{{1.`Submission ID`}}" } }] },
+    "execution": "sequential with incomplete executions enabled; fetch exactly one claimed record ID and compare server-supplied Request Fingerprint before populating details",
+    "fieldIds": {
+      "Request Fingerprint": "fldq46cNTtEpprcgN",
+      "Intake State": "fldnYB8vJvo3b6ddu",
+      "Dropbox Order Folder": "flde9LOZGGrHS8par",
+      "Dropbox Uploads Folder": "fldLvBqkU5rIbhFrc",
+      "File Request ID": "fld9AkpYIBIfCgeMv",
+      "Customer Email Status": "fldiHqm7xEMbVJLmg",
+      "Staff Email Status": "fldZJt4pfO1ldlOia",
+      "Intake Last Error": "fldbYG3ngxEuBTjQS",
+      "Intake Updated At": "fldhGBLf4ixDl7TmT"
+    },
+    "runtimeStatus": "untested; not a database uniqueness constraint against other writers"
+  },
+  "legacyCreateRecordValidationOnly": {
     "module": "airtable:ActionCreateRecord",
     "version": 3,
     "parameters": { "__IMTCONN__": 13265002 },
@@ -53,9 +75,9 @@
         "fldC0OBNOiit8AltO": "{{if(empty(1.`Artwork Reference`); \"Not supplied\"; \"Queued\")}}"
       }
     },
-    "note": "The Artist text field now receives the explicit Yes/No value, not the source scenario's boolean expression. Quoted price is untrusted customer input and must not trigger invoicing."
+    "note": "Configuration validation only; do not use CreateRecord after the preferred performUpsert claim, because an ambiguous retry could duplicate an order. The Artist text field receives explicit Yes/No, and quoted price is untrusted customer input that must not trigger invoicing. Adapt these mapped details to a guarded update of the claimed record after fingerprint verification."
   },
-  "airtableLookupBeforeCreateOrRecovery": {
+  "legacySearchRecordsValidationOnly": {
     "module": "airtable:ActionSearchRecords",
     "version": 3,
     "parameters": { "__IMTCONN__": 13265002 },
@@ -67,7 +89,7 @@
       "maxRecords": 2,
       "useColumnId": false
     },
-    "invariant": "Zero matches permits create; one match reuses that record after checking identity/details; two matches blocks and alerts staff. UUID syntax must be checked before interpolating into a formula."
+    "invariant": "Do not use this as the preferred claim path. Airtable performUpsert on Submission ID in a sequential scenario is the selected draft. This legacy search mapper was validated only for configuration shape."
   },
   "createdTestOnlyFields": [
     { "id": "fldDCDuwYdQuWJDmR", "name": "Packaging", "type": "singleSelect", "choices": ["Standard", "Printed Jacket + Labels", "Custom Finish Pack"] },
@@ -78,7 +100,7 @@
   "nativeDropboxFileRequest": {
     "module": "dropbox:createFileRequest",
     "version": 5,
-    "parameters": { "__IMTCONN__": "REPLACE_WITH_VERIFIED_JOSH_TEST_WRITE_SCOPED_CONNECTION" },
+    "parameters": { "__IMTCONN__": 13265654 },
     "mapper": {
       "title": "JOSH TEST audio upload — {{2.`Job Number`}}",
       "path": "{{27.path_display}}",
@@ -86,8 +108,8 @@
       "open": true
     },
     "customerUrl": "{{51.url}}",
-    "staffFolderUrl": "{{16.url}}",
-    "invariant": "Do not use connection 13265327 until its write boundary is proved test-only; its read-only root listing exposed unrelated top-level folders. Josh accepts team read access outside the app folder. Bind only a connection with verified test-folder-only write access and the exporter's shared namespace, replacing 13265327 if necessary. Store the file request URL in Audio Upload fld5G2oHi9NL73kkn and the share URL in Internal Folder Link fldFsfOT7hf2Bg4ZO. Verify the file request is open and uploads to the exporter's same isolated app-folder namespace before email or acknowledgement."
+    "staffFolderUrl": "ONLY_VERIFIED_TEAM_ONLY_URL_OR_LEAVE_EMPTY",
+    "invariant": "Old connection 13265327 remains unused. New app-folder connection 13265654 returned the expected JOSH TEST folder via an OAuth-bound /2/files/list_folder API call with disablePathRoot=true in controlled inactive scenario 8714819. The native Make folder picker listFolders RPC failed with 'path root is not supported for sandbox app'; do not assume native createFolder, createFileRequest or createShareLink work. Validate each with this connection or use OAuth-bound dropbox:makeApiCall without raw tokens. Verify actual test upload/write and the exporter's shared namespace. Store the file request URL in Audio Upload fld5G2oHi9NL73kkn; write Internal Folder Link fldFsfOT7hf2Bg4ZO only with a verified team-only URL, otherwise leave it empty and retain a private path for staff. Dropbox's default shared link is public: never create one without explicit team-only settings. Verify the file request is open and uploads to the exporter's same isolated app-folder namespace before email or acknowledgement."
   },
   "responseContract": {
     "serverTimeoutMs": 25000,

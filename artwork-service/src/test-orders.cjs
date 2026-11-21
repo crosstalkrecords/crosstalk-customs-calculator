@@ -128,7 +128,8 @@ function installTestOrders(app,store,config,{fetchImpl=fetch}={}){
    return k+': '+mapped[key].slice(0,k==='Tracklist'?1200:100);
   }).join('\n');
   const payload={testLabel:'JOSH TEST',...mapped,'Artwork Reference':reference,
-   'Submission ID':id,'Artwork Job ID':referenceId,'Test Order Name':NAME,
+   'Submission ID':id,'Request Fingerprint':requestHash,
+   'Artwork Job ID':referenceId,'Test Order Name':NAME,
    'Test Order ID':id,'Test Summary':summary};
   try{
    const response=await fetchImpl(config.testWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json','x-make-apikey':config.testMakeApiKey},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
