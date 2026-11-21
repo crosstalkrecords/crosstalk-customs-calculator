@@ -80,6 +80,6 @@
    if(reference&&result.deliveryPending)void watch(reference);
    else status.textContent='No designer artwork was attached to this test.';
    dispatchEvent(new Event('crosstalk-order-success'));
-  }catch(e){error.textContent=(e.message||'Test submission failed.')+' Keep this page open and retry, or give Crosstalk your test order ID: '+id;submit.disabled=false;submit.textContent='Place My Order';}
+  }catch(e){error.textContent=(e.message||'Test submission failed.')+' Keep this page open and retry, or give Crosstalk your test order ID: '+id;submit.disabled=false;submit.textContent='Submit JOSH TEST';}
  };
 })();

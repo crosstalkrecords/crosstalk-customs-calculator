@@ -121,11 +121,11 @@ async function run(){
    let attempts=0;
    await customer(page,async route=>{attempts++;const data=route.request().postDataJSON();assert.equal(data.artworkReference,reference);await route.fulfill({status:attempts===1?503:202,contentType:'application/json',body:attempts===1?'{"error":"JOSH TEST injected submission error"}':JSON.stringify({testOrderId:data.testOrderId,artworkStatus:'bound',deliveryPending:false})});});
    const old=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
-   await page.getByRole('button',{name:'Place My Order'}).click();
+   await page.locator('button[type="submit"]').click();
    await page.locator('#testSubmitError').filter({hasText:'JOSH TEST injected submission error'}).waitFor();
    assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
    assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
-   await page.getByRole('button',{name:'Place My Order'}).click();await page.locator('#success').waitFor({state:'visible'});
+   await page.locator('button[type="submit"]').click();await page.locator('#success').waitFor({state:'visible'});
    assert.equal(attempts,2);assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'');
    assert.notEqual(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),old);
    result.cases.push((mobile?'mobile':'desktop')+' failed submission retry and confirmed reset');

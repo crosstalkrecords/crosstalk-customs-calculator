@@ -11,11 +11,21 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
  try{
   await new Promise(resolve=>server.once('listening',resolve));
   const base='http://127.0.0.1:'+server.address().port;config.publicOrigin=base;config.origins.push(base);
+  // If the preview integration script cannot load, the copied form handler
+  // still posts only to this deliberately absent route and cannot succeed.
+  assert.equal((await fetch(base+'/order-submission-disabled',{method:'POST'})).status,410);
   browser=await chromium.launch({headless:true,executablePath:await packaged.executablePath(),args:packaged.args.filter(x=>x!=='--single-process')});
   const context=await browser.newContext({httpCredentials:{username:'tester',password:'test-access-only'}}),page=await context.newPage();page.setDefaultTimeout(30000);
   const outbound=[];page.on('request',request=>{if(request.method()==='POST')outbound.push({url:request.url(),origin:request.headers()['origin']||null,site:request.headers()['sec-fetch-site']||null,referer:request.headers()['referer']||null})});
   await page.goto(base+'/calculator-preview.html');
   assert.equal(await page.title(),'JOSH TEST — Crosstalk Customs');
+  assert.equal(await page.locator('#uploadWrap').count(),0);
+  assert(!((await page.content()).includes("After submitting, you'll receive your private Dropbox link")));
+  assert(!((await page.content()).includes("You'll upload them after ordering")));
+  assert(!((await page.content()).includes("You'll upload your finished artwork after submitting")));
+  assert.match(await page.locator('#success').innerText(),/test acknowledgement, not a customer order/i);
+  assert.match(await page.locator('[data-step="4"]').innerText(),/does not collect audio files/i);
+  assert.match(await page.locator('[data-step="5"]').innerText(),/synthetic JOSH TEST submission/i);
   await page.locator('input[name="Email"]').waitFor({state:'attached'});
   await page.waitForFunction(()=>document.querySelector('input[name="Email"]').value==='delousedcomatorium@gmail.com');
   assert.equal(await page.locator('#playlistTry').isDisabled(),true);
@@ -36,9 +46,9 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   assert.match(await page.locator('#delivery').locator('..').innerText(),/fictional address/);
   await page.locator('#delivery').selectOption('pickup');
   assert.equal(await page.locator('input[name="Street Address"]').inputValue(),'');
-  await page.locator('#terms').check();await page.getByRole('button',{name:'Place My Order'}).click();
+  await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
   try{await page.locator('#success').waitFor({state:'visible',timeout:5000});}catch(e){
-   console.error('TEST PREVIEW STATE',JSON.stringify({error:await page.locator('#testSubmitError').innerText(),outbound,button:await page.getByRole('button',{name:/Place My Order|Submitting JOSH TEST/}).allTextContents()}));throw e;
+   console.error('TEST PREVIEW STATE',JSON.stringify({error:await page.locator('#testSubmitError').innerText(),outbound,button:await page.locator('button[type="submit"]').allTextContents()}));throw e;
   }
   assert.match(await page.locator('#success').innerText(),/JOSH TEST submission accepted/);
   assert.match(await page.locator('#testDeliveryStatus').innerText(),/No designer artwork/);
@@ -92,7 +102,7 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   assert.match(reference,/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/);
   await page.locator('[data-step="3"] [data-next="4"]').click();
   await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
-  await page.locator('#terms').check();await page.getByRole('button',{name:'Place My Order'}).click();
+  await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
   await page.locator('#success').waitFor({state:'visible'});
   const confirmation=await page.locator('#success').innerText();
   assert.match(confirmation,/JOSH TEST submission accepted/);

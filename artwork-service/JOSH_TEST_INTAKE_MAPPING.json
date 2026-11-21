@@ -1,7 +1,7 @@
 {
   "kind": "Crosstalk Customs isolated intake mapping and validation record",
   "deployable": false,
-  "reason": "A dedicated hook, a scoped Dropbox connection and idempotent recovery routes are still required. This is not a Make scenario blueprint.",
+  "reason": "A dedicated protected hook, a Dropbox connection with verified test-only write scope, and idempotent recovery routes are still required. Connection 13265327 must stay unused pending write-boundary verification or replacement: its read-only root listing exposed top-level folders outside the expected JOSH TEST app folder. Josh accepts team read access outside the app folder. This is not a Make scenario blueprint.",
   "scope": {
     "testLabel": "JOSH TEST",
     "customerName": "TEST JOSH 21.11",
@@ -78,7 +78,7 @@
   "nativeDropboxFileRequest": {
     "module": "dropbox:createFileRequest",
     "version": 5,
-    "parameters": { "__IMTCONN__": "REPLACE_WITH_NEW_JOSH_TEST_APP_FOLDER_CONNECTION" },
+    "parameters": { "__IMTCONN__": "REPLACE_WITH_VERIFIED_JOSH_TEST_WRITE_SCOPED_CONNECTION" },
     "mapper": {
       "title": "JOSH TEST audio upload — {{2.`Job Number`}}",
       "path": "{{27.path_display}}",
@@ -87,7 +87,7 @@
     },
     "customerUrl": "{{51.url}}",
     "staffFolderUrl": "{{16.url}}",
-    "invariant": "Store the file request URL in Audio Upload fld5G2oHi9NL73kkn and the share URL in Internal Folder Link fldFsfOT7hf2Bg4ZO. Verify the file request is open and uploads to the exporter's same isolated app-folder namespace before email or acknowledgement."
+    "invariant": "Do not use connection 13265327 until its write boundary is proved test-only; its read-only root listing exposed unrelated top-level folders. Josh accepts team read access outside the app folder. Bind only a connection with verified test-folder-only write access and the exporter's shared namespace, replacing 13265327 if necessary. Store the file request URL in Audio Upload fld5G2oHi9NL73kkn and the share URL in Internal Folder Link fldFsfOT7hf2Bg4ZO. Verify the file request is open and uploads to the exporter's same isolated app-folder namespace before email or acknowledgement."
   },
   "responseContract": {
     "serverTimeoutMs": 25000,

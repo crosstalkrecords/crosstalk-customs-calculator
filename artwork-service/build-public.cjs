@@ -34,14 +34,14 @@ $('completeArtwork').onclick=async()=>{
   const project={format:'crosstalk-project',version:1,rendererVersion:'approved-d5b75f9-v1',surfaces:Object.fromEntries(Object.entries(state.surfaces).map(([id,layers])=>[id,layers.map(l=>({...l}))])),backgrounds:structuredClone(state.backgrounds)};
   const result=await window.CrosstalkHandoff.upload(project,message=>status.textContent=message);
   if(window.opener&&session)window.opener.postMessage({type:'crosstalk-artwork-complete',reference:result.reference,session},returnOrigin);
-  status.textContent='Artwork uploaded. Place your order to queue its PSD delivery.';
+  status.textContent='Artwork uploaded. Submit JOSH TEST to queue its PSD delivery.';
   $('finishContent').style.display='none';$('finishSuccess').classList.add('show');
  }catch(error){status.textContent=error.message||'Artwork could not be uploaded. Your draft is still on this device.';}finally{button.disabled=false;}
 };
 `;
 html=html.replace('})();\n</script>',hook+'\n})();\n</script>');
 html=html.replace('Your artwork is saved on this device.', 'Your draft is saved on this device.');
-html=html.replace('<strong>Artwork saved ✓</strong><p>Your designs are saved in this browser. Return to your order tab to continue.</p>','<strong>Artwork uploaded ✓</strong><p>Return to your order tab and place your order to queue its PSD delivery. Your draft is also saved in this browser.</p>');
+html=html.replace('<strong>Artwork saved ✓</strong><p>Your designs are saved in this browser. Return to your order tab to continue.</p>','<strong>Artwork uploaded ✓</strong><p>Return to your JOSH TEST form and submit the test to queue PSD delivery. Your draft is also saved in this browser.</p>');
 fs.writeFileSync(path.join(root,'public/designer.html'),html);
 fs.mkdirSync(path.join(root,'public/assets'),{recursive:true});fs.copyFileSync(path.join(root,'../assets/crosstalk-logo.png'),path.join(root,'public/assets/crosstalk-logo.png'));
 // This is a non-production calculator preview. Its existing Make URL is removed.
@@ -53,6 +53,46 @@ if(calculator===before||calculator.includes('hook.eu1.make.com'))throw Error('Pr
 const lookupOrigin='https://crosstalk-playlist-importer.vercel.app';
 if(calculator.split(lookupOrigin).length!==5)throw Error('Preview lookup isolation check failed');
 calculator=calculator.replaceAll(lookupOrigin,'/josh-test-lookup-disabled');
+// The preview must remain truthful even while its test config is loading or
+// unavailable. The live form's audio and success promises do not apply here.
+const testCopy=[
+ ['<strong>Already have a playlist?</strong>',
+  '<strong>Playlist import is disabled in JOSH TEST</strong>'],
+ ['placeholder="Paste a public playlist link"',
+  'placeholder="Enter synthetic tracks manually below"'],
+ ['You\'ll upload your finished artwork after submitting.',
+  'Use the artwork designer here to attach a synthetic design before test submission. JOSH TEST does not create a separate artwork upload link.'],
+ ['<h2 class="title">Now we need the actual music.</h2><p class="lede">Your tracklist is the plan. Before we can cut your record, we need the actual audio files.</p>',
+  '<h2 class="title">Plan the audio for this test.</h2><p class="lede">Use synthetic track names. JOSH TEST does not collect audio files or create a real record order.</p>'],
+ ['Every audio file must be provided manually by you before we cut anything.',
+  'For a real order, you must supply every audio file before Crosstalk can cut anything.'],
+ ['Playlist durations are used to help plan your record, but we’ll check the actual audio before cutting. If anything no longer fits, we’ll get in touch.',
+  'In a real order, playlist durations help plan the record and Crosstalk checks the supplied audio before cutting. If anything no longer fits, we contact you.'],
+ ['Our Qobuz links are simply a helping hand to locate possible legal downloads. Crosstalk does not purchase, download or transfer the music on your behalf.',
+  'The live form may suggest legal download sources. Track lookup is disabled in JOSH TEST; do not make a purchase for this test.'],
+ ['<strong>I\'ve got my files</strong><small>You\'ll upload them after ordering.</small>',
+  '<strong>I would supply audio files</strong><small>No audio upload happens in JOSH TEST.</small>'],
+ ['You must purchase/download the files yourself and then upload them to Crosstalk. A playlist link by itself is never treated as supplied audio.',
+  'For a real order, you must obtain and upload your own files. For JOSH TEST, do not purchase or upload audio. A playlist link is never supplied audio.'],
+ ['After submitting, you\'ll receive your private Dropbox link for audio and artwork.',
+  'JOSH TEST does not create an audio upload link or a real order. Use synthetic audio details only.'],
+ ['Step 5 of 5 · Review & Order','Step 5 of 5 · Review & Test Submit'],
+ ['<div class="legal"><strong>Copyright Declaration & Terms</strong>',
+  '<div class="legal"><strong>Preview of real order terms</strong><p>Shown for interface review only. JOSH TEST submits no customer order or audio files.</p>'],
+ ['I confirm that I have the right to reproduce the audio I supply and agree to the Crosstalk Customs terms above.',
+  'I understand this is a synthetic JOSH TEST submission and have reviewed the real order terms above.'],
+ ['<button type="submit" class="btn">Place My Order</button>',
+  '<button type="submit" class="btn">Submit JOSH TEST</button>'],
+ ["btn.textContent='Place My Order'","btn.textContent='Submit JOSH TEST'"],
+ ['<h2>Order received</h2><p>Your Crosstalk Customs project has been submitted.</p>',
+  '<h2>JOSH TEST submission accepted</h2><p>This is a test acknowledgement, not a customer order. Delivery is confirmed separately.</p>'],
+ ['<div id="uploadWrap" class="hidden"><a id="upload" class="upload" target="_blank">Upload Your Audio + Artwork</a></div>',
+  '']
+];
+for(const [source,replacement] of testCopy){
+ if(!calculator.includes(source))throw Error('Preview test copy replacement failed');
+ calculator=calculator.replace(source,replacement);
+}
 calculator=calculator.replace(/<title>[^<]*<\/title>/,'<title>JOSH TEST — Crosstalk Customs</title>');
 calculator=calculator.replace('</head>','<meta name="robots" content="noindex,nofollow,noarchive"></head>');
 calculator=calculator.replace('</body>','<script src="calculator-artwork.js"></script><script src="preview-orders.js"></script></body>');

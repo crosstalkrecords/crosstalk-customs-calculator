@@ -1,7 +1,7 @@
 {
   "kind": "sanitized Make blueprint plan",
   "deployable": false,
-  "reason": "The dedicated test Data store exists and a Locked Airtable OAuth connection (13265002) was granted with custom access to the JOSH TEST base only. Airtable's Integrations UI independently showed this grant includes only Crosstalk Customs — JOSH TEST, not V1.0 or the whole workspace. The scoped Dropbox connection and separate webhook are not bound; idempotent recovery routes are not implemented. No credential values or webhook URLs are included.",
+  "reason": "The dedicated test Data store exists and a Locked Airtable OAuth connection (13265002) was granted with custom access to the JOSH TEST base only. Airtable's Integrations UI independently showed this grant includes only Crosstalk Customs — JOSH TEST, not V1.0 or the whole workspace. Make Dropbox connection 13265327 has the requested scopes but is team-visible; a read-only root listing exposed top-level folders outside the expected JOSH TEST app folder, so it must stay unused pending write-boundary verification or replacement. Josh accepts team read access outside the app folder. A separate protected webhook and idempotent recovery routes are required. No credential values or webhook URLs are included.",
   "scope": "Crosstalk Customs JOSH TEST only",
   "make": {
     "organizationId": 6808399,
@@ -43,7 +43,7 @@
   "dropbox": {
     "fixedOrderRoot": "/Crosstalk Customs/JOSH TEST",
     "folderScopeConstraint": "If Make uses a Dropbox app-folder grant, its paths are relative to that app folder. The exporter must use the same isolated Dropbox app/account and folder namespace; do not bind to an existing full-Dropbox exporter destination by path alone.",
-    "requiredConnection": "new isolated Dropbox connection with file_requests.write, files.metadata.read, files.content.write, sharing.write, sharing.read; ideally dedicated account or app folder",
+    "requiredConnection": "Dropbox connection with file_requests.write, files.metadata.read, files.content.write, sharing.write and sharing.read. Verify its write grant reaches only the JOSH TEST app folder and shares the exporter's intended namespace before binding it. Team read access outside the app folder is accepted by Josh; team visibility alone is not a blocker. Do not use 13265327 pending proof of its write boundary; replace it with a custom-app connection if the grant is broader than JOSH TEST.",
     "neverAcceptClientDestination": true
   },
   "preflight": {
@@ -95,7 +95,7 @@
   "validationBeforeActivation": [
     "Confirm new Airtable Make connection can read/write only test base",
     "Reject a call to the dedicated Make hook without x-make-apikey and accept only the server-held test key",
-    "Confirm new Dropbox connection cannot reach production folders",
+    "Confirm the Dropbox connection's write grant is confined to its JOSH TEST app folder and cannot write production folders; replace connection 13265327 if not",
     "Validate every Make module and route with bound connections",
     "Send duplicate test webhook with same Submission ID and verify one Airtable record and one email pair",
     "Recover a timed-out or failed run by Submission ID without repeating Airtable create or Dropbox resources",

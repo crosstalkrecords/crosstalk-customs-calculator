@@ -119,6 +119,9 @@ function makeApp(config,options={}){
   const result=store.db.prepare("UPDATE jobs SET state='queued',attempts=0,next_attempt=0,error=NULL,failed_at=NULL,failure_stage=NULL WHERE id=? AND state='failed'").run(req.params.id);
   if(!result.changes)throw error(409,'Only failed jobs can be retried');res.status(202).json({state:'queued'});
  });
+ // The copied form handler is present if the JOSH TEST integration script
+ // fails to load. Its inert endpoint must never acknowledge a customer order.
+ app.post('/order-submission-disabled',(_,res)=>res.status(410).json({error:'Use the JOSH TEST submission flow'}));
  app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control','public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
  return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await worker.close();store.close();}};
