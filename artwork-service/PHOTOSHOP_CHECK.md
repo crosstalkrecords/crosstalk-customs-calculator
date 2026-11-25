@@ -1,7 +1,32 @@
 # Photoshop check — start here
 
-These are synthetic designs, with no customer information. They test the new
-server-rendered output. They are not a claim that Adobe Photoshop has passed yet.
+## JOB362 customer-journey archive (25 November)
+
+Use the ZIP named `JOSH TEST-77277d4e8b6f3c6cabe7010ecb25be40.zip` from
+JOB362's isolated Uploads folder. This is a dummy order, not the separate
+synthetic editable-text fixture described below.
+
+1. Extract it and open `front.psd`, `back.psd`, `labelA.psd` and `labelB.psd` in
+   Photoshop. Keep their layers and masks. Note any warnings or missing fonts.
+2. Compare each document with its matching `*-reference.png`. The covers are
+   3000 × 3000 pixels; the labels are 1146 × 1146 with transparent outside
+   and spindle hole. All four declare 300 PPI.
+3. Toggle a photo/image layer and a label mask, then restore them. Save a copy
+   of each PSD, close it, reopen it and confirm the layers, transparency and
+   appearance survive. Do not overwrite the delivered originals.
+4. Label A and B are byte-identical in this dummy export. Confirm that this
+   reflects the submitted design; flag it if different sides were intended.
+5. Print a cover and both labels using the actual production templates and
+   media. Have the cutting engineer confirm physical sizing, bleed, crop,
+   spindle-hole alignment and legibility before live release.
+
+The automated check passed ZIP CRC, PSD parsing and pixel comparison against
+the references. This particular dummy has no native editable text layers, so
+use the separate fixture below to test text editing.
+
+The following synthetic fixture has no customer information. It tests the new
+server-rendered output and native text editing. Neither fixture is a claim that
+Adobe Photoshop has passed yet.
 
 ## First: just open the cover
 
