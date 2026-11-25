@@ -42,8 +42,37 @@ The first diagnostic run found a Make HTTP output mapping error (`body` versus
 status. The mapping was corrected and the note cleared. Scenario 8719305 is
 inactive; a generic schedule, failure alerts and mismatch recovery have not
 been rehearsed. The customer/staff status and refresh fix passed 9 focused
-tests; the guarded endpoint passed 5. The deployed service's `/health` still
-reports delivery disabled.
+tests; the guarded endpoint passed 5. The deployed service's `/health` reported
+delivery disabled after that window.
+
+**25 November actual hosted retest:** Josh completed a new full JOSH TEST form
+journey and reported uploading a dummy WAV through the private request. Railway
+HTTP logs show the designer draft 201, asset upload 200, commit 200, order
+submission 202, protected bind 202 and final outcome callback 200. The revised
+protected Make intake 8715068 executed once (`333c664e31364e4080bb6da501f1ad90`)
+at 04:41 UTC in 20.244 s and finished **SUCCESS**, 25 operations, with no
+Webhook Response warning or waiting hook items. It created exactly one new
+isolated Airtable row, **JOB362** (`rect55xA4VsTPSJZo`), Submission ID
+`6555aa56-5013-496c-acf2-1c3ebbf84271`: one double-sided 12-inch red
+33 RPM Custom Finish Pack for pickup, estimated $180. Intake State is
+`Completed`, both email status fields say `Sent`, and the published staff page
+shows the same order. The guarded, JOB362-pinned status reconciliation scenario
+8719305 ran once (`b76b20f3c85f4b3991d09018941d2ec1`), succeeded in five
+operations, and updated Airtable and the staff page to `Delivered` only after
+the exporter returned a verified matching delivery receipt. That scenario is
+again inactive and on demand. This is evidence of the isolated exporter
+delivery state, but the new remote ZIP has not been downloaded for CRC,
+Photoshop or print review. Make's confidential execution exposes no per-module
+detail through the connector. Josh independently confirmed both this order's
+customer receipt and separate JOSH TEST staff notice reached the fixed Gmail
+inbox. The reported WAV upload is not independently
+verified in the new order folder: the request field is a link, and its
+aggregate field is empty. Automatic approval review rejected broad Dropbox
+Apps-folder browsing, so no alternate broad-account path was used. The
+protected intake was deactivated, the one-time reconciliation reset to inactive
+on-demand mode, and Railway delivery was switched back to `disabled`. The
+resulting deployment `3d7fef2a-4f08-423b-bb6c-d860bb1760c3` succeeded and
+hosted `/health` returned `deliveryMode=disabled`, `configured=false`.
 
 A review-branch-only exporter change at `424e6f7` now also accepts Make's
 default exact `200 Accepted` queue acknowledgement without treating it as an
@@ -55,17 +84,19 @@ Webhook Response modules removed; independent readback confirms it remains
 inactive, valid, immediate, sequential and confidential, with 94 modules and
 zero responders. Commit error handlers 41/43/45, the protected hook and the
 other claim, delivery, email and callback paths are preserved. The new queue
-acknowledgement path has **not** had a real intake retest. The
+acknowledgement path passed JOB362's normal real intake retest; ambiguous
+timeout, replay and partial-failure routes still need integrated tests. The
 [redacted change plan](MAKE_QUEUE_ACK_CANDIDATE.md) records the edit and rollback.
 
 Earlier separate probes confirmed Josh-only receipt and staff-style email
 arrival and a private-request GIF/photo plus harmless one-second 15.67 KB
-dummy WAV at a different test order folder. These do not prove the new order's
-email or audio stages. The cloud browser could not pass the preview Basic
+dummy WAV at a different test order folder. JOB362's separate inbox arrival
+was confirmed by Josh; these earlier probes do not prove its audio file location.
+The cloud browser could not pass the preview Basic
 gate, so hosted UX observation remains a human test. The controlled JOSH TEST
-window is now closed: Make 8715068 was deactivated, Railway delivery mode was
-set to `disabled`, its redeployment succeeded, and hosted `/health` returned
-`deliveryMode=disabled`, `configured=false`. No live form or production-delivery
+window is now closed: Make 8715068 is inactive, Railway delivery mode was set
+to `disabled`, its redeployment succeeded, and hosted health is unconfigured.
+No live form or production-delivery
 change occurred.
 
 The isolated Airtable base `Crosstalk Customs — JOSH TEST`
@@ -134,13 +165,13 @@ access. The isolated form URL does not expose the Airtable table.
 
 | Stage | Intended customer/staff outcome | Evidence and current gap |
 | --- | --- | --- |
-| Open and configure | Customer chooses product, format, packaging, audio and other options; sees a comprehensible price. | Josh completed a hosted 7-inch test order with $140 estimate. Local desktop/mobile browser tests cover the guarded path; first-time tester acceptance and hosted mobile remain open. |
-| Design and upload | Customer uses front/back and label surfaces, adds source images, completes the designer, and sees an attached artwork reference on order review. | The hosted submission bound and produced front/back PSDs and references. Local tests cover upload, attachment, failed submission retry, refresh/session isolation and mobile width. Independent human review of the hosted designer remains open. |
-| Submit | Test submission reaches only the isolated endpoint and protected Make intake; customer sees an accurate order state. | JOB361 is a form-created isolated Airtable order. `/v1/test-orders` returned 202, protected bind 202 and outcome callback 200. Make ran with WARNING; no clean end-to-end result can be claimed until the warning and later stages are reconciled. |
-| Confirmation email | Josh receives a clearly labelled test receipt acknowledgement. | JOB361's Airtable customer and staff email states are both `Sent`, but arrival of these two new messages has not yet been confirmed. Earlier separate Josh-only probes arrived; ambiguous-send recovery remains untested. |
-| Bind, render and deliver | Trusted processing binds the reference to the actual order's Uploads folder, renders the PSDs/ZIP and verifies the Dropbox upload. | Dropbox owner view confirms a 2.06 MB ZIP in JOB361's fixed isolated Uploads folder. Preview lists front/back PSDs and PNGs, manifest, README, Fonts, Recovery. The manifest lists 3000-pixel surfaces. A guarded exporter status query confirmed verified delivery and the isolated Airtable status is now `Delivered`; archive CRC, Photoshop round-trip and print review remain open. |
-| Audio upload | Customer follows a private request and uploads audio to the isolated order folder. | JOB361 has a private request and matching fixed destination; the owner view shows zero customer uploads. An earlier separate probe transferred a GIF/photo and harmless 15.67 KB dummy WAV. Audio policy and integrated audio journey remain open. |
-| Staff handling | Staff see an order, audio/assets, delivery or failure status and an actionable recovery path. | JOB361 appears in the published JOSH TEST Staff Review with mapped order details and `Delivered` after a guarded reconciliation run. An authenticated read-only recovery summary exists; automatic scheduling, failure alert/recovery ownership and real staff routing remain open. |
+| Open and configure | Customer chooses product, format, packaging, audio and other options; sees a comprehensible price. | Josh completed hosted 7-inch and 12-inch test orders; JOB362's red Custom Finish Pack and $180 estimate match the test ledger. Local desktop/mobile browser tests cover the guarded path; first-time tester acceptance and hosted mobile remain open. |
+| Design and upload | Customer uses front/back and label surfaces, adds source images, completes the designer, and sees an attached artwork reference on order review. | JOB362's hosted draft, asset and commit calls succeeded, then the protected bind returned 202. JOB361's owner-view ZIP preview showed front/back PSDs and references; JOB362's remote ZIP contents have not been inspected. Local tests cover upload, retry, refresh/session isolation and mobile width. |
+| Submit | Test submission reaches only the isolated endpoint and protected Make intake; customer sees an accurate order state. | JOB362's `/v1/test-orders` returned 202, the final outcome callback returned 200, and the revised protected Make execution finished SUCCESS without warning. Airtable created one matching JOB362 row. The queue response alone is not delivery evidence; guarded terminal reconciliation confirmed delivery separately. |
+| Confirmation email | Josh receives a clearly labelled test receipt acknowledgement. | JOB362's Airtable customer and staff email states are both `Sent`, and Josh confirmed both the new receipt and separate staff notice reached the fixed Gmail inbox. Ambiguous-send recovery remains untested. |
+| Bind, render and deliver | Trusted processing binds the reference to the actual order's Uploads folder, renders the PSDs/ZIP and verifies the Dropbox upload. | JOB362's protected bind returned 202 and the guarded exporter query matched order/record/artwork/fingerprint with a verified terminal receipt; Airtable and staff page now read `Delivered`. JOB361's 2.06 MB ZIP was previewed in its fixed isolated folder. JOB362's remote archive CRC, contents, Photoshop round-trip and print review remain open. |
+| Audio upload | Customer follows a private request and uploads audio to the isolated order folder. | Josh reports uploading a dummy WAV for JOB362. Airtable stores the request link, but its aggregate field is empty and broad Dropbox folder inspection was blocked by automatic review. The WAV's presence in JOB362's isolated Uploads folder and audio policy remain unverified. |
+| Staff handling | Staff see an order, audio/assets, delivery or failure status and an actionable recovery path. | JOB362 appears in the published JOSH TEST Staff Review with mapped order details and `Delivered` after a guarded one-time reconciliation. An authenticated read-only recovery summary exists; automatic scheduling, failure alert/recovery ownership and real staff routing remain open. |
 
 Test identifiers retained for correlation: order
 `0f7ba405-0239-47fa-b17d-688458e2139a`, Make execution
@@ -195,14 +226,14 @@ playlist service. Testers can enter a manual synthetic tracklist. This change
 does not alter the current live form. A further preview-only copy pass removes
 promises of a real order or audio upload link, and the inert fallback route
 returns 410 if the test handoff script is unavailable. The latest version is
-deployed to JOSH TEST; the hosted authenticated smoke test is pending. Playlist
+deployed to JOSH TEST; JOB362's hosted authenticated form submission passed. Playlist
 import still needs its own prelaunch regression check in an
 appropriately isolated environment. The isolated intake mapping also identified
 Packaging, Vinyl Colour, Side A Length and Side B Length as absent from the
 current Airtable intake map. Four matching fields now exist in the JOSH TEST
 base, and the proposed create-record mapping validates with no Make configuration
-errors or warnings. JOB361 subsequently verified persistence; its execution
-warning is a separate unresolved issue.
+errors or warnings. JOB361 subsequently verified persistence; its historic
+execution warning was absent from JOB362's revised-route execution.
 
 The deployed review code also fixes a missing `Origin` on a same-origin mobile
 draft request, prevents playlist error markup from executing, gates the private
@@ -230,15 +261,23 @@ with `spawn ETXTBSY`: concurrent tests extracted Chromium into the same
 `/tmp/chromium`. The serialized runner and updated UI fixture passed the full
 GitHub review gate on final code commit `ecfa1547dac5e68ac71c898b663a6841ea7fba0f`
 ([run 44850487239](https://github.com/crosstalkrecords/crosstalk-customs-calculator/actions/runs/44850487239)).
-The latest deployed SHA `43be85b` still requires a hosted authenticated form smoke test.
+That earlier deployed SHA `43be85b` still required a hosted authenticated form smoke test.
 The test-intake allowlist, fictional shipping, changed-details replay and
 server-only Make key guard are deployed to JOSH TEST. The staff visibility
 and expired-promotion patch passed local tests and deployed; staff recovery
 summary authorization now passes hosted checks. No pull-request
 GitHub Actions run was returned for `2bcd592`; the current `43be85b` review
 gate passed build, service/UI/acceptance and dependency audit. A
-second synthetic acceptance run passed for two local archives, but remote ZIP
-contents and hosted authenticated interaction remain unverified.
+second synthetic acceptance run passed for two local archives; remote ZIP
+contents remained unverified. On 23 November, the clean review branch passed
+28/28 service tests, a separate desktop/mobile browser gate including upload
+and submit retries and a no-artwork payload, and two local acceptance exports.
+Both generated ZIPs passed CRC and their isolated delivered copies matched
+byte for byte; `npm audit --omit=dev --audit-level=high` found zero
+vulnerabilities. The preview build left the branch clean. Unauthenticated
+hosted preview/designer and encoded preview returned 401. JOB362 then supplied
+the hosted authenticated form smoke and clean revised Make intake; remote
+archive inspection and integrated adverse-path tests remain open.
 
 ## Prioritized risks and release gates
 
@@ -273,7 +312,8 @@ email branches, optional bind and outcome callback. The route subsequently
 executed JOB361 with WARNING; no invoice, payment or public share
 module was added. The approved JOSH TEST revision then removed its six
 Webhook Response modules, leaving 94 modules without changing the protected
-hook or processing routes; it remains inactive and unexecuted in this form.
+hook or processing routes. It ran JOB362 successfully in this form and is
+inactive again.
 A separate inactive on-demand synthetic runner
 `8715455` retains the earlier guarded route with a fixed `TEST JOSH 21.11` payload
 and no webhook. An initial UI step was blocked by automatic approval review.
@@ -411,61 +451,61 @@ partial-failure and replay behavior under adverse latency remain untested.
 
 | Priority / risk | Likelihood / impact | Evidence | Concrete resolution and retest status |
 | --- | --- | --- | --- |
-| 1. Production path is incomplete | Certain / high | JOB361 ran through protected Make, created one test Airtable row and a ZIP at its fixed Dropbox destination. Make ended WARNING; new email arrival and audio upload have not been verified; no-artwork and staff recovery remain open. The live form and Customer Intake are unchanged. | Explain the warning, verify both JOB361 emails and a supported audio upload to its request, complete no-artwork/mobile/recovery and remote PSD review. **Partial isolated journey; production blocked.** |
-| 1a. Delivery status can become stale | Medium / high | JOB361 stayed `Queued` after its ZIP arrived because intake ends before the worker. Guarded exporter status and scenario 8719305 matched the four identities and updated only JOB361 to `Delivered`; the first diagnostic run exposed and corrected `body`/`data` mapping. | Customer/staff API and refresh fix deployed (`f7e596f`, 9 focused tests); guarded status endpoint deployed (`be0e4d5`, 5 tests); one-record Make reconciliation passed and Airtable was independently read as `Delivered`. Add safe scheduling, alert and recovery for failed/mismatched/stale jobs, then test final failure and repetition. **Resolved for JOB361; operational automation open.** |
-| 1b. Make response warning and claim ambiguity | Medium / high | Make UI history identified six Webhook Response modules with the same immediate-processing warning; scenario 8715068 is sequential. The main side effects occurred, but JOB361's final callback can race the early structured acknowledgement, so that acknowledgement is not independently proven. | JOSH TEST exporter `424e6f7` accepts Make's exact default queue ack without a claim, with 7 focused tests. Josh approved the isolated six-module removal after an initial automatic review rejection. Readback confirms 94 modules, no responders, original sequential claim/callback and protected hook intact; scenario remains inactive. A new Josh-only full order must verify the default queue acknowledgement, clean execution and adverse failure paths. **Edit applied; runtime retest open.** |
+| 1. Production path is incomplete | Certain / high | JOB362 exercised hosted designer upload, full protected intake, one Airtable order, bind, callback and verified exporter delivery; the revised Make run finished SUCCESS. Josh confirmed both test emails arrived. He reports a WAV upload, but its Dropbox location is unverified. Remote ZIP contents, no-artwork full route and failure recovery remain open. The live form and Customer Intake are unchanged. | Verify JOB362's WAV in its exact isolated folder, inspect ZIP/PSD/print, then finish no-artwork/mobile and adverse-path recovery. **Normal isolated intake improved; production blocked.** |
+| 1a. Delivery status can become stale | Medium / high | Both JOB361 and JOB362 initially stayed `Queued` after intake because the worker is asynchronous. Guarded one-record exporter status checks matched each order and updated Airtable to `Delivered`; JOB362's check succeeded in five operations. | Customer/staff API and refresh fix and guarded endpoint passed local tests. Add bounded automatic reconciliation, alerts and recovery for failed/mismatched/stale jobs; test repeat/final failure. **Resolved manually for both test orders; operational automation open.** |
+| 1b. Make response warning and claim ambiguity | Medium / high | JOB361's earlier sequential route had six Webhook Response warnings. In the revised 94-module route, JOB362's protected execution completed SUCCESS in 20.244 s, with no warning, one Airtable row, bind and callback. | Exporter accepts exact Make default 200 `Accepted` without treating it as an Airtable claim; seven focused tests passed. Josh approved removal of the six responders. Normal full-route runtime now passes; force timeout, duplicate and post-claim failure to validate ambiguity handling. **Normal-route warning resolved in JOSH TEST; adverse paths open.** |
 | 2. Duplicate intake may create a second real order | Medium / high | The current live Make intake creates Airtable records without a prior dedup. Separate test claim probe reused one row with the same ID across two runs. JOB361's normal full intake ran once; replay and timeout routes have not run. | Guard on Submission ID and Request Fingerprint, verify state and reconcile side effects. Force ambiguous timeout after claim and duplicate webhook; confirm one row, one request, one email pair. **Claim reuse resolved in probe; full-route recovery open; live untouched.** |
-| 2m. Intake timeout and ambiguous dispatch | Medium / high | Static claim, folder, request and separate email probes take meaningful time. A timeout after side effects may be ambiguous. The deployed JOSH TEST code durably queues before dispatch and now accepts only exact Make 200 `Accepted` as an unclaimed queue acknowledgement; only the authenticated callback pins the Airtable ID. Uncertain outcomes become `unknown` without blind retry. | Time the revised full route and force timeout/crash/duplicate after claim; reconcile the Airtable row and side effects before retry. **Code and local tests pass; revised integrated runtime proof open.** |
-| 2e. Ambiguous email delivery on retry | Medium / medium | A provider send can succeed before Make saves a sent flag or responds. The Customs Microsoft sender connection grants `Mail.Send` but not `Mail.Read`; the connected Outlook account is a different Releases mailbox. Both earlier Josh-only probes arrived. JOB361's separate email states say `Sent`, but arrival has not been confirmed. | Stop automatic retries at ambiguous sends; reconcile provider and inbox evidence before deliberate recovery. Confirm JOB361's receipt and staff notice, then force failures around each send and verify real staff routing separately. **Open.** |
+| 2m. Intake timeout and ambiguous dispatch | Medium / high | JOB362's normal revised route took 20.244 s. A timeout after side effects may still be ambiguous. JOSH TEST durably queues before dispatch, accepts only exact Make 200 `Accepted` as an unclaimed queue acknowledgement and pins Airtable ID only on authenticated callback. Uncertain outcomes become `unknown` without blind retry. | Force timeout/crash/duplicate after claim; reconcile the Airtable row and side effects before retry. **Normal runtime and local tests pass; adverse-path integration open.** |
+| 2e. Ambiguous email delivery on retry | Medium / medium | A provider send can succeed before Make saves a sent flag or responds. The Customs Microsoft sender grants `Mail.Send` but not `Mail.Read`; the connected Outlook account is a different Releases mailbox. JOB362's separate email states say `Sent`, and Josh confirmed both messages arrived. | Stop automatic retries at ambiguous sends; reconcile provider and inbox evidence before deliberate recovery. Force failures around sends and verify real staff routing separately. **Normal pair passed; retry ambiguity open.** |
 | 2a. Copied invoice action in the test base | Low for form-only tester, high impact if clicked | A seeded test record computed a `Send Invoice` button pointing at an external invoice webhook. | Button was **not clicked**; field renamed with a warning and omitted from published staff interface. Remove the column in Airtable's base editor before broader direct table access. **Contained for form/staff-interface testing; deletion open.** |
-| 2b. Customer audio link overwritten in current intake | Medium / high | Live Make module 30 writes the file-request URL to `Internal Folder Link`; module 5 overwrites it with a share URL and module 29 emails that share URL. | In the isolated copy, JOB361's file-request URL is in `Audio Upload`, `Internal Folder Link` is empty and staff have a private path. Verify an audio upload to JOB361's request before proposing the live fix. **Isolated mapping passed; upload and live change open.** |
+| 2b. Customer audio link overwritten in current intake | Medium / high | Live Make module 30 writes the file-request URL to `Internal Folder Link`; module 5 overwrites it with a share URL and module 29 emails that share URL. | The isolated copy stores JOB362's file-request URL in `Audio Upload`, with a private path for staff. Josh reports using it for a WAV; independently verify the file in JOB362's Uploads folder. **Isolated mapping passed; file verification and live change open.** |
 | 2c. Secret-bearing Make blueprint and broad Dropbox connection | Medium / high | Live module 38 contains OAuth material; broad 13265327 remains unused. App-folder 13265654 read the exporter ZIP, created fixed folders and reopened the existing request through OAuth-backed API calls. No raw OAuth values or old broad connection are in inactive 8715068. The private request delivered a GIF/photo and small dummy WAV to the fixed folder. | Keep OAuth material out of the blueprint; test error recovery and enforce audio policy before production. **Scoped read/write/open, generic and WAV transfer passed; handling policy open.** |
 | 2i. Staff folder may become public | Medium / high | Dropbox `create_shared_link_with_settings` defaults to public visibility if no settings are supplied; the proposed module 16 did not set an explicit audience. | Do not create a default share link in JOSH TEST. Only store a verified team-only URL for staff; if that is unavailable, leave the Airtable URL blank and keep the private path in the test Airtable ledger for authorized staff. Test access as an unauthorised viewer before considering production. **Default link removed from test plan; sharing retest open.** |
 | 2h. Test preview reaches shared playlist lookup | Medium / medium | The copied calculator includes four calls to the separate production playlist importer. | A preview-only rewrite disables those network calls and presents manual synthetic track entry. Local focused tests pass and the change is deployed; hosted authenticated check remains. Test playlist import separately before go-live. **Code deployed; hosted retest open.** |
-| 2f. Different Dropbox app folders cannot share an order path | Low after actual order / high | JOB361's actual exporter ZIP appeared inside the fixed `Uploads` folder created by the protected intake. The older static request separately accepted a GIF/photo and dummy WAV. | Verify a new audio upload lands beside JOB361's ZIP and that the scoped connection can read both. **Same actual order ZIP path passed; audio coexistence open.** |
-| 2j. Private request inspection and full-run gate | Medium / medium | JOB361's request and fixed destination were created; the earlier static request accepted a GIF/photo and one-second dummy WAV. No new-order audio file is verified. | Exercise duplicate and expired/closed-request behavior; verify a supported harmless audio file through JOB361's request. **New-order creation passed; upload open.** |
+| 2f. Different Dropbox app folders cannot share an order path | Low after actual order / high | JOB361's exporter ZIP appeared inside its fixed `Uploads` folder. JOB362's guarded exporter check confirms a verified delivery receipt to the claimed isolated path; Josh reports a WAV upload to the private request, but its actual location is not independently verified. | Verify JOB362's audio file beside its archive using access limited to that isolated folder. **Exporter destination passed; audio coexistence open.** |
+| 2j. Private request inspection and full-run gate | Medium / medium | JOB362's private request and fixed destination were created; Josh reports a dummy WAV upload, but Airtable's aggregate field is empty and broad Dropbox Apps-folder inspection was blocked by automatic approval review. | Use an explicitly scoped, approved read-only proof of JOB362's Uploads folder or owner-supplied screenshot; exercise duplicate and expired/closed-request behavior. **Request creation passed; independent upload proof open.** |
 | 2n. Audio upload validation and malware handling | Medium / high | The private request accepted both a GIF/photo and small WAV in the order's Uploads folder. It bypasses the artwork image-validation endpoint; no enforced audio format/size policy, quarantine or malicious-file scan is established. | Define allowed audio formats and maximum bytes, validate the uploaded file and match it to the claimed order before staff retrieval; quarantine or reject unexpected files and agree a malware scanning workflow. Test wrong type, oversized file and duplicate upload in JOSH TEST. **Small WAV transfer passed; policy gate open.** |
 | 2g. Artist field semantics need confirmation | Medium / low | The current intake maps `Artist Order = Yes` to a boolean-like value in an Airtable single-line `Artist` field, rather than an artist name. | In the isolated record, compare the intended meaning of that field with staff expectations and map it explicitly; preserve the source behavior only if it is deliberately a yes/no flag. **Open; live unchanged.** |
 | 2d. Form values can disagree with the quoted price | Low after isolated fix / medium | The JOSH TEST server recalculates the displayed estimate from allowed format, quantity, colour, packaging, rush and shipping; tampered amounts fail locally. Production remains unchanged. | Exercise all pricing branches and tampered prices in the hosted test, then review live pricing parity before cutover. **Isolated code deployed; hosted parity open.** |
 | 2k. Artist eligibility and expired promotion | Medium / high if invoiced | The artist unlock string is client-side and a restored test draft could revive the expired Father's Day selection. Browser artist status does not prove eligibility. | The deployed JOSH TEST patch hides/disables the expired offer, blocks restoration and rejects its marker. Keep artist and final quote under staff approval before any invoice; implement trusted eligibility or remove automatic artist pricing in production. **Promotion retested locally and deployed; eligibility open.** |
-| 2l. Browser-held artwork capability | Medium / high | The legacy handoff stores a per-draft bearer-equivalent token in browser storage and sends a full reference through the form. It is not an infrastructure key and is not in the URL, but a script running on that origin could read it. | The isolated JOSH TEST code now uses an HttpOnly signed browser session and server-sealed draft token, with only an opaque job ID in the browser; local tests and JOSH TEST deploy pass, hosted authenticated retest pending. A separate production redesign is required before attaching the designer to the live form. **Test code deployed; production open.** |
-| 3. Failed or uncertain jobs could be missed | Medium / high | Four older artwork jobs are failed after three attempts. JOB361's terminal delivery now reconciles to Airtable on demand, while an ambiguous Make timeout leaves submissions `unknown` and rejects a blind repeat. The authenticated summary is read-only; no alert, recovery ownership or backup/restore schedule is established. | Assign staff ownership, schedule idempotent reconciliation, alert on failed/unknown/stale processing, document manual recovery before retry, back up SQLite/artwork volume and rehearse a restore plus no-double-delivery check. **One delivered outcome passed; failure/alert/restore gate open.** |
-| 4. Printed files may differ from approved templates | Medium / high | Dropbox ZIP preview shows front/back PSDs and references with a 3000-pixel conversion manifest. Archive CRC, Photoshop edit/save/reopen and physical print approval have not been checked. | Download the delivered test ZIP, verify CRC and source assets, inspect PSD layers/masks/fonts, edit/save/reopen, print covers and labels, and obtain engineer approval. **Preview passed; production acceptance open.** |
+| 2l. Browser-held artwork capability | Medium / high | The legacy handoff stores a per-draft bearer-equivalent token in browser storage and sends a full reference through the form. It is not an infrastructure key and is not in the URL, but a script running on that origin could read it. | JOSH TEST uses an HttpOnly signed browser session and server-sealed draft token, with only an opaque job ID in the browser; local tests and JOB362's hosted upload/bind passed. A separate production redesign is required before attaching the designer to the live form. **Test path passed; production open.** |
+| 3. Failed or uncertain jobs could be missed | Medium / high | Four older artwork jobs are failed after three attempts. JOB361 and JOB362 terminal deliveries reconciled only by proof-pinned, on-demand runs; an ambiguous Make timeout leaves submissions `unknown` and rejects a blind repeat. The authenticated summary is read-only; no alert, recovery ownership or backup/restore schedule exists. | Assign staff ownership, schedule idempotent reconciliation, alert on failed/unknown/stale processing, document manual recovery before retry, back up SQLite/artwork volume and rehearse a restore plus no-double-delivery check. **Two normal deliveries passed; failure/alert/restore gate open.** |
+| 4. Printed files may differ from approved templates | Medium / high | JOB361's Dropbox ZIP preview showed front/back PSDs and references with a 3000-pixel conversion manifest. Local synthetic ZIPs passed CRC and byte-for-byte delivery checks; JOB362's remote ZIP contents and Photoshop edit/save/reopen and physical print approval have not been checked. | Download the delivered JOB362 test ZIP through authorized isolated access, verify CRC and source assets, inspect PSD layers/masks/fonts, edit/save/reopen, print covers and labels, and obtain engineer approval. **Local integrity passed; remote production acceptance open.** |
 | 5. Hosted phone experience unknown | Medium / medium | The mobile fix is deployed. Josh submitted the hosted form in his browser, but a deliberate first-time desktop/phone UX pass with refresh and error states has not been witnessed. | Have a human tester use the completed interface on desktop and phone with refresh/interruption/large image; test the audio link and both emails as part of one order. **Hosted submission passed; UX acceptance open.** |
 | 6. Production infrastructure and permission boundary absent | Certain / high | Railway project has only JOSH TEST. The replacement Make Dropbox grant is app-folder scoped; separate production credentials, volume, backup, alert and ingress limiter have not been verified. | Provision distinct production service/volume and credentials, restrict access, implement ingress rate limiting, backup/restore and monitored failure queue. Verify with synthetic data before enabling customer delivery. **Open.** |
 | 7. Repeat delivery and changed/missing references | Low to medium / high | Same submission cached; duplicate binding returned `already_bound`; server rejects conflicting binding and arbitrary folder; worker retries existing archive. Hosted interrupted and adversarial paths are less thoroughly exercised. | Force upload interruption, restart mid-job, duplicate webhook, expired/invalid/foreign references and mismatched order folder in the isolated copy; inspect that one verified archive results and staff can recover. **Partial; further retest required.** |
 | 8. Privacy and retention | Medium / medium | Test route fixes name/recipient/root and omits live downstream systems; service has source, layer and project limits, noindex and Basic gate. Failed jobs are now retained to avoid silent loss, which also extends private data retention. | Agree deletion/acknowledgement and restricted backup policy, verify access logs/secret handling and upload validation, measure actual Railway volume headroom during PSD/ZIP rendering and restore. **Open policy/operational gate.** |
-| 9. Final CI and hosted gate | Low / medium | Railway's JOSH TEST deployment and earlier GitHub review gate passed; protected hook ran one hosted form-created order and produced a ZIP. Status reconciliation passed for JOB361, but the intake Make WARNING remains; no-artwork regression and mobile UX are not yet evidenced. Cloud browser Basic authentication failed, so Josh used his own browser. | Resolve warning, finish independent new-email/audio and phone checks, failure/replay recovery, and rerun focused CI and deployment health before tester release. **Partial hosted gate; go-live blocked.** |
+| 9. Final CI and hosted gate | Low / medium | The 23 November unattended gate passed 28 service tests, desktop/mobile browser script, two local ZIP integrity checks and dependency audit. JOB362's revised protected intake completed cleanly, guarded delivery reconciled and both messages arrived; remote ZIP/WAV contents, full-route no-artwork, mobile human UX and adverse recovery are not yet evidenced. | Finish independent audio/remote ZIP and phone checks, full-route no-artwork and failure/replay recovery; rerun focused CI and deployment health before tester release. **Normal hosted path passed; go-live blocked.** |
 
 ## Live and test configuration comparison
 
 | Boundary | JOSH TEST | Live/current or proposed production |
 | --- | --- | --- |
 | Form | Basic gated isolated preview and designer | Current GitHub Pages form remains in use without this handoff |
-| Make | Artwork-only 8084300 and full protected intake 8715068 are inactive. The latter ran JOB361 under the earlier 100-module configuration in 26 operations, 19.329 s, WARNING. The approved 94-module no-responder revision is saved but unexecuted. Separate inactive on-demand reconciliation 8719305 queried the exporter and updated only JOB361 to `Delivered` (5 operations, success). Old broad Dropbox 13265327 unused. | Customer Intake 4762364 remains active; no integration change applied. |
-| Orders and billing | JOB361 was created by the hosted form in the isolated Airtable base and appears in the published staff interface. Earlier fixtures and probe rows also exist. No invoice or payment was created. The copied invoice button is omitted from the staff interface but remains in the base editor. | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is separate. |
-| Dropbox | JOB361's fixed JOSH TEST Uploads folder contains a 2.06 MB exported ZIP with front/back PSDs and references. The separate earlier probe folder contains a GIF/photo and dummy WAV. The new order's audio request has no independently verified upload. | Separate production root/authorization and tested environment required. |
-| Exporter | JOSH TEST Railway service/volume, one worker; actual protected bind 202, outcome callback 200, ZIP delivered to fixed folder. Guarded status endpoint authenticated by the existing test-only Make connection confirmed verified delivery; Airtable now reads `Delivered`. Delivery mode remains disabled outside test runs. | No production exporter in this project yet. |
-| Secrets | Test hook key exists server-side in Make and is not in blueprint/browser URL; Josh entered the protected destination privately into Railway JOSH TEST. The controlled window was closed after JOB361 ZIP verification. | New separate production credentials and staff recovery secret to provision securely. |
+| Make | Artwork-only 8084300 and full protected intake 8715068 are inactive. JOB361 used the old 100-module route and ended WARNING. JOB362 used the approved 94-module no-responder revision: SUCCESS, 25 operations, 20.244 s. Inactive on-demand reconciliation 8719305 updated only the pinned JOB362 row to `Delivered` in five operations, then reset to on-demand; the same guarded mechanism previously reconciled JOB361. Old broad Dropbox 13265327 unused. | Customer Intake 4762364 remains active; no integration change applied. |
+| Orders and billing | JOB361 and JOB362 came through the hosted form into the isolated Airtable base and appear in the published staff page. JOB362 is one 12-inch red 33 RPM Custom Finish Pack, $180 pickup. No invoice or payment was created. The copied invoice button is omitted from the staff page but remains in the base editor. | Existing intake creates records/folders and emails; it has no invoice module. Invoicing is separate. |
+| Dropbox | JOB361's fixed JOSH TEST Uploads folder contains a 2.06 MB exported ZIP with previewed PSDs and references. JOB362's exporter returned a verified delivery receipt and the status was guardedly reconciled; its archive contents were not directly inspected. Josh reports a dummy WAV upload for JOB362, but its isolated folder presence has not been independently checked. The separate earlier probe folder has a GIF/photo and dummy WAV. | Separate production root/authorization and tested environment required. |
+| Exporter | JOSH TEST Railway service/volume, one worker; JOB362 protected bind 202, outcome callback 200 and verified terminal receipt through the guarded status endpoint. Airtable now reads `Delivered`. The disabled redeployment succeeded and hosted `/health` returned `deliveryMode=disabled`, `configured=false`. | No production exporter in this project yet. |
+| Secrets | Test hook key exists server-side in Make and is not in blueprint/browser URL; Josh entered the protected destination privately into Railway JOSH TEST. The controlled window was closed after JOB362's verified delivery state. | New separate production credentials and staff recovery secret to provision securely. |
 
 ## Evidence required before a live approval request
 
 | Gate | Evidence to present | Current state |
 | --- | --- | --- |
-| First-time form journey | Hosted desktop and phone runs with artwork and without artwork; product/price/options, upload, refresh, validation and completion screens match the submitted test order. | Josh's hosted form submission created JOB361. Local browser tests passed; deliberate phone/no-artwork and first-time tester acceptance open. |
-| Isolated intake and recovery | One Airtable row per `TEST JOSH 21.11` Submission ID with mapped details, fingerprint, Make execution and stage history; repeat click/webhook and forced post-claim timeout leave one row and one set of side effects. | Actual protected intake and bind/callback produced JOB361 and a ZIP; one-record status reconciliation set Airtable to `Delivered`. The approved 94-module no-responder revision is saved inactive and awaits a new full-order retest. Full-route duplicate, forced timeout, failed-delivery status and recovery remain untested. |
-| Audio, artwork and email | File request records a supported audio upload in the fixed test app folder; actual exporter bind uses the claimed record and same Uploads path; remote ZIP content/Photoshop/print review; Josh's customer and staff emails observed in inbox/Sent. | JOB361's ZIP is visible with expected files and manifest. Its two email states say `Sent` but inbox arrival and new audio upload are not confirmed. Earlier separate probes arrived and transferred dummy WAV; CRC/Photoshop/print review and actual staff routing remain open. |
-| Security and operations | Confirm test-only OAuth/write boundary, no default public staff link, no invoice/payment/live recipient, protected hook and server-only key, audio format/size/malware policy, failure alert/retry, volume headroom, retention and backup/restore. | Test-only connection read/fixed writes and small WAV transfer proven; old broad connection unused. Protected hook transfer was resolved through Josh's private Railway entry. One-record terminal reconciliation passed; automatic schedule, failed-job alerting, audio policy and restore drill remain open. |
+| First-time form journey | Hosted desktop and phone runs with artwork and without artwork; product/price/options, upload, refresh, validation and completion screens match the submitted test order. | Josh's hosted form submissions created JOB361 and JOB362. Local desktop/mobile browser tests passed; deliberate hosted phone/no-artwork and first-time tester acceptance open. |
+| Isolated intake and recovery | One Airtable row per `TEST JOSH 21.11` Submission ID with mapped details, fingerprint, Make execution and stage history; repeat click/webhook and forced post-claim timeout leave one row and one set of side effects. | Revised protected intake and bind/callback produced exactly one JOB362 record and a clean execution. Guarded one-record status reconciliation set Airtable to `Delivered`. Full-route duplicate, forced timeout, failed-delivery status and recovery remain untested. |
+| Audio, artwork and email | File request records a supported audio upload in the fixed test app folder; actual exporter bind uses the claimed record and same Uploads path; remote ZIP content/Photoshop/print review; Josh's customer and staff emails observed in inbox/Sent. | JOB361's ZIP preview has expected files; JOB362 has a guarded verified delivery receipt but its remote contents are not inspected. Josh confirmed today's receipt and staff notice arrived and reports a dummy WAV upload; independent folder proof remains pending. Earlier separate probes transferred a dummy WAV; Photoshop/print review and actual staff routing remain open. |
+| Security and operations | Confirm test-only OAuth/write boundary, no default public staff link, no invoice/payment/live recipient, protected hook and server-only key, audio format/size/malware policy, failure alert/retry, volume headroom, retention and backup/restore. | Test-only connection read/fixed writes and a separate earlier small WAV transfer were proven; old broad connection unused. Protected hook transfer was resolved through Josh's private Railway entry. Two one-record terminal reconciliations passed; automatic schedule, failed-job alerting, audio policy and restore drill remain open. |
 | Release and reversal | Exact live form diff, Make blueprint and environment variable **names** (not values), deployment order, monitored smoke, saved live commit/blueprint, disabling switches and a rehearsed rollback/no-artwork regression result. | Plan below is preliminary; no live change or production activation authorized. |
 
 ## Proposed release sequence — approval boundary
 
-1. Finish JOSH TEST checks: JOB361's hosted intake and fixed-folder ZIP are
-   observed, and Airtable status reconciliation passed for JOB361, but Make
-   intake WARNING needs a clean retest of the approved response redesign.
-   Confirm arrival of
-   JOB361's two emails and upload a harmless
-   supported audio file through its new private request. Establish audio
+1. Finish JOSH TEST checks: JOB361's earlier ZIP was previewed, JOB362's
+   revised protected Make intake finished SUCCESS without warning, and guarded
+   status reconciliation marked both test orders `Delivered`. Josh confirmed
+   both test emails arrived. Independently verify his reported dummy WAV
+   in JOB362's isolated Uploads folder using access limited to that order.
+   Download and inspect JOB362's remote archive. Establish audio
    type/size limits and staff validation/quarantine. Repeat hosted mobile and
    no-artwork journeys in a controlled window, verify ZIP CRC, Photoshop and
    print acceptance, and force a failed delivery to test staff visibility,
@@ -486,13 +526,12 @@ partial-failure and replay behavior under adverse latency remain untested.
    archive in isolation first.
 3. Remove the copied test-base invoice button in Airtable's editor before
    direct tester table access. Keep broad Dropbox connection 13265327 unused.
-   Review the revised **94-module** intake 8715068 and resolve the original
-   WARNING in a controlled retest. Verify
-   preflight/fingerprint, exact default 200 `Accepted` queue acknowledgement
-   without an Airtable claim,
-   final callback and manual-stop error handling; establish an **open** request
-   actually accepts a harmless audio upload into JOB361's
-   same isolated Uploads folder. Persist the verified customer URL in Audio
+   Review the revised **94-module** intake 8715068 and retain JOB362's clean
+   normal-route evidence. Verify preflight/fingerprint, exact default 200
+   `Accepted` queue acknowledgement without an Airtable claim, final callback
+   and manual-stop error handling under forced duplicate/timeout conditions;
+   verify the reported JOB362 WAV beside its delivered archive. Persist the
+   verified customer URL in Audio
    Upload, keep Internal Folder Link empty unless a team-only URL is proven,
    and use the private path for authorized staff. Check the saved optional
    artwork bind uses the claimed Airtable ID and Uploads path, and the fixed

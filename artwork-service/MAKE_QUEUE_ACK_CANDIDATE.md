@@ -1,6 +1,6 @@
 # JOSH TEST intake no-response-module candidate
 
-**Status: applied to inactive JOSH TEST; runtime retest pending.** Automatic
+**Status: applied and normal runtime retest passed in JOSH TEST; now inactive.** Automatic
 approval review initially rejected the blueprint replacement because removing
 response/error handlers can change failure behavior. Josh then explicitly
 approved this exact isolated edit. The live Customs form and live Customer
@@ -30,11 +30,19 @@ HTTP 200 body `Accepted` as queued, with no Airtable claim; an authenticated
 final callback must pin the record. Focused tests passed 7/7. This code is
 deployed only in Railway JOSH TEST with delivery mode disabled.
 
-The structural readback is complete. The next step is one new Josh-only hosted
-form order in a controlled window. Confirm a clean Make execution, exactly one
-isolated Airtable row and email pair, a verified ZIP, final status reconciliation,
-and no live, invoice or payment effect. Test rejected/duplicate payloads and
-stalled queue recovery. Keep the scenario inactive outside the test window.
+The structural readback and normal runtime retest are complete. Josh submitted
+one new hosted order, JOB362, on 25 November. The revised Make execution
+`333c664e31364e4080bb6da501f1ad90` finished SUCCESS in 20.244 s and
+25 operations without a Webhook Response warning; Airtable has exactly one
+new matching test row, with customer/staff email states `Sent`. Josh confirmed
+both messages arrived. Railway recorded the protected bind 202 and final
+callback 200. A separate guarded one-record reconciliation confirmed a matching
+verified exporter receipt and set JOB362 to `Delivered`. Its new remote ZIP
+contents/CRC and reported dummy WAV in Dropbox remain independently unverified.
+Scenario 8715068 is inactive and Railway delivery is disabled. Rejected/duplicate
+payloads, stalled queue and post-claim failure recovery still need integrated
+tests before go-live. A successful Make run or queue 200 alone is not delivery
+proof.
 
 If validation or the controlled run fails, deactivate the scenario, disable
 Railway JOSH TEST delivery, restore the original full blueprint from its saved
