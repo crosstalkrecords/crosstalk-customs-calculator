@@ -71,6 +71,7 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
    console.error('TEST PREVIEW STATE',JSON.stringify({error:await page.locator('#testSubmitError').innerText(),outbound,button:await page.locator('button[type="submit"]').allTextContents()}));throw e;
   }
   assert.match(await page.locator('#success').innerText(),/JOSH TEST submission saved/);
+  assert.equal(await page.locator('#startAnotherTestOrder').isHidden(),true,'queued intake must not offer a fresh order');
   assert.equal(await page.locator('#success h2').evaluate(el=>document.activeElement===el),true);
   assert.match(await page.locator('#success').innerText(),/not yet an order confirmation/);
   await until(()=>sent.length===1);
@@ -82,7 +83,31 @@ test('guarded preview submits only to isolated JOSH TEST route and shows truthfu
   await page.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor({timeout:8000});
   assert.equal(await page.locator('#success h2').evaluate(el=>document.activeElement===el),true,'terminal confirmation is announced');
   assert.match(await page.locator('#testDeliveryStatus').innerText(),/No designer artwork/);
-  assert.equal(sent.length,1);assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
+  const firstId=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
+  assert.equal(await page.locator('#startAnotherTestOrder').isVisible(),true);
+  await page.reload();
+  await page.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor();
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),firstId,'refresh retains the confirmed order');
+  await page.locator('#startAnotherTestOrder').click();
+  await page.locator('#wrap').waitFor({state:'visible'});
+  await page.locator('#success').waitFor({state:'hidden'});
+  const secondId=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
+  assert.match(secondId,/^[0-9a-f-]{36}$/);
+  assert.notEqual(secondId,firstId,'another test gets a new session ID');
+  assert.equal(sent.length,1,'opening a new test must not replay or submit the prior order');
+  await page.locator('#regularStart').click();await page.locator('#sizes [data-size="12"]').click();
+  await page.locator('[data-step="1"] [data-next="2"]').click();
+  await page.getByText('Prefer to type a tracklist manually?').click();await page.locator('#manual').fill('A1 - second synthetic track');
+  await page.locator('[data-step="2"] [data-next="3"]').click();
+  await page.locator('[data-step="3"] [data-next="4"]').click();
+  await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
+  await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
+  await until(()=>sent.length===2);
+  assert.equal(sent[1]['Submission ID'],secondId);
+  assert.equal((await callback(base,config.bindSecret,sent[1],'not_supplied')).status,200);
+  await page.locator('#success h2').filter({hasText:'JOSH TEST order confirmed'}).waitFor();
+  assert.equal(service.store.db.prepare("SELECT count(*) AS n FROM test_submissions WHERE state='complete'").get().n,2);
+  assert.equal(sent.length,2);assert.equal(sent[0].Email,'delousedcomatorium@gmail.com');
   assert.equal(sent[0]['Delivery Method'],'Pickup');
   assert.equal(sent[0]['Street Address'],'');
   assert(outbound.some(request=>request.url===base+'/v1/test-orders'));
@@ -112,6 +137,7 @@ test('uncertain Make intake freezes the test form and supplies the reconciliatio
   await page.locator('.audio[data-audio="have"]').click();await page.locator('[data-step="4"] [data-next="5"]').click();
   await page.locator('#terms').check();await page.locator('button[type="submit"]').click();
   await page.locator('#success h2').filter({hasText:'JOSH TEST needs Crosstalk review'}).waitFor({timeout:8000});
+  assert.equal(await page.locator('#startAnotherTestOrder').isHidden(),true,'uncertain intake must not offer a fresh order');
   assert.match(await page.locator('#success').innerText(),/Test order ID: [0-9a-f-]{36}/);
   assert.match(await page.locator('#success').innerText(),/Do not submit again/);
   assert.equal(await page.locator('button[type="submit"]').isDisabled(),true);
@@ -139,6 +165,7 @@ test('lost browser session preserves the prior order ID and blocks a second subm
   },id);
   await page.reload();
   await page.locator('#success h2').filter({hasText:'JOSH TEST session needs review'}).waitFor();
+  assert.equal(await page.locator('#startAnotherTestOrder').isHidden(),true,'lost session must not offer a fresh order');
   assert.match(await page.locator('#success').innerText(),new RegExp('Test order ID: '+id));
   assert.match(await page.locator('#success').innerText(),/Do not submit again/);
   assert.equal(await page.locator('button[type="submit"]').isDisabled(),true);

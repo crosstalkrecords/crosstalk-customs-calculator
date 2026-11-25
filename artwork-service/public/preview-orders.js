@@ -8,6 +8,9 @@
  submit.closest('.nav').before(error);
  const success=document.getElementById('success'),heading=success.querySelector('h2'),message=success.querySelector('p');
  const status=document.createElement('p');status.id='testDeliveryStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');success.append(status);
+ const another=document.createElement('button');another.type='button';another.id='startAnotherTestOrder';
+ another.className='btn secondary hidden';another.textContent='Start another JOSH TEST order';another.hidden=true;success.append(another);
+ const anotherError=document.createElement('p');anotherError.id='startAnotherError';anotherError.setAttribute('role','alert');success.append(anotherError);
  document.getElementById('uploadWrap')?.remove();
  document.querySelector('.promo')?.classList.add('hidden');
  const promoButton=document.getElementById('promoStart');if(promoButton)promoButton.disabled=true;
@@ -56,11 +59,36 @@
  }
  function session(){return sessionStorage.getItem('crosstalk-artwork-order-session');}
  const attemptedKey='crosstalk-artwork-order-attempted';
+ another.onclick=async()=>{
+  if(success.dataset.intakeState!=='complete'||another.disabled)return;
+  const priorId=session();
+  if(!priorId)return;
+  anotherError.textContent='';
+  another.disabled=true;
+  try{
+   // A previous confirmed order stays visible until both the server still
+   // confirms it and a fresh controlled test submission is available.
+   const [outcome,available]=await Promise.all([
+    fetch('/v1/test-orders/'+priorId,{cache:'no-store'}),
+    fetch('/v1/test-config',{cache:'no-store'})
+   ]);
+   if(!outcome.ok||!available.ok)throw Error('A new JOSH TEST order cannot be started right now.');
+   const result=await outcome.json();
+   if(result.testOrderId!==priorId||result.state!=='complete')throw Error('The earlier test needs Crosstalk review before starting another.');
+   for(const key of [attemptedKey,'crosstalk-test-artwork-job','crosstalk-josh-test-form-draft-v1','crosstalk-josh-test-form-instance-v1'])sessionStorage.removeItem(key);
+   sessionStorage.setItem('crosstalk-artwork-order-session',crypto.randomUUID());
+   location.assign('/calculator-preview.html');
+  }catch(e){
+   anotherError.textContent=(e.message||'Could not start another test.')+' Your earlier test order ID remains above.';
+   another.disabled=false;
+  }
+ };
  function showSessionLost(id){
   // A fresh signed cookie cannot read an older submission. Preserve the ID
   // instead of leaving a form that will fail or invite a second order.
   document.getElementById('wrap').style.display='none';success.style.display='block';
   success.dataset.intakeState='session_lost';heading.tabIndex=-1;
+  another.hidden=true;another.classList.add('hidden');
   heading.textContent='JOSH TEST session needs review';
   message.textContent='This browser can no longer verify the earlier test submission. Give Crosstalk the test order ID below to reconcile it. Do not submit again until Crosstalk confirms the outcome; no payment was taken on this page.';
   let code=success.querySelector('[data-test-order-id]');
@@ -73,6 +101,7 @@
   const firstResult=success.style.display!=='block',previousState=success.dataset.intakeState;
   document.getElementById('wrap').style.display='none';success.style.display='block';
   success.dataset.intakeState=result.state;heading.tabIndex=-1;
+  another.hidden=result.state!=='complete';another.classList.toggle('hidden',result.state!=='complete');
   let code=success.querySelector('[data-test-order-id]');
   if(!code){code=document.createElement('p');code.dataset.testOrderId='1';success.append(code);}
   code.textContent='Test order ID: '+id;
