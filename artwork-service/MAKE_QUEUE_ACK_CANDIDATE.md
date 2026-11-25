@@ -37,8 +37,12 @@ one new hosted order, JOB362, on 25 November. The revised Make execution
 new matching test row, with customer/staff email states `Sent`. Josh confirmed
 both messages arrived. Railway recorded the protected bind 202 and final
 callback 200. A separate guarded one-record reconciliation confirmed a matching
-verified exporter receipt and set JOB362 to `Delivered`. Its new remote ZIP
-contents/CRC and reported dummy WAV in Dropbox remain independently unverified.
+verified exporter receipt and set JOB362 to `Delivered`. Josh's exact-folder
+screenshot shows the 60.59 MB WAV beside the ZIP under the matching Submission
+ID; the ZIP suffix matches the Artwork Job ID. The attached 13,211,225-byte
+ZIP has 22 safe entries, passes CRC, and its four PSDs fully parse with
+manifest-consistent layers/masks. WAV validity, Photoshop round-trip and print
+approval remain open.
 Scenario 8715068 is inactive and Railway delivery is disabled. Rejected/duplicate
 payloads, stalled queue and post-claim failure recovery still need integrated
 tests before go-live. A successful Make run or queue 200 alone is not delivery
