@@ -1,5 +1,30 @@
 # Crosstalk Customs artwork handoff — prelaunch review
 
+## 26 November second designer feedback — isolated JOSH TEST
+
+The uploaded feedback's **New New Notes** were applied on the review branch.
+The upload-or-create sentence is now a heading above the standalone Open
+Packaging Designer button. Desktop Layers sits at the right end of the same
+surface-navigation row as Front cover, Back cover and labels A/B, with its
+250-pixel width and centred text. The mobile top-bar Layers control remains.
+The redundant artboard text box and wheel-zoom hint were removed. The artboard
+guidance and unsafe-text warning use the tester's requested dotted-line copy.
+The sticker picker still offers the Crosstalk logo with an accessible button
+name, but no longer shows “Approved logo from supplied template.” The enlarged
+product-preview modal scales its image to keep both Close and Edit this design
+visible without an inner scrollbar, including at 1280×600 and 360×568.
+
+The revised build passed 30 service tests, two PSD export acceptance orders,
+desktop/mobile form handoff and Standard packaging regression, and focused
+browser layout checks. No production form or delivery changes were made.
+Railway deployment `e2bf73a3-5202-479a-a205-d4cb8edcd5af` is SUCCESS on
+review commit `049b15653d005ed1fffe257d83355a4b95baa1cb`; JOSH TEST
+`/health` reports `deliveryMode=dropbox`, `configured=true`. The protected
+JOSH TEST intake 8715068 and status sweep 8816289 remain active at Josh's
+request until he instructs us to turn them off. This revision still needs
+fresh tester visual feedback and a hosted order before its complete customer
+and staff journey can be called retested.
+
 ## 26 November designer feedback follow-up — isolated JOSH TEST
 
 The review branch removes the extra artwork checkbox. A standalone **Open
