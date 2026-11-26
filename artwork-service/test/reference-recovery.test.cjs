@@ -41,6 +41,7 @@ test('an attached artwork reference survives refresh only for its order session'
   const oldSession=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
   await editor.close();
 
+  await page.evaluate(()=>sessionStorage.removeItem('crosstalk-custom-artwork-choice'));
   await page.reload();
   await page.locator('#regularStart').click();
   await page.locator('#sizes [data-size="12"]').click();
@@ -50,6 +51,7 @@ test('an attached artwork reference survives refresh only for its order session'
   await page.locator('[data-step="2"] [data-next="3"]').click();
   await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
+  assert.equal(await page.locator('#chooseCustomArtwork').isChecked(),true,'restored artwork restores its editor choice');
   assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),oldSession);
 
   await page.locator('#chooseCustomArtwork').uncheck();

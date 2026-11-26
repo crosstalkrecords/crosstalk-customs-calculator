@@ -34,6 +34,8 @@
   const saved=JSON.parse(sessionStorage.getItem(referenceKey));
   if(saved?.session===session&&validReference(saved.reference)){
    input.value=saved.reference;
+   choice.checked=true;
+   try{sessionStorage.setItem(choiceKey,'yes');}catch(_){}
    status.textContent=attachedCopy;
   }else sessionStorage.removeItem(referenceKey);
  }catch(_){sessionStorage.removeItem(referenceKey);}
