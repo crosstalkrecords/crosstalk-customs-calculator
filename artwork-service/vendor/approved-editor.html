@@ -54,6 +54,10 @@
 .text-art{display:flex;align-items:center;width:100%;height:100%;white-space:inherit;line-height:inherit;word-break:inherit;pointer-events:none}
 @media(max-width:900px){.topbar .top-actions #mobileLayersTopBtn{display:block}}
 @media(max-width:520px){.topbar{gap:8px;padding:0 10px}.top-actions{gap:6px}.top-actions #undoBtn,.top-actions #redoBtn,.topbar #saveStatus{display:none}.top-actions .btn{white-space:nowrap}}
+.surface-tabs{justify-content:space-between;gap:12px;overflow:hidden}.surface-tab-list{min-width:0;flex:1;display:flex;justify-content:center;gap:7px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;overscroll-behavior-x:contain}.surface-tab-list::-webkit-scrollbar{display:none}.surface-tabs #layersBtn{flex:0 0 250px;min-height:46px;text-align:center;font-size:14px}
+.preview-dialog-card{display:flex;flex-direction:column;max-height:calc(100dvh - 40px);overflow:hidden}.preview-dialog-head,.preview-dialog-actions{flex:0 0 auto}.large-preview{width:min(100%,560px,calc(100dvh - 245px));max-height:calc(100dvh - 245px);aspect-ratio:1;margin:10px auto;flex:0 0 auto}.large-preview>div{width:100%}.preview-dialog-actions{margin-top:auto}
+@media(max-width:900px){.surface-tab-list{justify-content:flex-start}.surface-tabs #layersBtn{display:none}}
+@media(max-width:520px){.preview-dialog-card{max-height:calc(100dvh - 14px);padding:16px 14px}.large-preview{width:min(100%,calc(100dvh - 250px));max-height:calc(100dvh - 250px);margin:8px auto}}
 </style>
 </head>
 <body>
@@ -69,7 +73,10 @@
       <button class="btn primary" id="finishBtn" type="button">Finish artwork</button>
     </div>
   </header>
-  <nav class="surface-tabs" id="surfaceTabs" aria-label="Artwork surfaces"></nav>
+  <nav class="surface-tabs" id="surfaceTabs" aria-label="Artwork surfaces and layers">
+    <div class="surface-tab-list" id="surfaceTabChoices" aria-label="Artwork surfaces"></div>
+    <button class="btn" id="layersBtn" type="button" aria-haspopup="dialog" aria-controls="layersDrawer"><span aria-hidden="true">▤</span> Layers</button>
+  </nav>
   <div class="recovery" id="recoveryPrompt" role="status">
     <div class="recovery__copy"><strong>Previous artwork is available</strong><span>Start clean, or restore it if you came back by accident.</span></div>
     <div class="recovery__actions"><button class="btn" id="discardRecovery" type="button">Start fresh</button><button class="btn primary" id="restoreRecovery" type="button">Restore</button></div>
@@ -106,8 +113,8 @@
       <div class="artboard-shell" id="artboardShell">
         <div class="artboard" id="artboard" aria-label="Design area"></div>
       </div>
-      <div class="guidance">Photos can fill the whole shape. Keep important text inside the dotted safe line.</div>
-      <div class="safety-warning" id="safetyWarning">Some text is outside the safe line. Move or resize it so it won’t sit too close to the edge.</div>
+      <div class="guidance">Extend your artwork to the edge, but keep important information inside the dotted line.</div>
+      <div class="safety-warning" id="safetyWarning">Some text is outside the dotted line. It may be cut off during production.</div>
       <div class="mobile-stage-actions">
         <button class="btn mobile-context-action" id="mobileBackgroundBtn" type="button">Background</button>
         <button class="btn mobile-context-action" id="mobileShapesBtn" type="button">Shapes</button>
@@ -143,10 +150,8 @@
         <button class="btn primary" id="maskDone" type="button">Done</button>
       </div>
       <div class="zoom-row"><span>Zoom</span><input id="zoom" type="range" min="55" max="110" value="100"><span id="zoomValue">100%</span></div>
-      <div class="wheel-hint desktop-hint">Scroll over the design to zoom gently</div>
     </section>
     <aside class="panel right" id="editPanel">
-      <button class="btn" id="layersBtn" type="button" aria-haspopup="dialog" aria-controls="layersDrawer"><span aria-hidden="true">▤</span> Layers</button>
       <div class="panel-title"><h2>Edit</h2><button class="panel-close" id="panelClose" type="button" aria-label="Done editing">Done</button></div>
       <p id="surfaceHelp">Front cover</p>
       <div id="properties"><div class="empty-properties">Select a photo or text item on your design to edit it.</div></div>
@@ -353,7 +358,7 @@ async function recover(){try{const db=await openDB();if(!db)return;const tx=db.t
 function restoreRecovery(){if(!pendingRecovery)return;state.active=pendingRecovery.active||'front';state.selected=null;state.surfaces=pendingRecovery.surfaces;state.backgrounds={...blankBackgrounds(),...(pendingRecovery.backgrounds||{})};state.lastTextStyle=pendingRecovery.lastTextStyle||null;state.history=[];state.future=[];pendingRecovery=null;$('recoveryPrompt').classList.remove('show');renderAll();$('saveStatus').textContent='Previous work restored'}
 async function discardRecovery(){pendingRecovery=null;$('recoveryPrompt').classList.remove('show');try{const db=await openDB();if(db)db.transaction('projects','readwrite').objectStore('projects').delete('current')}catch(_){}$('saveStatus').textContent='Fresh design'}
 function surfaceHasContent(id){return !!(state.surfaces[id].length||state.backgrounds[id])}
-function renderTabs(){$('surfaceTabs').innerHTML=SURFACES.map(s=>`<button type="button" class="surface-tab ${s.id===state.active?'active':''} ${surfaceHasContent(s.id)?'has-content':''}" data-id="${s.id}">${s.name}</button>`).join('');document.querySelectorAll('.surface-tab').forEach(b=>b.onclick=()=>switchSurface(b.dataset.id))}
+function renderTabs(){$('surfaceTabChoices').innerHTML=SURFACES.map(s=>`<button type="button" class="surface-tab ${s.id===state.active?'active':''} ${surfaceHasContent(s.id)?'has-content':''}" data-id="${s.id}">${s.name}</button>`).join('');document.querySelectorAll('.surface-tab').forEach(b=>b.onclick=()=>switchSurface(b.dataset.id))}
 function switchSurface(id){if(id===state.active)return;if(drawMode)setDrawMode(false);if(maskMode)setMaskMode(false);if(cropMode)setCropMode(false);state.active=id;state.selected=null;renderAll();scheduleSave()}
 function renderAll(){renderTabs();renderArtboard();renderProperties();renderLayersDrawer();updateUndo()}
 function isUnsafe(layer){if(layer.type!=='text')return false;const m=surface().shape==='circle'?.1:.045;return layer.x<m||layer.y<m||layer.x+layer.w>1-m||layer.y+layer.h>1-m}
@@ -380,7 +385,7 @@ function renderArtboard(){
   const s=surface();$('stageTitle').textContent=s.name;$('surfaceHelp').textContent=s.help;artboard.className='artboard '+(s.shape==='circle'?'label':'cover')+(drawMode?' doodle-mode':'')+(maskMode?' mask-mode':'')+(cropMode?' crop-mode':'');artboard.style.background=backgroundCSS(state.backgrounds[state.active]);artboard.innerHTML='';
   if(!surfaceHasContent(state.active)){const hint=document.createElement('div');hint.className='empty-hint';hint.innerHTML='<strong><span class="desktop-hint">Double-click to add a photo</span><span class="mobile-hint">Tap to add a photo</span></strong><span>Or use the Photo and Text buttons below.</span><small>You can change everything later.</small>';artboard.appendChild(hint)}
   layers().filter(l=>l.visible!==false).forEach(addLayerNode);if(snapGuides.x!==null){const line=document.createElement('div');line.className='snap-guide vertical';line.style.left=(snapGuides.x*100)+'%';artboard.appendChild(line)}if(snapGuides.y!==null){const line=document.createElement('div');line.className='snap-guide horizontal';line.style.top=(snapGuides.y*100)+'%';artboard.appendChild(line)}if(doodleDraft){const draft=document.createElementNS('http://www.w3.org/2000/svg','svg');draft.setAttribute('class','doodle-draft');draft.setAttribute('viewBox','0 0 100 100');draft.innerHTML=`<path d="${doodlePath(doodleDraft.points)}" fill="none" stroke="${$('doodleColor').value}" stroke-width="${Math.max(.4,+$('doodleWidth').value/5)}" stroke-linecap="round" stroke-linejoin="round"/>`;artboard.appendChild(draft)}if(maskDraft){const l=maskDraft.layer,vw=Math.max(1,l.w*1000),vh=Math.max(1,l.h*1000),draft=document.createElement('div');draft.className='mask-draft';Object.assign(draft.style,{left:(l.x*100)+'%',top:(l.y*100)+'%',width:(l.w*100)+'%',height:(l.h*100)+'%',transform:`rotate(${l.rotation||0}deg)`});draft.innerHTML=`<svg viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none"><path d="${doodlePath(maskDraft.points,vw,vh)}" stroke-width="${Math.max(2,maskDraft.width*Math.min(vw,vh))}"/></svg>`;artboard.appendChild(draft)}const safe=document.createElement('div');safe.className='guide '+(s.shape==='circle'?'label-guide':'cover-guide');artboard.appendChild(safe);
-  if(s.shape==='circle'){const hole=document.createElement('div');hole.className='guide label-hole';artboard.appendChild(hole)}const note=document.createElement('div');note.className='guide-note';note.textContent='Keep important text inside';artboard.appendChild(note);const trim=document.createElement('div');trim.className='trim-outline';artboard.appendChild(trim);
+  if(s.shape==='circle'){const hole=document.createElement('div');hole.className='guide label-hole';artboard.appendChild(hole)}const trim=document.createElement('div');trim.className='trim-outline';artboard.appendChild(trim);
   artboard.onclick=e=>{if(drawMode||maskMode||cropMode)return;if(e.target.closest('.design-layer'))return;if(!surfaceHasContent(state.active)&&matchMedia('(pointer:coarse)').matches){$('imageInput').click();return}clearSelection()};artboard.ondblclick=e=>{if(!drawMode&&!maskMode&&!cropMode&&!e.target.closest('.design-layer'))$('imageInput').click()};
   $('safetyWarning').classList.toggle('show',layers().filter(l=>l.visible!==false).some(isUnsafe));updateControls();scheduleProjectPreview();
 }
@@ -415,7 +420,7 @@ function colourLuminance(hex){const value=String(hex||'#ffffff').replace('#','')
 function backgroundLuminance(bg){if(!bg)return 255;return bg.type==='gradient'?(colourLuminance(bg.a)+colourLuminance(bg.b))/2:colourLuminance(bg.color)}
 function defaultTextStyle(){if(state.lastTextStyle)return{...state.lastTextStyle};const top=[...layers()].filter(l=>l.type==='image'&&l.visible!==false).sort((a,b)=>(b.z||0)-(a.z||0))[0],luminance=top?top.luminance:backgroundLuminance(state.backgrounds[state.active]);return{font:'Arial, Helvetica, sans-serif',fontSize:5.8,color:luminance<145?'#ffffff':'#202020',align:'center',bold:true,italic:false,letterSpacing:0,textStrokeEnabled:false,textStrokeColor:'#202020',textStrokeWidth:.35}}
 function addText(){remember();const style=defaultTextStyle(),layer={id:uid(),type:'text',text:'Your text',x:.2,y:.43,w:.6,h:.14,rotation:0,opacity:1,z:nextZ(),...style};tightenTextBounds(layer);layers().push(layer);state.selected=layer.id;renderAll();scheduleSave();if(matchMedia('(pointer:coarse)').matches)openMobileEditor(true);else setTimeout(()=>props.querySelector('textarea')?.focus(),0)}
-function openMarksModal(){const groups=[...new Set(RECORD_MARKS.map(mark=>mark.group))],official=`<section class="mark-section"><h3>Official Crosstalk artwork</h3><div class="mark-section__choices"><button class="mark-choice official-choice" type="button" id="officialLogoChoice"><img src="${OFFICIAL_LOGO_SRC}" alt="Crosstalk Records logo"><small>Approved logo from supplied template</small></button></div></section>`;$('markGrid').innerHTML=official+groups.map(group=>`<section class="mark-section"><h3>${esc(group)}</h3><div class="mark-section__choices">${RECORD_MARKS.map((mark,i)=>mark.group===group?`<button class="mark-choice" type="button" data-mark="${i}" style="font-family:${mark.font},${mark.fontFallback||'sans-serif'};font-style:${mark.italic?'italic':'normal'};letter-spacing:${mark.letterSpacing||0}em">${esc(mark.label)}<small>${esc(mark.hint)}</small></button>`:'').join('')}</div></section>`).join('');$('officialLogoChoice').addEventListener('click',addOfficialLogo);$('markGrid').querySelectorAll('[data-mark]').forEach(button=>button.onclick=()=>addRecordMark(+button.dataset.mark));$('marksModal').classList.add('open')}
+function openMarksModal(){const groups=[...new Set(RECORD_MARKS.map(mark=>mark.group))],official=`<section class="mark-section"><h3>Official Crosstalk artwork</h3><div class="mark-section__choices"><button class="mark-choice official-choice" type="button" id="officialLogoChoice" aria-label="Add Crosstalk Records logo"><img src="${OFFICIAL_LOGO_SRC}" alt=""></button></div></section>`;$('markGrid').innerHTML=official+groups.map(group=>`<section class="mark-section"><h3>${esc(group)}</h3><div class="mark-section__choices">${RECORD_MARKS.map((mark,i)=>mark.group===group?`<button class="mark-choice" type="button" data-mark="${i}" style="font-family:${mark.font},${mark.fontFallback||'sans-serif'};font-style:${mark.italic?'italic':'normal'};letter-spacing:${mark.letterSpacing||0}em">${esc(mark.label)}<small>${esc(mark.hint)}</small></button>`:'').join('')}</div></section>`).join('');$('officialLogoChoice').addEventListener('click',addOfficialLogo);$('markGrid').querySelectorAll('[data-mark]').forEach(button=>button.onclick=()=>addRecordMark(+button.dataset.mark));$('marksModal').classList.add('open')}
 function closeMarksModal(){$('marksModal').classList.remove('open')}
 function addRecordMark(index){const mark=RECORD_MARKS[index];if(!mark)return;remember();const base=defaultTextStyle(),h=mark.h||.12,layer={id:uid(),type:'text',text:mark.text,x:(1-mark.w)/2,y:(1-h)/2,w:mark.w,h,rotation:0,opacity:1,z:nextZ(),font:mark.font,fontFallback:mark.fontFallback||'',fontSize:mark.fontSize,color:base.color,align:'center',bold:true,italic:!!mark.italic,letterSpacing:mark.letterSpacing||0};tightenTextBounds(layer);layers().push(layer);state.selected=layer.id;closeMarksModal();renderAll();scheduleSave();showToast(`${mark.label} added`)}
 function addOfficialLogo(){remember();const w=.62,h=w*(306/900),layer={id:uid(),type:'image',asset:true,name:'Official Crosstalk Records logo',src:OFFICIAL_LOGO_SRC,aspect:900/306,x:(1-w)/2,y:(1-h)/2,w,h,rotation:0,opacity:1,z:nextZ(),lockRatio:true,focusX:50,focusY:50,cropZoom:100,brightness:100,contrast:100,saturation:100,hue:0,fit:'contain'};layers().push(layer);state.selected=layer.id;closeMarksModal();renderAll();scheduleSave();showToast('Official Crosstalk logo added')}
