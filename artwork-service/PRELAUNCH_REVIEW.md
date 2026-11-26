@@ -31,11 +31,18 @@ The PSD acceptance additionally reads actual flipped photo-layer pixels,
 verifies the mirrored text fallback and parses front/label PSDs. A synthetic
 archive test inspects the ZIP directory and confirms the named folder and files.
 These tests do not establish the hosted email/Make/Dropbox outcome for this
-revision. JOB364 (`recbBm6OayPlgH5sB`) remains `Queued` in Airtable despite
-the earlier verified private Dropbox export; proof-pinned reconciliation and
-automated status/alert ownership remain open. Keep delivery disabled and Make
-inactive outside controlled tests. Do not change the live form or production
-delivery on this evidence alone.
+revision. The exact JOB364 (`recbBm6OayPlgH5sB`) proof-pinned status check ran
+once on 26 November: Make execution `8b6ce79884b3495f972e17c9e9aaa5f6`
+finished SUCCESS in 2.747 seconds with five operations, and Airtable changed
+from `Queued` to `Delivered` while Intake State remained `Completed`. The
+one-time scenario became inactive and was reset to on-demand. This confirms
+one prior verified Dropbox delivery, not the new JOB-number archive mapping;
+automated status/alert ownership remains open. Railway JOSH TEST deployment
+`d78b6181-959a-4503-a68d-1b4f80518d7c` passed health on review commit
+`5f0411c`, with `deliveryMode=disabled` and `configured=false`. The Basic-gated
+preview rejects an unauthenticated request with 401. Keep delivery disabled
+and Make inactive outside controlled tests. Do not change the live form or
+production delivery on this evidence alone.
 
 Status: **isolated tester interface available, complete journey blocked, production release blocked**. This is the
 Customs project only. The live order form and Customer Intake scenario have not
