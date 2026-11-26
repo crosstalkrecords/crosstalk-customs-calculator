@@ -56,6 +56,18 @@ submission, inbox rendering at `custom@crosstalkrecords.com`, and an actual
 JOB-numbered ZIP download and CRC/PSD inspection remain pending.
 The live form, live Make intake and production delivery have not changed.
 
+The controlled test window on 26 November ran approximately 05:28–05:58 UTC
+(16:28–16:58 Sydney time). No new protected intake execution arrived, so this
+revision has **no new hosted customer order evidence**. After the window,
+Make intake 8715068 and status sweep 8816289 were both verified inactive.
+Railway JOSH TEST redeployed successfully as
+`0cdf474b-63dc-4d0b-81a0-838dfdb63551`; `/health` again reports
+`deliveryMode=disabled` and `configured=false`. Reopen a controlled window
+before a tester submits. The ZIP download control in the connected Dropbox
+browser did not yield a downloadable artifact, so actual JOB365 archive CRC
+and PSD inspection still require the tester's ZIP file or another authorized
+download path. Do not infer completion from the Dropbox preview.
+
 ## 26 November tester feedback revision (JOSH TEST only)
 
 An earlier JOSH TEST revision put the editor button near the top of Extras
