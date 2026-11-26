@@ -69,7 +69,7 @@ const testCopy=[
  ['placeholder="Paste a public playlist link"',
   'placeholder="Enter synthetic tracks manually below"'],
  ['You\'ll upload your finished artwork after submitting.',
-  'Use the artwork designer here to attach a synthetic design before test submission. JOSH TEST does not create a separate artwork upload link.'],
+  'Use the Packaging Designer to attach a synthetic design now, or supply harmless finished files using the private JOSH TEST upload link sent after submission.'],
  ['<h2 class="title">Now we need the actual music.</h2><p class="lede">Your tracklist is the plan. Before we can cut your record, we need the actual audio files.</p>',
   '<h2 class="title">Plan the audio for this test.</h2><p class="lede">Use synthetic track names. This form does not collect audio files directly or create a genuine customer order.</p>'],
  ['Every audio file must be provided manually by you before we cut anything.',
