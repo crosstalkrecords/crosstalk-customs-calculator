@@ -14,8 +14,13 @@ test('small square rectangles, Layers, duplicate and flips work on desktop and m
    const page=await browser.newPage({viewport:mobile?{width:360,height:780}:{width:1280,height:900},isMobile:mobile,hasTouch:mobile});
    const errors=[];page.on('pageerror',error=>errors.push(error.message));
    await page.goto('http://127.0.0.1:'+server.address().port+'/');
-   assert.equal(await page.locator('#layersBtn').isVisible(),true);
-   assert.equal(await page.locator('#layersBtn').evaluate(el=>el.getBoundingClientRect().right<=innerWidth),true);
+   const layers=page.locator(mobile?'#mobileLayersTopBtn':'#layersBtn');
+   assert.equal(await layers.isVisible(),true);
+   assert.equal(await layers.evaluate(el=>el.getBoundingClientRect().right<=innerWidth),true);
+   if(!mobile){
+    assert.equal(await page.locator('#layersBtn').evaluate(el=>el.closest('#editPanel')!==null),true);
+    assert.equal(await page.locator('#layersBtn').evaluate(el=>el.getBoundingClientRect().width>180),true);
+   }
    assert.equal(await page.locator('#finishBtn').evaluate(el=>el.getBoundingClientRect().right<=innerWidth),true);
    assert.equal(await page.locator('#downloadLayeredPackage').count(),0);
    await page.locator(mobile?'#mobileShapesBtn':'#shapesBtn').click();
@@ -33,7 +38,7 @@ test('small square rectangles, Layers, duplicate and flips work on desktop and m
     assert(after.width<board.width*.08,'rectangle can be much smaller than the old 8% limit');
     assert(after.height<board.height*.08,'rectangle can be a narrow eye bar');
    }
-   await page.locator('#layersBtn').click();
+   await layers.click();
    assert.equal(await page.locator('#layersDrawer').getAttribute('aria-hidden'),'false');
    await page.locator('#layerDuplicate').click();
    assert.equal(await page.locator('.design-layer.shape-layer').count(),2);
