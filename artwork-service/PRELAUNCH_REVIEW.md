@@ -15,7 +15,7 @@ Desktop Layers is now a full-width button at the top of the right Edit panel;
 the narrow layout retains a visible Layers button in the top bar and canvas
 controls.
 
-The inactive protected Make intake 8715068 now maps the Airtable Job Number
+The protected Make intake 8715068 now maps the Airtable Job Number
 into both customer and staff email subjects. Its staff HTML message addresses
 only `custom@crosstalkrecords.com` and labels the private, signed-in Dropbox
 folder-navigation link with the Job Number; the recipient must sign in to an
@@ -37,13 +37,23 @@ with five operations and changed only JOB365's Artwork Delivery Status to
 `Delivered`. The sweep was deactivated afterward. Its failure/alert routes,
 network-timeout behaviour, second-pass no-op, and scheduling while a tester is
 active still need hosted proof; do not represent this as production-grade
-automatic reconciliation.
+automatic reconciliation. After activation in the next controlled test window,
+the scheduled sweep completed an empty pass with one operation and SUCCESS;
+it did not resend delivery or change the already delivered JOB365 record.
 
 Local gate after the feedback change: build passed, 30 service tests passed,
 two synthetic PSD acceptance orders passed (including flipped photo and text
 fallback pixels), and desktop/mobile form handoff plus Standard/no-artwork
-regression passed. Hosted deploy, inbox rendering at the staff address,
-JOB-numbered file inspection and the next controlled full order are pending.
+regression passed. The review branch head `1056501f53eb4ea97cfedd04123a55a01114f7fe`
+deployed successfully to Railway JOSH TEST as deployment
+`e5023ff2-520f-4622-acb7-41f14d353d26`, with no warnings or recent failures.
+The later isolated delivery-mode restart `d013acbd-8f5f-4c79-b1d5-68b4f4a3efb6`
+also reached SUCCESS; `/health` reports `dropbox` and `configured=true`
+during this controlled test window. The protected preview rejected this
+session's cloud browser with invalid authentication credentials, so a fresh
+hosted desktop/mobile journey is not yet verified here. The tester's new
+submission, inbox rendering at `custom@crosstalkrecords.com`, and an actual
+JOB-numbered ZIP download and CRC/PSD inspection remain pending.
 The live form, live Make intake and production delivery have not changed.
 
 ## 26 November tester feedback revision (JOSH TEST only)
