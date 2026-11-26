@@ -1,16 +1,58 @@
 # Crosstalk Customs artwork handoff — prelaunch review
 
+## 26 November designer feedback follow-up — isolated JOSH TEST
+
+The review branch removes the extra artwork checkbox. A standalone **Open
+Packaging Designer** button sits after the Packaging choices (or the fixed
+printed-promo summary) and before the Handmade packaging / Artwork files
+notes. It remains visible with Standard packaging. Clicking it on Standard
+explains which printed option is required, focuses that choice and does not
+change the selection or price. Printed orders can still be submitted without
+designer artwork for the separate private upload route. The button explains
+that customers may upload their own images or create a design, and the JOSH
+TEST form's session draft restores choices and tracklist for up to 24 hours.
+Desktop Layers is now a full-width button at the top of the right Edit panel;
+the narrow layout retains a visible Layers button in the top bar and canvas
+controls.
+
+The inactive protected Make intake 8715068 now maps the Airtable Job Number
+into both customer and staff email subjects. Its staff HTML message addresses
+only `custom@crosstalkrecords.com` and labels the private, signed-in Dropbox
+folder-navigation link with the Job Number; the recipient must sign in to an
+account with access. The staff archive output code already names the ZIP,
+root folder, PSDs and reference PNGs using the protected Job Number. A local
+synthetic ZIP test verifies those entries, but JOB365's remote ZIP contents
+still require an independent download and CRC/PSD inspection.
+
+The JOB365 test record was `Queued` despite a ZIP visible in its isolated
+Dropbox folder. A separate inactive batch sweep, Make scenario **8816289**,
+searches up to 100 completed JOSH TEST orders still queued for artwork. It
+requests the authenticated exporter status, checks submission, record and
+artwork IDs against a fresh Airtable read, and updates only a verified terminal
+delivery or failure. Ambiguous, mismatched or non-200 responses write a
+sanitized `Reconciliation blocked:` note and send one test-only staff review
+alert; flagged rows leave the sweep until a human clears the note. A controlled
+run `c42657669e53402e9f69d70cd1c38f66` on 26 November completed SUCCESS
+with five operations and changed only JOB365's Artwork Delivery Status to
+`Delivered`. The sweep was deactivated afterward. Its failure/alert routes,
+network-timeout behaviour, second-pass no-op, and scheduling while a tester is
+active still need hosted proof; do not represent this as production-grade
+automatic reconciliation.
+
+Local gate after the feedback change: build passed, 30 service tests passed,
+two synthetic PSD acceptance orders passed (including flipped photo and text
+fallback pixels), and desktop/mobile form handoff plus Standard/no-artwork
+regression passed. Hosted deploy, inbox rendering at the staff address,
+JOB-numbered file inspection and the next controlled full order are pending.
+The live form, live Make intake and production delivery have not changed.
+
 ## 26 November tester feedback revision (JOSH TEST only)
 
-The review branch now puts a standalone, full-width **Open artwork editor** button
-near the top of Extras after a customer selects a printed packaging option and
-checks **Create custom artwork in the editor**. It explains that choices and the
-tracklist persist in this browser tab for up to 24 hours in JOSH TEST, then
-returns focus to Extras when the uploaded artwork attaches. The customer-facing
-form now blocks Continue when that option is checked without an attached
-design; unticking after attachment removes the artwork from this order. A
-customer who will upload finished files later can leave the option unticked.
-The separate standard/no-artwork order route remains available. The
+An earlier JOSH TEST revision put the editor button near the top of Extras
+behind an artwork checkbox and blocked Continue after opting in without a
+finished design. The designer's later feedback prompted the revision above;
+the checkbox and its Continue gate have been removed. The
+separate standard/no-artwork order route remains available. The
 customer-facing
 layered-PNG/staff-export download is removed; staff PSD/PNG generation remains
 server-side. The editor has Layers in the top bar at desktop and phone widths,
