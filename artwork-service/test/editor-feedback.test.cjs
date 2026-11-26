@@ -18,9 +18,14 @@ test('small square rectangles, Layers, duplicate and flips work on desktop and m
    assert.equal(await layers.isVisible(),true);
    assert.equal(await layers.evaluate(el=>el.getBoundingClientRect().right<=innerWidth),true);
    if(!mobile){
-    assert.equal(await page.locator('#layersBtn').evaluate(el=>el.closest('#editPanel')!==null),true);
-    assert.equal(await page.locator('#layersBtn').evaluate(el=>el.getBoundingClientRect().width>180),true);
+    assert.equal(await page.locator('#layersBtn').evaluate(el=>el.parentElement?.id==='surfaceTabs'),true);
+    assert.equal(await page.locator('#layersBtn').evaluate(el=>el.getBoundingClientRect().width>=240),true);
+    assert.equal(await page.locator('#layersBtn').evaluate(el=>getComputedStyle(el).textAlign),'center');
    }
+   assert.equal(await page.locator('#surfaceTabChoices .surface-tab').count(),4);
+   assert.equal(await page.locator('.guidance').innerText(),'Extend your artwork to the edge, but keep important information inside the dotted line.');
+   assert.equal(await page.locator('#safetyWarning').innerText(),'Some text is outside the dotted line. It may be cut off during production.');
+   assert.equal(await page.locator('.guide-note,.wheel-hint').count(),0);
    assert.equal(await page.locator('#finishBtn').evaluate(el=>el.getBoundingClientRect().right<=innerWidth),true);
    assert.equal(await page.locator('#downloadLayeredPackage').count(),0);
    await page.locator(mobile?'#mobileShapesBtn':'#shapesBtn').click();
@@ -46,6 +51,28 @@ test('small square rectangles, Layers, duplicate and flips work on desktop and m
    await page.locator('#layerFlipY').click();
    assert.match(await page.locator('.design-layer.shape-layer.selected').evaluate(el=>el.style.transform),/scale\(-1, -1\)/);
    await page.locator('#closeLayers').click();
+   await page.locator(mobile?'#mobileMarksBtn':'#marksBtn').click();
+   assert.equal(await page.getByText('Approved logo from supplied template').count(),0);
+   assert.equal(await page.getByRole('button',{name:'Add Crosstalk Records logo'}).count(),1);
+   await page.locator('#cancelMarks').click();
+   if(!mobile){
+    await page.locator('#projectPreviewGrid [data-preview-surface="labelA"]').waitFor();
+    await page.locator('#projectPreviewGrid [data-preview-surface="labelA"]').click();
+    await page.locator('#largePreview img').waitFor();
+    for(const viewport of [{width:1280,height:600},{width:360,height:568}]){
+     await page.setViewportSize(viewport);
+     const layout=await page.locator('.preview-dialog-card').evaluate(card=>{
+      const bounds=card.getBoundingClientRect(),actions=card.querySelector('.preview-dialog-actions').getBoundingClientRect(),preview=card.querySelector('.large-preview').getBoundingClientRect();
+      return {scrollHeight:card.scrollHeight,clientHeight:card.clientHeight,top:bounds.top,bottom:bounds.bottom,actionsBottom:actions.bottom,previewBottom:preview.bottom,viewportHeight:innerHeight};
+     });
+     assert(layout.scrollHeight<=layout.clientHeight+1,'preview card should not need a scrollbar');
+     assert(layout.top>=0&&layout.bottom<=layout.viewportHeight,'preview card fits the viewport');
+     assert(layout.actionsBottom<=layout.viewportHeight&&layout.previewBottom<=layout.actionsBottom,'Close and Edit this design remain visible');
+    }
+    await page.locator('#previewEditDesign').click();
+    assert.equal(await page.locator('#previewModal').evaluate(el=>el.classList.contains('open')),false);
+    assert.equal(await page.locator('#surfaceTabChoices .surface-tab.active').innerText(),'Side A label');
+   }
    assert.deepEqual(errors,[]);
    await page.close();
   }
