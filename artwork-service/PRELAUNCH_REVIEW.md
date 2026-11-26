@@ -27,6 +27,9 @@ record. The staff archive uses `JOSH TEST-JOB###.zip` and contains a matching
 top-level folder; PSDs, reference PNGs and conversion metadata also carry the
 JOB number. Old bindings fall back to the unique Airtable record ID. This
 mapping has not yet been exercised by a new hosted submission.
+The inactive JOSH TEST staff notice template has a Dropbox folder-navigation
+link for the isolated order, but its inbox rendering and staff access have not
+yet been retested with this revision. It is not a public shared-folder URL.
 
 Local evidence: `node build-public.cjs`, 30 service tests, the separate desktop
 and mobile form handoff/regression script and two full synthetic PSD acceptance
@@ -43,8 +46,9 @@ from `Queued` to `Delivered` while Intake State remained `Completed`. The
 one-time scenario became inactive and was reset to on-demand. This confirms
 one prior verified Dropbox delivery, not the new JOB-number archive mapping;
 automated status/alert ownership remains open. Railway JOSH TEST deployment
-`d78b6181-959a-4503-a68d-1b4f80518d7c` passed health on review commit
-`5f0411c`, with `deliveryMode=disabled` and `configured=false`. The Basic-gated
+`677fc102-758a-44f4-9dde-df2e12d14064` is SUCCESS on review commit
+`5fe2c380d9aad8d0565062c987508ba432337032`; hosted `/health` reports
+`deliveryMode=disabled` and `configured=false`. The Basic-gated
 preview rejects an unauthenticated request with 401. Keep delivery disabled
 and Make inactive outside controlled tests. Do not change the live form or
 production delivery on this evidence alone.
@@ -211,7 +215,7 @@ access. The isolated form URL does not expose the Airtable table.
   stays disabled. The actual order destination is fixed beneath
   `/Crosstalk Customs/JOSH TEST/` in the scoped app folder.
 - Railway reports a successful **JOSH TEST only** deployment of review commit
-  `424e6f7` on 21 November 2026. Hosted `/health` returned
+  `5fe2c380` on 26 November 2026. Hosted `/health` returned
   `deliveryMode=disabled` and `configured=false` before the controlled run;
   unauthenticated normal and percent-encoded preview paths, designer and
   test-config returned 401 in checks across the review. A distinct
