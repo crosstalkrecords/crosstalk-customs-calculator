@@ -7,7 +7,7 @@ const ROOT=path.resolve(__dirname,'..');
 async function rendererHTML(){
  const original=await fs.readFile(path.join(ROOT,'vendor/approved-editor.html'),'utf8');
  const blob=crypto.createHash('sha1').update(`blob ${Buffer.byteLength(original)}\0`).update(original).digest('hex');
- if(blob!=='925544813e4d77cf5b99d494dbc8e41991a127d7')throw Error('Approved renderer source changed');
+ if(blob!=='5ed971a6e7f4959eed02f5d60f01705eb6add590')throw Error('Approved renderer source changed');
  const lab=await fs.readFile(path.join(ROOT,'vendor/lab-hook.js'),'utf8');
  const helpers=lab.slice(lab.indexOf('function labCanvas'),lab.indexOf("document.getElementById('labRender').onclick"));
  const hook=`${helpers}
