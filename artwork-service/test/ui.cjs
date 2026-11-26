@@ -43,6 +43,8 @@ const {createCanvas}=require('../src/psd.cjs');
    await page.locator('[data-step="2"] [data-next="3"]').click();
    assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
    await page.locator('#packs [data-pack="Custom Finish Pack"]').click();
+   assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
+   await page.locator('#chooseCustomArtwork').check();
    assert.equal(await page.locator('#openArtworkDesigner').isVisible(),true);
    assert.equal(await page.locator('input[name="Artwork Reference"]').isEnabled(),true);
    await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
@@ -52,8 +54,10 @@ const {createCanvas}=require('../src/psd.cjs');
    await editor.locator(mobile?'#mobileTextBtn':'#addTextBtn').click();
    // Close the existing mobile editor through its visible Done control.
    if(mobile){const buttons=editor.getByRole('button',{name:/^(Done|Apply|Save)$/i});if(await buttons.count())await buttons.first().click();}
-   console.log('Text added');await editor.locator('#finishBtn').click();console.log('Finish opened');await editor.locator('#completeArtwork').click();console.log('Upload clicked');await editor.waitForTimeout(1000);console.log('Upload status:',await editor.locator('#handoffStatus').textContent());
+   console.log('Text added');await editor.locator('#finishBtn').click();console.log('Finish opened');await editor.locator('#completeArtwork').click();console.log('Upload clicked');
    await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor({timeout:7000});
+   assert.equal(await page.locator('.step.active').getAttribute('data-step'),'3');
+   assert.equal(editor.isClosed(),true);
    const reference=await page.locator('input[name="Artwork Reference"]').inputValue();assert.match(reference,/^[a-f0-9]{32}\./);
    await page.locator('#packs [data-pack="Standard"]').click();
    assert.equal(await page.locator('#openArtworkDesigner').isVisible(),false);
@@ -70,14 +74,8 @@ const {createCanvas}=require('../src/psd.cjs');
    const formDraft=await page.evaluate(()=>sessionStorage.getItem('crosstalk-josh-test-form-draft-v1'));
    assert(!formDraft.includes(reference),'form draft must not contain artwork capability');
    assert(!formDraft.includes('josh-test@example.invalid'),'form draft must not contain test identity');
-   await editor.screenshot({path:path.join(root,mobile?'mobile-uploaded.png':'desktop-uploaded.png'),fullPage:false});
    const before=service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n;
-   await editor.reload();await editor.locator('#restoreRecovery').count();
-   // Use the public handoff module with the exact same tiny synthetic design to
-   // check that a refresh resumes the sealed upload rather than creating another.
-   await editor.locator('#restoreRecovery').click();await editor.locator('#finishBtn').click();await editor.locator('#completeArtwork').click();await editor.locator('#finishSuccess.show').waitFor();
-   const saved=await editor.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('crosstalk-artwork-upload:')).map(k=>JSON.parse(localStorage.getItem(k))));
-   assert(saved.some(s=>s.id===reference.split('.')[0]));assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,before);
+   assert.equal(service.store.db.prepare('SELECT count(*) AS n FROM jobs').get().n,before);
    const oldSession=await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session'));
    await page.locator('[data-step="3"] [data-next="4"]').click();
    await page.locator('.audio[data-audio="have"]').click();

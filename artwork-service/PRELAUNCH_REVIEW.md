@@ -1,5 +1,42 @@
 # Crosstalk Customs artwork handoff — prelaunch review
 
+## 26 November tester feedback revision (JOSH TEST only)
+
+The review branch now puts a standalone, full-width **Open artwork editor** button
+near the top of Extras after a customer selects a printed packaging option and
+checks **Create custom artwork in the editor**. It explains that choices and the
+tracklist persist in this browser tab for up to 24 hours in JOSH TEST, then
+returns focus to Extras when the uploaded artwork attaches. The customer-facing
+layered-PNG/staff-export download is removed; staff PSD/PNG generation remains
+server-side. The editor has Layers in the top bar at desktop and phone widths,
+with Duplicate, Flip horizontally and Flip vertically. Rectangle corners are
+square and shapes can shrink below the former 8%-of-canvas limit. Flipped text
+uses an explicitly named visual raster fallback in the PSD so it does not
+silently appear as editable native text. A future dedicated custom label
+designer can use the current separate label A/B surfaces and order handoff;
+this change does not claim that product has been designed or approved.
+
+The protected JOSH TEST bind optionally accepts Airtable's formula Job Number
+and the inactive Make intake 8715068 now maps that field from its isolated
+record. The staff archive uses `JOSH TEST-JOB###.zip` and contains a matching
+top-level folder; PSDs, reference PNGs and conversion metadata also carry the
+JOB number. Old bindings fall back to the unique Airtable record ID. This
+mapping has not yet been exercised by a new hosted submission.
+
+Local evidence: `node build-public.cjs`, 30 service tests, the separate desktop
+and mobile form handoff/regression script and two full synthetic PSD acceptance
+orders passed. The focused test checks a 360 px mobile top bar, small square
+rectangle, duplication, both flips and absence of the customer ZIP control.
+The PSD acceptance additionally reads actual flipped photo-layer pixels,
+verifies the mirrored text fallback and parses front/label PSDs. A synthetic
+archive test inspects the ZIP directory and confirms the named folder and files.
+These tests do not establish the hosted email/Make/Dropbox outcome for this
+revision. JOB364 (`recbBm6OayPlgH5sB`) remains `Queued` in Airtable despite
+the earlier verified private Dropbox export; proof-pinned reconciliation and
+automated status/alert ownership remain open. Keep delivery disabled and Make
+inactive outside controlled tests. Do not change the live form or production
+delivery on this evidence alone.
+
 Status: **isolated tester interface available, complete journey blocked, production release blocked**. This is the
 Customs project only. The live order form and Customer Intake scenario have not
 been changed. Review branch: `artwork-form-handoff-review-20261119`; draft PR

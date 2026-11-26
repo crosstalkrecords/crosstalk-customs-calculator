@@ -34,6 +34,7 @@ test('an attached artwork reference survives refresh only for its order session'
   await page.locator('#manual').fill('A1 - synthetic test');
   await page.locator('[data-step="2"] [data-next="3"]').click();
   await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
+  await page.locator('#chooseCustomArtwork').check();
   const popup=page.waitForEvent('popup');await page.locator('#openArtworkDesigner').click();const editor=await popup;
   await page.locator('#artworkOrderStatus').filter({hasText:'Artwork uploaded and attached'}).waitFor();
   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);

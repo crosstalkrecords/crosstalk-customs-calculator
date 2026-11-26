@@ -4,14 +4,21 @@ const {accessToken,rpc,contentHash}=require('./dropbox-api.cjs');
 function apiArg(value){return JSON.stringify(value).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
 function validateBinding(value,root){
  if(!value||typeof value.orderId!=='string'||!value.orderId||value.orderId.length>150)throw Error('Invalid order reference');
+ if(value.jobNumber!==undefined&&(typeof value.jobNumber!=='string'||!/^JOB[1-9][0-9]{0,8}$/.test(value.jobNumber)))throw Error('Invalid job number');
  const folder=value.folder;
  if(typeof folder!=='string'||!folder.startsWith(root+'/')||folder.length>700||/[\\\x00-\x1f]/.test(folder)||folder.slice(1).split('/').some(p=>!p||p==='.'||p==='..'))throw Error('Invalid order folder');
  const parts=folder.slice(root.length+1).split('/');
  if(parts.length!==2||parts[1]!=='Uploads'||!parts[0])throw Error('Expected the existing order Uploads folder');
- return {orderId:value.orderId,folder};
+ return {orderId:value.orderId,folder,...(value.jobNumber?{jobNumber:value.jobNumber}:{})};
+}
+// The Airtable formula number is supplied by the protected intake when it is
+// available. Older bindings still get a unique, staff-searchable record ID.
+function staffFileStem(id,binding,config){
+ const key=binding.jobNumber||(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(binding.orderId||'')?binding.orderId:id);
+ return (config.testLabel==='JOSH TEST'?'JOSH TEST-':'Crosstalk-artwork-')+key;
 }
 async function deliver({archive,id,binding,config}){
- const filename=(config.testLabel==='JOSH TEST'?'JOSH TEST-':'Crosstalk-artwork-')+id+'.zip';
+ const filename=staffFileStem(id,binding,config)+'.zip';
  if(config.mode==='synthetic'){
   if(!config.testDestination)throw Error('Synthetic destination missing');
   const dest=path.join(config.testDestination,binding.orderId.replace(/[^a-zA-Z0-9_-]/g,'_'));
@@ -38,4 +45,4 @@ async function deliver({archive,id,binding,config}){
   return {dropboxFileId:metadata.id,path:metadata.path_display,bytes:metadata.size,contentHash:expectedHash,verified:true};
  }finally{await handle.close();}
 }
-module.exports={validateBinding,deliver};
+module.exports={validateBinding,staffFileStem,deliver};

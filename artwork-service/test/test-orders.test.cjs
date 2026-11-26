@@ -64,8 +64,8 @@ test('queued artwork intake hides capability from Make; trusted bind and callbac
   assert.equal(hash,crypto.createHash('sha256').update(JSON.stringify({mapped:JSON.parse(saved.payload),artworkJobId:job.id})).digest('hex'));
   assert.equal(p['Submission ID'],ID);assert.equal(p['Test Order Name'],'TEST JOSH 21.11');
   assert.match(p['Test Summary'],/Do not invoice/);assert.equal(p.Tracklist,form.Tracklist);
-  const bind={testLabel:'JOSH TEST',submissionId:ID,requestFingerprint:hash,artworkJobId:job.id,airtableRecordId:RECORD,folder:ROOT+'/'+ID+'/Uploads'};
-  const deliveryQuery=Object.fromEntries(Object.entries(bind).filter(([key])=>key!=='folder'));
+  const bind={testLabel:'JOSH TEST',submissionId:ID,requestFingerprint:hash,artworkJobId:job.id,airtableRecordId:RECORD,folder:ROOT+'/'+ID+'/Uploads',jobNumber:'JOB364'};
+  const deliveryQuery=Object.fromEntries(Object.entries(bind).filter(([key])=>!['folder','jobNumber'].includes(key)));
   const delivery=async(body=deliveryQuery,key=f.config.bindSecret)=>f.trusted('/internal/test-delivery-status',body,key);
   assert.equal((await delivery(deliveryQuery,'wrong-secret')).status,401);
   assert.equal((await delivery({...deliveryQuery,folder:bind.folder})).status,422);
@@ -76,6 +76,8 @@ test('queued artwork intake hides capability from Make; trusted bind and callbac
   assert.equal((await f.trusted('/internal/test-bind',{...bind,requestFingerprint:'f'.repeat(64)})).status,409);
   assert.equal((await f.trusted('/internal/test-bind',bind)).status,202,'bind can pin claim before ack');
   assert.equal((await(await f.trusted('/internal/test-bind',bind)).json()).artwork_status,'already_bound');
+  assert.equal((await f.trusted('/internal/test-bind',{...bind,jobNumber:'JOB365'})).status,409,'a later bind cannot rename the verified job');
+  assert.equal((await f.trusted('/internal/test-bind',{...bind,jobNumber:'../other'})).status,422);
   assert.equal((await f.trusted('/internal/test-bind',{...bind,airtableRecordId:'recBBBBBBBBBBBBBB'})).status,409);
   const route='/internal/test-submissions/'+ID+'/outcome',done=outcome(ID,hash,'complete',{artwork_status:'bound'});
   assert.equal((await f.trusted(route,done)).status,200,'final callback can race ahead of early ack');

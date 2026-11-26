@@ -23,7 +23,7 @@ async function prepare(page,pack){
  await page.getByText('Prefer to type a tracklist manually?').click();
  await page.locator('#manual').fill('A1 - JOSH TEST synthetic audio');
  await page.locator('[data-step="2"] [data-next="3"]').click();
- if(pack!=='Standard')await page.locator('#packs [data-pack="'+pack+'"]').click();
+ if(pack!=='Standard'){await page.locator('#packs [data-pack="'+pack+'"]').click();await page.locator('#chooseCustomArtwork').check();}
  assert.equal(await page.locator('#openArtworkDesigner').isVisible(),pack!=='Standard');
 }
 async function customer(page,route){

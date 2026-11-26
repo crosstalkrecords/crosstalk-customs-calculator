@@ -4,6 +4,13 @@ const {validateBinding}=require('./delivery.cjs');
 
 const NAME='TEST JOSH 21.11';
 const ROOT='/Crosstalk Customs/JOSH TEST';
+function matchesTestBinding(serialized,recordId,submissionId){
+ try{
+  const binding=JSON.parse(serialized);
+  return JSON.stringify(validateBinding(binding,ROOT))===serialized&&
+   binding.orderId===recordId&&binding.folder===ROOT+'/'+submissionId+'/Uploads';
+ }catch(_){return false;}
+}
 const MAX_ORDERS=30;
 const TEST_ADDRESS=Object.freeze({
  'Street Address':'1 TEST ONLY LANE',
@@ -337,7 +344,7 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
  app.post('/internal/test-bind',require('express').json({limit:'4kb'}),(req,res)=>{
   if(!trusted(req))return res.status(401).json({error:'Unauthorised'});
   const v=req.body||{};
-  if(typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['testLabel','submissionId','requestFingerprint','artworkJobId','airtableRecordId','folder'].includes(k))||
+  if(typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['testLabel','submissionId','requestFingerprint','artworkJobId','airtableRecordId','folder','jobNumber'].includes(k))||
     v.testLabel!=='JOSH TEST'||!uuid.test(v.submissionId||'')||!hash64.test(v.requestFingerprint||'')||
     !/^[a-f0-9]{32}$/.test(v.artworkJobId||'')||!/^rec[A-Za-z0-9]{14}$/.test(v.airtableRecordId||'')||
     v.folder!==ROOT+'/'+v.submissionId+'/Uploads')return res.status(422).json({error:'Invalid JOSH TEST binding'});
@@ -348,7 +355,9 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
   if(!linked||linked.order_id!==row.id||linked.browser_hash!==row.browser_hash)return res.status(409).json({error:'Artwork does not belong to the claimed submission'});
   const token=openDraftToken(linked.token_sealed,v.artworkJobId,config),job=token&&store.authorize(v.artworkJobId,token);
   if(!job)return res.status(409).json({error:'Artwork is unavailable for binding'});
-  const binding=JSON.stringify(validateBinding({orderId:v.airtableRecordId,folder:v.folder},ROOT));
+  let binding;
+  try{binding=JSON.stringify(validateBinding({orderId:v.airtableRecordId,folder:v.folder,...(v.jobNumber===undefined?{}:{jobNumber:v.jobNumber})},ROOT));}
+  catch(_){return res.status(422).json({error:'Invalid JOSH TEST binding'});}
   if(job.binding){
    if(job.binding!==binding||!pinClaim(row,v.airtableRecordId))return res.status(409).json({error:'Artwork is bound to a different test order'});
    return res.json({id:job.id,artwork_status:'already_bound',state:job.state});
@@ -379,7 +388,7 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
     row.reference_id!==v.artworkJobId||row.airtable_id!==v.airtableRecordId)
    return res.status(409).json({error:'Delivery query does not match a completed test order'});
   const job=store.get(row.reference_id);
-  if(job?.binding!==JSON.stringify({orderId:row.airtable_id,folder:ROOT+'/'+row.id+'/Uploads'}))
+  if(!matchesTestBinding(job?.binding,row.airtable_id,row.id))
    return res.status(409).json({error:'Artwork is not bound to this test order'});
   res.set('Cache-Control','private, no-store').json({testLabel:'JOSH TEST',submissionId:row.id,
    airtableRecordId:row.airtable_id,artworkJobId:row.reference_id,...deliveryState(row.reference_id)});
@@ -402,8 +411,8 @@ function installTestOrders(app,store,config,{fetchImpl=fetch,interval=1000}={}){
   if(v.state==='complete'){
    if((!row.reference_id)!==(v.artwork_status==='not_supplied'))return res.status(409).json({error:'Artwork outcome does not match this test order'});
    if(row.reference_id){
-    const job=store.get(row.reference_id),expected=JSON.stringify({orderId:v.airtableRecordId,folder:ROOT+'/'+row.id+'/Uploads'});
-    if(job?.binding!==expected)return res.status(409).json({error:'Artwork has not been bound to the claimed test order'});
+    const job=store.get(row.reference_id);
+    if(!matchesTestBinding(job?.binding,v.airtableRecordId,row.id))return res.status(409).json({error:'Artwork has not been bound to the claimed test order'});
    }
   }
   if(row.state==='complete'){
