@@ -52,6 +52,10 @@ test('an attached artwork reference survives refresh only for its order session'
   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),reference);
   assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-session')),oldSession);
 
+  await page.locator('#chooseCustomArtwork').uncheck();
+  assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'','unticking removes an existing attachment');
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-reference')),null);
+
   await page.evaluate(()=>dispatchEvent(new Event('crosstalk-order-success')));
   assert.equal(await page.locator('input[name="Artwork Reference"]').inputValue(),'');
   assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-artwork-order-reference')),null);

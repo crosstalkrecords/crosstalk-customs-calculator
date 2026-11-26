@@ -210,6 +210,8 @@ test('mobile guarded preview attaches synthetic art and acknowledges an isolated
   await page.locator('[data-step="2"] [data-next="3"]').click();
   await page.locator('#packs [data-pack="Printed Jacket + Labels"]').click();
   await page.locator('#chooseCustomArtwork').check();
+  await page.locator('[data-step="3"] [data-next="4"]').click();
+  assert.equal(await page.locator('.step.active').getAttribute('data-step'),'3','selected custom artwork cannot be skipped');
   const popup=page.waitForEvent('popup');await page.locator('#openArtworkDesigner').click();
   const editor=await popup;editor.setDefaultTimeout(30000);
   const canvas=createCanvas(120,120),ctx=canvas.getContext('2d');ctx.fillStyle='#35698c';ctx.fillRect(0,0,120,120);

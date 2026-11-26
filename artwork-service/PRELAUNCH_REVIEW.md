@@ -7,6 +7,11 @@ near the top of Extras after a customer selects a printed packaging option and
 checks **Create custom artwork in the editor**. It explains that choices and the
 tracklist persist in this browser tab for up to 24 hours in JOSH TEST, then
 returns focus to Extras when the uploaded artwork attaches. The customer-facing
+form now blocks Continue when that option is checked without an attached
+design; unticking after attachment removes the artwork from this order. A
+customer who will upload finished files later can leave the option unticked.
+The separate standard/no-artwork order route remains available. The
+customer-facing
 layered-PNG/staff-export download is removed; staff PSD/PNG generation remains
 server-side. The editor has Layers in the top bar at desktop and phone widths,
 with Duplicate, Flip horizontally and Flip vertically. Rectangle corners are
