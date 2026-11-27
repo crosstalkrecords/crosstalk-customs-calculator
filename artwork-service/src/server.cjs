@@ -192,6 +192,12 @@ function makeApp(config,options={}){
  // The copied form handler is present if the JOSH TEST integration script
  // fails to load. Its inert endpoint must never acknowledge a customer order.
  app.post('/order-submission-disabled',(_,res)=>res.status(410).json({error:'Use the JOSH TEST submission flow'}));
+ app.get('/designer.html',(req,res,next)=>{
+  if(config.testLabel==='JOSH TEST')return next();
+  res.set('X-Robots-Tag','noindex, nofollow, noarchive');
+  res.sendFile(path.join(__dirname,'../public/designer-production.html'));
+ });
+ app.get('/designer-production.html',(_,res)=>res.sendStatus(404));
  app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control',res.locals.privatePreview?'private, no-store':'public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
  return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await testIntake.close();await worker.close();store.close();}};

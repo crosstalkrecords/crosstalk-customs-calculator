@@ -51,6 +51,20 @@ html=html.replace('})();\n</script>',hook+'\n})();\n</script>');
 html=html.replace('Your artwork is saved on this device.', 'Your draft is saved on this device.');
 html=html.replace('<strong>Artwork saved ✓</strong><p>Your designs are saved in this browser. Return to your order tab to continue.</p>','<strong>Artwork uploaded ✓</strong><p>Return to your JOSH TEST form and submit the test to queue PSD delivery. Your draft is also saved in this browser.</p>');
 fs.writeFileSync(path.join(root,'public/designer.html'),html);
+// Generate a separate production-facing document. The JOSH TEST designer and
+// its guarded preview remain unchanged; the server selects this file only in
+// a non-test environment. Both documents use the same pinned renderer source.
+let production=html
+ .replace('<title>Crosstalk Customs Artwork Designer — JOSH TEST</title>','<title>Crosstalk Customs Packaging Designer</title>')
+ .replace('<div class="sandbox">JOSH TEST</div>','<div class="sandbox">Packaging Designer</div>')
+ .replace('Finish uploads to the JOSH TEST service','Finish to attach artwork to your order')
+ .replace('Explore here; open from the JOSH TEST form to attach or upload artwork.','Explore here; open from the Customs order form to attach artwork.')
+ .replace('Return to your JOSH TEST form and submit the test to queue PSD delivery.','Return to your order form and submit your order to queue PSD delivery.')
+ .replace('Open this designer from the JOSH TEST order form so the artwork can attach to that test.','Open this designer from the Customs order form so the artwork can attach to your order.')
+ .replace("const testPreview=new URLSearchParams(location.search).get('testPreview')==='1';","const testPreview=false;")
+ .replace('Artwork uploaded. Submit JOSH TEST to queue its PSD delivery.','Artwork uploaded. Place your order to queue PSD delivery.');
+if(production.includes('JOSH TEST')||production.includes("get('testPreview')"))throw Error('Production designer contains a test-only reference');
+fs.writeFileSync(path.join(root,'public/designer-production.html'),production);
 fs.mkdirSync(path.join(root,'public/assets'),{recursive:true});fs.copyFileSync(path.join(root,'../assets/crosstalk-logo.png'),path.join(root,'public/assets/crosstalk-logo.png'));
 // This is a non-production calculator preview. Its existing Make URL is removed.
 let calculator=fs.readFileSync(path.join(root,'../calculator.html'),'utf8');
