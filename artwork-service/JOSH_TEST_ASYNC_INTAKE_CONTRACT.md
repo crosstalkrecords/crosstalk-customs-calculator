@@ -1,5 +1,7 @@
 # JOSH TEST queued intake contract (draft)
 
+**27 November reconciliation:** The opening historical status below is superseded by `JOSH_TEST_FULL_INTAKE_MODULE_AUDIT.md`. Several full Make test runs did occur; `JOB368` has an Airtable Completed row, verified isolated Dropbox folders and request, Make bind/outcome callbacks, and a delivered ZIP. The saved test scenario is currently inactive. Its staff mail module had addressed the live Customs mailbox despite the original Josh-only audit; it was corrected while inactive to Josh's test inbox, with no new email sent. The protected preview was blocked in this cloud browser, so no new browser submission was made during this reconciliation. Staff editor-link access remains unproven in the test app folder.
+
 This is an isolated Customs design. The protected Make scenario `8715068` is
 saved as a confidential 100-module ASYNC DRAFT, remains inactive and has not
 run end to end. The hosted order endpoint implements a durable `queued`
