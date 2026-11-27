@@ -66,7 +66,7 @@ Dropbox's signed-in File requests screen showed the new request under Opened wit
 
 ## Customer upload and unsigned-in edit-link check — 28 November 2026
 
-Josh authorized a second isolated rehearsal. The same inactive, on-demand scenario `8847560` created a fresh folder/request/editor link under the identical named `JOSH TEST/CUTOVER DUAL LINK REHEARSAL 2026-11-28` path after the first folder had been moved to Trash. Make's browser showed all four modules succeeded again; the new run's execution ID was not recorded in this note.
+Josh authorized a second isolated rehearsal. The same inactive, on-demand scenario `8847560` created a fresh folder/request/editor link under the identical named `JOSH TEST/CUTOVER DUAL LINK REHEARSAL 2026-11-28` path after the first folder had been moved to Trash. Make's browser showed all four modules succeeded again; manual execution `b111b22d084b49e8bba7b390a54bd5f7` ended **SUCCESS** with four operations.
 
 A 57-byte harmless `cutover-upload-probe.txt` was submitted through the new Dropbox customer file-request page while signed in as the owner. The page reported **Finished uploading**. Dropbox's independent File requests listing changed to **1 submitter / 1 upload**; its request detail showed **1 item · 57 bytes** and a `View uploads` destination at the exact new JOSH TEST Uploads path. The actual Dropbox folder contained `Crosstalk Customs - cutover-upload-probe.txt` (Dropbox added the submitter name). This proves a real upload through the request and storage at the mapped destination, but it is **not** an unsigned-in customer submission.
 
