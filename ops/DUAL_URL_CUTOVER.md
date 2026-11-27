@@ -6,6 +6,10 @@
 
 **Airtable test checkpoint.** In the separate JOSH TEST base, the Status field now reads `QC → READY FOR ART → Cut Ready → NOTIFIED FOR PICK UP → Completed`, with all original named choice IDs preserved. A test-only customer upload request URL field was added. The production Airtable schema, Make intake and Common Ground embed have not been changed by this rehearsal.
 
+**Common Ground rehearsal (27 November, safe page only).** The signed-in editor entry is `Eshop editor → Pages → Temp Holdover` at `/article/46/edit`; the public page is `/temp-holdover`. It originally had one empty row. We added one Embed block with the preserved `calculator.html` iframe and verified its public `src`; changed its `src` to the same file with `?cutover-rehearsal=1`, saved and observed that value publicly within **11 seconds** of clicking Save; changed it back to the exact old URL, saved and observed the public reversal within **6 seconds**. The temporary query string loaded the same old renderer, so this measures the editor/publish/reversal mechanism, **not** the candidate route, checkout, Make, or an in-flight order. We then removed the block, recreated the original empty row, saved, and verified the public page had **zero** iframes. These are observed upper bounds at the times checked, not a production propagation guarantee.
+
+**Actual live editor readback (no edit).** `Eshop editor → Pages → CROSSTALK CUSTOMS — LIVE PAGE — DO NOT SANDBOX` is `/article/37/edit`, serving `/crosstalk-customs`. The live page has a separate hero Embed and a second Embed containing FAQ and the iframe. The second Embed is **6,953 characters of HTML** and contains exactly one `src="https://crosstalkrecords.github.io/crosstalk-customs-calculator/calculator.html"`; the public page independently showed that same iframe source. The editor Save control remained disabled. Before cutover capture the complete second Embed and its hash in the restricted manifest, then replace only that one exact `src` string, check the surrounding HTML is byte-for-byte unchanged, save, and inspect the public page. The rollback performs the inverse exact substitution in that same block.
+
 ## Keep both forms published and distinct
 
 | Role | Pages file / URL | Rule |
@@ -17,7 +21,7 @@ Publishing the candidate file is a GitHub Pages build, but it happens **before**
 
 ## Cutover after all gates pass and Josh gives specific approval
 
-1. Capture the old served Pages bytes, the Common Ground page's current iframe `src` and published page state, original Make status/hook, gateway deployment, ledger, Airtable schema and Dropbox root in the restricted release manifest. Record the exact Common Ground editor path and who can publish it.
+1. Capture the old served Pages bytes, the complete live Common Ground second Embed HTML and its hash, current iframe `src` and published page state, original Make status/hook, gateway deployment, ledger, Airtable schema and Dropbox root in the restricted release manifest. The signed-in editor path and publish control above were observed with Josh's account; capture a fresh pre-release snapshot.
 2. Confirm the new file is already served with the expected digest, the full Make/Dropbox/Airtable order flow has passed its isolated rehearsal, and the protected gateway is configured. Keep the old Make hook active. Enable new intake only as part of the controlled switch sequence; never route one form to both intakes.
 3. Change **only** the Common Ground iframe `src` from the preserved old URL to the verified new URL, publish, and observe the served page and one controlled new-route order. Record the time until the served iframe changes. Do not treat an editor save as proof of publication.
 
@@ -28,7 +32,7 @@ Publishing the candidate file is a GitHub Pages build, but it happens **before**
 3. Inspect the served Common Ground page until its iframe points to that exact old URL; load the old form and verify the original Make scenario remains active on hook `2620320`. Allow for customers with an already loaded new page during propagation: a paused gateway must fail closed, and staff must reconcile their submission IDs.
 4. Read the candidate ledger, including orders whose intake completed but artwork delivery has not been proven. Reconcile Airtable rows, Dropbox folders/ZIPs and Outlook notices. Never retry an uncertain order blindly or undo a legitimate Stripe invoice.
 
-The above is a **one-field human editor reversal**. It avoids another GitHub Pages publication during the primary rollback. Josh says iframe edits normally take about five minutes; measure this in a safe-page rehearsal and do not guarantee the time beforehand. The procedure cannot be called a one-command rollback unless a supported, authenticated Common Ground edit API is identified and rehearsed.
+The above is a **one-string substitution in a Common Ground Embed HTML block**, followed by Save and public verification. It avoids another GitHub Pages publication during the primary rollback. The safe-page rehearsal observed 11 seconds to switch and 6 seconds to reverse after Save, using a query-string alternate on the old renderer; neither timing proves the production page or candidate route. Josh says iframe edits normally take about five minutes, but no production recovery-time guarantee is justified. The procedure cannot be called a one-command rollback unless a supported, authenticated Common Ground edit API is identified and rehearsed.
 
 ## Secondary recovery
 
