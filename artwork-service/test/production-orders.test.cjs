@@ -83,3 +83,13 @@ test('pause stops new acceptance while an already accepted order drains',async()
   const status=await f.request('/v1/production-orders/'+id,{orderKey:key});assert.equal(status.data.state,'processing');
  }finally{await f.close();}
 });
+test('a queued Make acknowledgment without final callback becomes uncertain, not replayed',async()=>{
+ let calls=0;const f=await setup(async()=>{calls++;return {ok:true,text:async()=> 'Accepted'};});
+ try{
+  assert.equal((await f.request('/v1/production-orders',{method:'POST',body:{submissionId:id,clientKey:key,fields}})).status,202);
+  await until(async()=>{const r=await f.request('/v1/production-orders/'+id,{orderKey:key});return r.data.state==='processing';});
+  f.service.store.db.prepare("UPDATE production_submissions SET updated=? WHERE id=?").run(Date.now()-11*60*1000,id);
+  await until(async()=>{const r=await f.request('/v1/production-orders/'+id,{orderKey:key});return r.data.state==='unknown';});
+  assert.equal(calls,1);
+ }finally{await f.close();}
+});

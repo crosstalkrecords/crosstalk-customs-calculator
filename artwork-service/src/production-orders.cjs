@@ -44,12 +44,25 @@ function installProductionOrders(app,store,config,{fetchImpl=fetch,interval=1000
  const paused=()=>store.db.prepare("SELECT value FROM production_control WHERE name='paused'").get().value==='1';
  const staff=req=>safeEqual(req.get('Authorization'),'Bearer '+config.staffSecret);
  const trusted=req=>safeEqual(req.get('Authorization'),'Bearer '+config.bindSecret);
- const sameOrigin=req=>req.get('Origin')&&config.origins.includes(req.get('Origin'));
+ const sameOrigin=req=>{
+  const origin=req.get('Origin');
+  if(origin)return config.origins.includes(origin);
+  if(config.publicOrigin&&req.get('Host')===new URL(config.publicOrigin).host&&req.get('Sec-Fetch-Site')==='same-origin')return true;
+  // Some Chromium builds omit Origin for an allowed cross-port request on
+  // the same site. In that case require both Fetch Metadata and an exact
+  // approved Referer origin; a missing Referer never opens this fallback.
+  if(req.get('Sec-Fetch-Site')==='same-site'){
+   try{return config.origins.includes(new URL(req.get('Referer')).origin);}catch(_){return false;}
+  }
+  return false;
+ };
  const publicState=row=>({submissionId:row.id,state:row.state,
   ...(row.state==='complete'?{uploadLink:row.upload_link,artworkStatus:row.reference?'queued':'not_supplied'}:{}),
   ...(['unknown','manual_review'].includes(row.state)?{outcomeUncertain:true}:{})});
  let closed=false,inFlight=null;
  async function dispatch(){
+  store.db.prepare("UPDATE production_submissions SET state='unknown',updated=? WHERE state='processing' AND updated<?")
+   .run(Date.now(),Date.now()-10*60*1000);
   // Pausing stops new acceptance, not work already durably accepted.
   if(closed||inFlight||!available(config))return;
   const row=store.db.prepare("SELECT * FROM production_submissions WHERE state='queued' ORDER BY created,id LIMIT 1").get();
