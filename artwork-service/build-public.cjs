@@ -34,7 +34,7 @@ $('completeArtwork').onclick=async()=>{
    if(!config.returnOrigins?.includes(returnOrigin))throw Error('This order page is not approved for artwork handoff.');
   }
   await saveNow();
-  const project={format:'crosstalk-project',version:1,rendererVersion:'approved-d5b75f9-v1',surfaces:Object.fromEntries(Object.entries(state.surfaces).map(([id,layers])=>[id,layers.map(l=>({...l}))])),backgrounds:structuredClone(state.backgrounds)};
+  const project={format:'crosstalk-project',version:1,rendererVersion:'approved-spacing-v2',surfaces:Object.fromEntries(Object.entries(state.surfaces).map(([id,layers])=>[id,layers.map(l=>({...l}))])),backgrounds:structuredClone(state.backgrounds)};
   const result=await window.CrosstalkHandoff.upload(project,message=>status.textContent=message);
   if(window.opener&&session){
    const testPreview=new URLSearchParams(location.search).get('testPreview')==='1';

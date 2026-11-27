@@ -9,7 +9,7 @@ const FONT_CATALOG = [
 ];
 function fail(message){const e=new Error(message);e.status=422;throw e;}
 function validate(project, assetIds){
-  if(!project || project.format!=='crosstalk-project' || project.version!==1 || project.rendererVersion!=='approved-d5b75f9-v1') fail('Unsupported artwork project version');
+  if(!project || project.format!=='crosstalk-project' || project.version!==1 || !['approved-d5b75f9-v1','approved-spacing-v2'].includes(project.rendererVersion)) fail('Unsupported artwork project version');
   if(!project.surfaces || Array.isArray(project.surfaces) || typeof project.surfaces!=='object') fail('Missing surfaces');
   if(Object.keys(project.surfaces).some(id=>!SURFACES[id])) fail('Unknown surface');
   if(Buffer.byteLength(JSON.stringify(project))>LIMITS.projectBytes) fail('Project is too large');

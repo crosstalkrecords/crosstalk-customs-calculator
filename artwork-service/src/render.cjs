@@ -4,10 +4,12 @@ const {chromium}=require('playwright');
 const {SURFACES}=require('./project.cjs');
 const {decode,pixelLayer,mask,fontName,nativeText,writePsdBuffer}=require('./psd.cjs');
 const ROOT=path.resolve(__dirname,'..');
-async function rendererHTML(){
- const original=await fs.readFile(path.join(ROOT,'vendor/approved-editor.html'),'utf8');
+async function rendererHTML(version='approved-spacing-v2'){
+ const sources={'approved-d5b75f9-v1':['approved-editor-v1.html','1b2e6ef95dcad12640dba4380b3e117adba09234'],'approved-spacing-v2':['approved-editor.html','b6de9bfc716b3a8a3e92e71bd591915109cc887c']};
+ const source=sources[version];if(!source)throw Error('Unsupported artwork renderer version');
+ const original=await fs.readFile(path.join(ROOT,'vendor',source[0]),'utf8');
  const blob=crypto.createHash('sha1').update(`blob ${Buffer.byteLength(original)}\0`).update(original).digest('hex');
- if(blob!=='1b2e6ef95dcad12640dba4380b3e117adba09234')throw Error('Approved renderer source changed');
+ if(blob!==source[1])throw Error('Approved renderer source changed');
  const lab=await fs.readFile(path.join(ROOT,'vendor/lab-hook.js'),'utf8');
  const helpers=lab.slice(lab.indexOf('function labCanvas'),lab.indexOf("document.getElementById('labRender').onclick"));
  const hook=`${helpers}
@@ -38,7 +40,7 @@ async function renderProject(project,assetDir,out){
  try{
   const page=await browser.newPage({viewport:{width:1200,height:900}});
   await page.route('**/*',route=>route.abort()); // No customer-controlled network requests.
-  await page.setContent(await rendererHTML(),{waitUntil:'domcontentloaded'});
+  await page.setContent(await rendererHTML(project.rendererVersion),{waitUntil:'domcontentloaded'});
   const resolved=structuredClone(project);
   for(const list of Object.values(resolved.surfaces))for(const l of list)if(l.type==='image'){
    const bytes=await fs.readFile(path.join(assetDir,l.src.slice(6)));
