@@ -4,6 +4,8 @@
 
 **Make recovery checkpoint (27 November 2026).** The organization exhausted its yearly allowance and reported scenarios paused. Josh replenished credits; the API now reports 49,998 unused credits and `isPaused:false`. With Josh's specific approval, JOSH TEST status sweep `8816289` and async intake draft `8715068` were deactivated and independently verified off. Existing Customer Intake `4762364` and invoicing backup `6745352` report active; their webhook queues each held 0 items when checked. The existing Customer Intake's last observed execution was at 2:08 pm Sydney time before the credit interruption, and no post-replenishment live order/invoice run has been observed. An active switch and an empty queue are not a completed end-to-end proof. Confirm those routes with controlled evidence before release. Do not infer from the sweep's 1,602 credits that it caused all 125,000 annual credits to be spent.
 
+**Airtable test checkpoint.** In the separate JOSH TEST base, the Status field now reads `QC → READY FOR ART → Cut Ready → NOTIFIED FOR PICK UP → Completed`, with all original named choice IDs preserved. A test-only customer upload request URL field was added. The production Airtable schema, Make intake and Common Ground embed have not been changed by this rehearsal.
+
 ## Keep both forms published and distinct
 
 | Role | Pages file / URL | Rule |
