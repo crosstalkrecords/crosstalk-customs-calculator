@@ -1,7 +1,15 @@
 # JOSH TEST full intake blueprint audit (inactive saved draft)
 
+## Reconciliation on 27 November 2026
+
+The opening audit below described the state when the draft was first saved. It is no longer accurate to call the scenario unexecuted. Make's history shows several automatic runs of 23–25 operations. The 27 November 00:13 UTC run for test submission `36d0bd53-6f78-4b0e-96e1-6b7c7073422c` finished with 25 operations. JOSH TEST Airtable record `recM9OstNTr8oLBLk` / `JOB368` has matching Submission ID and fingerprint, isolated order and Uploads paths, a file request ID and URL, `Completed` intake, `Sent` customer and staff fields, and `Delivered` artwork status. Railway HTTP logs for the same ID show a browser POST `/v1/test-orders` 202, Make `/internal/test-bind` 202 and Make `/internal/test-submissions/:id/outcome` 200. The public file request showed the `Choose files` upload form. The isolated Dropbox app folder contains `JOSH TEST-JOB368.zip` (87.27 MB) under that exact Uploads path; its preview lists job-numbered front/back/label PSDs, reference PNGs, JSON, README, fonts and recovery files. These observations establish this one test chain; the `Sent` fields prove provider acceptance, not inbox arrival, and no customer audio upload was observed in JOB368.
+
+The earlier claim that **both** Make mail modules addressed Josh was false for the saved blueprint: module 110 addressed `custom@crosstalkrecords.com`. Before another run, module 110 was changed in the **inactive** JOSH TEST scenario to `delousedcomatorium@gmail.com`; readback now shows modules 107 and 110 each have exactly that one recipient. The scenario description was corrected. The previous runs may have sent staff notices to the live Customs mailbox. No new email was sent during this correction.
+
+The test Dropbox app folder currently presents `Only you`, a disabled invite field, and a **viewing** link setting but no editing link setting. It therefore does not prove that staff can edit the production order folder. The production-capable Dropbox connection and staff access need a separate isolated rehearsal without changing existing live folder permissions. The protected preview could not be opened in this cloud browser (`ERR_INVALID_AUTH_CREDENTIALS` followed by a browser URL-policy denial); no fresh browser order was submitted in this reconciliation. Make scenario `8715068` remains inactive. This evidence is separate from the new on-demand Data Store → Airtable guard probe `8845276`.
+
 The adjacent `JOSH_TEST_FULL_INTAKE_BLUEPRINT_DRAFT.json` was saved to protected
-Make scenario `8715068`, which remains **inactive and unexecuted** end to end.
+Make scenario `8715068`. The following table is the **original pre-run audit**, superseded where the reconciliation above gives actual runtime evidence. The scenario is currently inactive.
 Readback confirms 100 unique modules, `confidential=true`, sequential execution,
 incomplete execution storage off, and no Break retry handlers. The draft
 contains no raw credential, webhook URL,
@@ -29,14 +37,13 @@ connection `12211852` authenticates bind/callback modules. No Brain, live
 Customs order scenario, live form, invoice, Stripe, payment, or production
 Dropbox module appears in the candidate.
 
-The saved inactive draft passed structural schema validation with 100 unique module IDs.
+At the initial pre-run audit, the saved inactive draft passed structural schema validation with 100 unique module IDs.
 All 32 distinct changed/new configuration signatures covering 54 changed/new
 configured modules passed Make validation with zero errors and warnings,
 including the early response, Airtable, Dropbox, Microsoft, and HTTP modules.
 The initial Airtable update was revalidated after omitting the premature
 Artwork Delivery Status and adding the blank quote price mapping. Modules 17
 and 104 were revalidated after correcting their ledger stages. This does
-**not** validate runtime filter evaluation, the blank-price `erase` expression,
+**not**, by itself, validate runtime filter evaluation, the blank-price `erase` expression,
 HTTP response-body mapping, hook destination, recipient handling in the
-combined route, timing, or error behavior. Keep the full scenario inactive
-until a strict controlled end-to-end test and review.
+combined route, timing, or error behavior. The reconciliation above records later runtime evidence and remaining limits. Keep the full scenario inactive pending the remaining controlled checks.
