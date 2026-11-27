@@ -30,7 +30,7 @@ test('production gateway deduplicates an ordinary order, requires trusted outcom
   assert.equal((await f.request('/v1/production-orders/'+id,{orderKey:'wrong'})).status,422);
   const ledger=await f.request('/internal/production-ledger',{staff:true});assert.equal(ledger.data.items.length,1);
   const outcome={submissionId:id,requestFingerprint:sent[0]['Request Fingerprint'],airtableRecordId:'rec12345678901234',
-   folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123',state:'complete'};
+   jobNumber:'JOB9',folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123',state:'complete'};
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',body:outcome})).status,401);
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',body:outcome,bind:true})).status,200);
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',body:outcome,bind:true})).status,200);
@@ -63,12 +63,13 @@ test('one artwork capability binds only to the exact returned order folder',asyn
   assert.equal(sent[0]['Artwork Attached'],'Yes');
   assert.equal(JSON.stringify(sent[0]).includes(draft.token),false);
   const outcome={submissionId:id,requestFingerprint:sent[0]['Request Fingerprint'],airtableRecordId:'rec12345678901234',
-   folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123',state:'complete'};
+   jobNumber:'JOB9',folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123',state:'complete'};
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...outcome,jobNumber:undefined}})).status,422);
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...outcome,uploadLink:'https://www.dropbox.com/scl/fo/edit'}})).status,422);
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...outcome,folder:'/Crosstalk Customs/JOSH TEST/other/Uploads'}})).status,422);
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:outcome})).status,200);
   const binding=JSON.parse(f.service.store.get(draft.id).binding);
-  assert.equal(binding.orderId,outcome.airtableRecordId);assert.equal(binding.folder,outcome.folder);
+  assert.equal(binding.orderId,outcome.airtableRecordId);assert.equal(binding.folder,outcome.folder);assert.equal(binding.jobNumber,'JOB9');
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...outcome,folder:'/Crosstalk Customs/Orders/JOB10/Uploads'}})).status,409);
  }finally{await f.close();}
 });
