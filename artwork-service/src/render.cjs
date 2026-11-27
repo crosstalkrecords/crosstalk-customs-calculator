@@ -4,10 +4,12 @@ const {chromium}=require('playwright');
 const {SURFACES}=require('./project.cjs');
 const {decode,pixelLayer,mask,fontName,nativeText,writePsdBuffer}=require('./psd.cjs');
 const ROOT=path.resolve(__dirname,'..');
-async function rendererHTML(){
- const original=await fs.readFile(path.join(ROOT,'vendor/approved-editor.html'),'utf8');
+async function rendererHTML(version='approved-spacing-v2'){
+ const sources={'approved-d5b75f9-v1':['approved-editor-v1.html','1b2e6ef95dcad12640dba4380b3e117adba09234'],'approved-spacing-v2':['approved-editor.html','b6de9bfc716b3a8a3e92e71bd591915109cc887c']};
+ const source=sources[version];if(!source)throw Error('Unsupported artwork renderer version');
+ const original=await fs.readFile(path.join(ROOT,'vendor',source[0]),'utf8');
  const blob=crypto.createHash('sha1').update(`blob ${Buffer.byteLength(original)}\0`).update(original).digest('hex');
- if(blob!=='d38ee5689fa164ac1cc9c2f0c239ec1b3dac03cf')throw Error('Approved renderer source changed');
+ if(blob!==source[1])throw Error('Approved renderer source changed');
  const lab=await fs.readFile(path.join(ROOT,'vendor/lab-hook.js'),'utf8');
  const helpers=lab.slice(lab.indexOf('function labCanvas'),lab.indexOf("document.getElementById('labRender').onclick"));
  const hook=`${helpers}
@@ -38,7 +40,7 @@ async function renderProject(project,assetDir,out){
  try{
   const page=await browser.newPage({viewport:{width:1200,height:900}});
   await page.route('**/*',route=>route.abort()); // No customer-controlled network requests.
-  await page.setContent(await rendererHTML(),{waitUntil:'domcontentloaded'});
+  await page.setContent(await rendererHTML(project.rendererVersion),{waitUntil:'domcontentloaded'});
   const resolved=structuredClone(project);
   for(const list of Object.values(resolved.surfaces))for(const l of list)if(l.type==='image'){
    const bytes=await fs.readFile(path.join(assetDir,l.src.slice(6)));
@@ -55,20 +57,20 @@ async function renderProject(project,assetDir,out){
     const l=ordered[index],e=await page.evaluate(({id,index})=>window.__artworkRenderer.layer(id,index),{id,index});
     let layer;
     if(l.type==='image'){layer=await pixelLayer(e.unmasked,l.name||'Photo');layer.mask=await mask(e.mask);}
-    else if(l.type==='text'&&fontName(l)){
+    else if(l.type==='text'&&fontName(l)&&!l.flipX&&!l.flipY){
      layer=await pixelLayer(e.fillRaster,l.name||l.text);layer.text=nativeText(l,e.metrics,size);
      if(l.textStrokeEnabled)layer.effects={stroke:[{enabled:true,present:true,showInDialog:true,size:{units:'Pixels',value:Math.max(1,Math.round(l.textStrokeWidth/100*size))},position:'center',fillType:'color',blendMode:'normal',opacity:1,color:{r:parseInt(l.textStrokeColor.slice(1,3),16),g:parseInt(l.textStrokeColor.slice(3,5),16),b:parseInt(l.textStrokeColor.slice(5,7),16)}}]};
      children.push({...await pixelLayer(e.raster,'Preview backup — '+l.id),hidden:true});
     }else{
      layer=await pixelLayer(e.raster,l.name||l.text||l.shape||l.id);
-     if(l.type==='text'){layer.name='Raster text — '+l.id;fallbacks.push({id:l.id,font:l.font,reason:'Exact font/style not pinned'});}
+     if(l.type==='text'){layer.name='Raster text — '+l.id;fallbacks.push({id:l.id,font:l.font,reason:l.flipX||l.flipY?'Flipped text retained as visual raster':'Exact font/style not pinned'});}
     }
     layer.opacity=l.opacity??1;layer.hidden=l.visible===false;children.push(layer);
    }
    const doc={width:size,height:size,canvas:await decode(base.reference),children:base.shape==='circle'?[{name:'Circular label boundary and centre hole',children,mask:await mask(base.boundary)}]:children,imageResources:{resolutionInfo:{horizontalResolution:300,horizontalResolutionUnit:'PPI',widthUnit:'Inches',verticalResolution:300,verticalResolutionUnit:'PPI',heightUnit:'Inches'}}};
    await fs.writeFile(path.join(out,id+'.psd'),writePsdBuffer(doc,{noBackground:true}));
    await fs.writeFile(path.join(out,id+'-reference.png'),Buffer.from(base.reference.split(',')[1],'base64'));
-   manifest.surfaces.push({id,size,editorLayers:ordered.length,nativeText:ordered.filter(l=>l.type==='text'&&fontName(l)).length,fallbacks});
+   manifest.surfaces.push({id,size,editorLayers:ordered.length,nativeText:ordered.filter(l=>l.type==='text'&&fontName(l)&&!l.flipX&&!l.flipY).length,fallbacks});
    doc.canvas.width=doc.canvas.height=1;for(const l of children)if(l.canvas)l.canvas.width=l.canvas.height=1;
   }
   await fs.writeFile(path.join(out,'conversion.json'),JSON.stringify(manifest,null,2));return manifest;

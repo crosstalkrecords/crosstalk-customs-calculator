@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {createCanvas,readPsd}=require('../src/psd.cjs');
+const {renderProject}=require('../src/render.cjs');
 const {makeApp}=require('../src/server.cjs'),{digest}=require('../src/project.cjs');
 const root=process.env.ARTWORK_ACCEPTANCE_DIR?path.resolve(process.env.ARTWORK_ACCEPTANCE_DIR):path.resolve(__dirname,'../test-output');
 function text(id,words,y,extra={}){return {id,type:'text',text:words,font:'Crosstalk Sans',fontSize:4,color:'#ffffff',align:'center',rotation:0,letterSpacing:0,opacity:1,x:.1,y,w:.8,h:.12,z:10,...extra};}
@@ -34,6 +35,29 @@ function fixture(hash,labelOnly=false){
    if(!labelOnly){await fs.cp(output,path.join(root,'Photoshop-check'),{recursive:true});await fs.cp(path.join(__dirname,'../public/fonts'),path.join(root,'Photoshop-check/Fonts'),{recursive:true});}
   }
   const dirs=await fs.readdir(config.testDestination);assert.deepEqual(dirs.sort(),['JOSH_TEST_A','JOSH_TEST_B']);for(const d of dirs)assert.equal((await fs.readdir(path.join(config.testDestination,d))).length,1);
+  // The editor's preview and the PSD exporter use separate photo paths. Check
+  // the actual Photoshop photo layer, plus the flipped-text fallback decision.
+  const flipDir=path.join(root,'flip-check'),assetDir=path.join(flipDir,'assets'),out=path.join(flipDir,'output');
+  await fs.mkdir(assetDir,{recursive:true});
+  const asymmetric=createCanvas(40,20),ax=asymmetric.getContext('2d');
+  ax.fillStyle='#ff0000';ax.fillRect(0,0,20,20);ax.fillStyle='#0000ff';ax.fillRect(20,0,20,20);
+  const asymmetricBytes=asymmetric.toBuffer('image/png'),asymmetricHash=digest(asymmetricBytes);
+  await fs.writeFile(path.join(assetDir,asymmetricHash),asymmetricBytes);
+  const flipped={format:'crosstalk-project',version:1,rendererVersion:'approved-d5b75f9-v1',
+   surfaces:{front:[{id:'mirrored-photo',type:'image',src:'asset:'+asymmetricHash,x:.1,y:.1,w:.8,h:.5,z:1,flipX:true,opacity:1},
+    {id:'tiny-square-box',type:'shape',shape:'rectangle',x:.2,y:.72,w:.06,h:.025,z:2,fillMode:'solid',fillA:'#000000',strokeEnabled:false,flipY:true},
+    text('mirrored-text','AB',.82,{flipX:true})]},backgrounds:{front:{type:'solid',color:'#ffffff'}}};
+  const flipManifest=await renderProject(flipped,assetDir,out);
+  assert.equal(flipManifest.surfaces[0].nativeText,0);
+  assert.match(flipManifest.surfaces[0].fallbacks[0].reason,/Flipped text/);
+  const flippedDoc=readPsd(await fs.readFile(path.join(out,'front.psd')),{skipCompositeImageData:true,skipThumbnail:true});
+  const photoLayer=flippedDoc.children.find(layer=>layer.name==='Photo'),pixels=photoLayer.canvas.getContext('2d');
+  const left=pixels.getImageData(600-photoLayer.left,1000-photoLayer.top,1,1).data;
+  const right=pixels.getImageData(2400-photoLayer.left,1000-photoLayer.top,1,1).data;
+  assert(left[2]>left[0]*3,'left of flipped photo is blue');
+  assert(right[0]>right[2]*3,'right of flipped photo is red');
+  assert(flippedDoc.children.some(layer=>layer.name==='Raster text — mirrored-text'));
+  console.log('Flipped photo PSD pixels, tiny square box and raster text fallback verified');
   await fs.writeFile(path.join(root,'acceptance.json'),JSON.stringify({syntheticOnly:true,remoteDropboxVerified:false,photoshopVerified:false,results},null,2));console.log(JSON.stringify(results,null,2));
  }finally{await new Promise(r=>server.close(r));await service.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

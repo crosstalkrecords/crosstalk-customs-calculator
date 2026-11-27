@@ -1,0 +1,120 @@
+{
+  "kind": "Crosstalk Customs isolated intake mapping and validation record",
+  "deployable": false,
+  "reason": "The preferred claim/recovery design is the Airtable-only performUpsert ledger in JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md, with sequential Make execution and incomplete executions. Its shape passed validation but runtime is untested. The older CreateRecord/SearchRecords mappings below are validation records only, not the selected claim path. A dedicated protected hook and runnable stage/error routes are still required. Dropbox connection 13265654 passed a controlled read-only listing, but writes/file requests/exporter namespace remain unverified. Old 13265327 stays unused. This is not a Make scenario blueprint.",
+  "scope": {
+    "testLabel": "JOSH TEST",
+    "customerName": "TEST JOSH 21.11",
+    "recipient": "delousedcomatorium@gmail.com",
+    "airtableBase": "appDz7CEL2KQWpzyC",
+    "airtableTable": "tbly1iXdcMvFuqCcY",
+    "airtableConnection": 13265002,
+    "dropboxOrderRoot": "/Crosstalk Customs/JOSH TEST",
+    "makeScenarioName": "JOSH TEST Customer Intake"
+  },
+  "moduleValidation": {
+    "airtableCreate": "Legacy CreateRecord field map, including Packaging, Vinyl Colour, Side A/B Length, Extras, Submission ID, Artwork Job ID and Artwork Delivery Status, validated with zero errors or warnings on 2026-11-21. It is not the preferred recovery path and has not created a record.",
+    "airtableSearch": "Legacy ActionSearchRecords exact Submission ID formula and maxRecords=2 validated with zero errors or warnings on 2026-11-21; preferred claim uses performUpsert.",
+    "airtableClaim": "Airtable makeApiCall PATCH performUpsert with only Submission ID as merge field/body passed strict configuration validation. Runtime claim response, one-row retry and 25-second timing remain untested; see JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md.",
+    "dropboxFileRequest": "Verified module identifier dropbox:createFileRequest version 5. It requires title and destination path and returns a distinct customer upload URL. New connection 13265654 is available but this native module and destination have not been tested with it; an OAuth-bound dropbox:makeApiCall may be needed if native modules are incompatible with the app-folder grant."
+  },
+  "preferredAirtableLedger": {
+    "draft": "JOSH_TEST_AIRTABLE_LEDGER_DRAFT.md",
+    "claimModule": "airtable:makeApiCall",
+    "claimConnection": 13265002,
+    "claimMethod": "PATCH",
+    "claimPath": "v0/appDz7CEL2KQWpzyC/tbly1iXdcMvFuqCcY",
+    "claimBody": { "performUpsert": { "fieldsToMergeOn": ["Submission ID"] }, "records": [{ "fields": { "Submission ID": "{{1.`Submission ID`}}" } }] },
+    "execution": "sequential with incomplete executions enabled; fetch exactly one claimed record ID and compare server-supplied Request Fingerprint before populating details",
+    "fieldIds": {
+      "Request Fingerprint": "fldq46cNTtEpprcgN",
+      "Intake State": "fldnYB8vJvo3b6ddu",
+      "Dropbox Order Folder": "flde9LOZGGrHS8par",
+      "Dropbox Uploads Folder": "fldLvBqkU5rIbhFrc",
+      "File Request ID": "fld9AkpYIBIfCgeMv",
+      "Customer Email Status": "fldiHqm7xEMbVJLmg",
+      "Staff Email Status": "fldZJt4pfO1ldlOia",
+      "Intake Last Error": "fldbYG3ngxEuBTjQS",
+      "Intake Updated At": "fldhGBLf4ixDl7TmT"
+    },
+    "runtimeStatus": "untested; not a database uniqueness constraint against other writers"
+  },
+  "legacyCreateRecordValidationOnly": {
+    "module": "airtable:ActionCreateRecord",
+    "version": 3,
+    "parameters": { "__IMTCONN__": 13265002 },
+    "mapper": {
+      "base": "appDz7CEL2KQWpzyC",
+      "table": "tbly1iXdcMvFuqCcY",
+      "typecast": true,
+      "useColumnId": false,
+      "record": {
+        "fldKgbOba0zvKyWRt": "{{1.`Customer Name`}}",
+        "fldfkF6sDQsNpXdXk": "{{1.Email}}",
+        "fld2POlaG4bAY7SCQ": "{{1.`Custom Field 1`}}",
+        "fldYMxBMG5MubBQ5M": "New Submissions",
+        "fldXlei2WHnueVkFz": "{{1.`Artist Order`}}",
+        "fldwAXAFk0CWyp1Oy": "{{lower(toString(1.Rush)) = \"on\"}}",
+        "fld5F5mKkYYOAGQqD": "{{lower(toString(1.`Shipping Required`)) = \"on\"}}",
+        "fldN1FpgWdUHgqC5w": "{{1.`Delivery Method`}}",
+        "fldQnSLXlzyedrnIO": "{{1.Speed}}",
+        "flddgwWOugRimbwIw": "{{1.Sides}}",
+        "fldiDDxb2Aaz85Jjj": "{{1.Quantity}}",
+        "fldkvqgZfvpOlXaN3": "{{1.`Record Size`}}",
+        "fldrkJPDoAPG0kS7s": "{{1.`Estimated Price Given`}}",
+        "fldxlk24RQeHUAPcp": "{{1.Tracklist}}",
+        "flduI8PgnORR8I71d": "{{1.Tracklist}}",
+        "fldlipVWj9gGrEEVR": "{{1.`Customer Name`}},{{1.`Street Address`}} {{1.Suburb}} {{1.Postcode}} {{1.State}}.",
+        "fldGqpmxYQBhWAFrp": "{{1.Extras}}",
+        "fldDCDuwYdQuWJDmR": "{{1.Packaging}}",
+        "fldzWWtP29T4sQYtv": "{{1.`Vinyl Colour`}}",
+        "fldsaBEXJkwNKkrPa": "{{1.`Side A Length`}}",
+        "fld4VpGvvfNlWQDxi": "{{1.`Side B Length`}}",
+        "fldro75kOQGnubjQR": "{{1.`Submission ID`}}",
+        "fldZ3a2PYHZ7LKubs": "{{1.`Artwork Job ID`}}",
+        "fldC0OBNOiit8AltO": "{{if(empty(1.`Artwork Reference`); \"Not supplied\"; \"Queued\")}}"
+      }
+    },
+    "note": "Configuration validation only; do not use CreateRecord after the preferred performUpsert claim, because an ambiguous retry could duplicate an order. The Artist text field receives explicit Yes/No, and quoted price is untrusted customer input that must not trigger invoicing. Adapt these mapped details to a guarded update of the claimed record after fingerprint verification."
+  },
+  "legacySearchRecordsValidationOnly": {
+    "module": "airtable:ActionSearchRecords",
+    "version": 3,
+    "parameters": { "__IMTCONN__": 13265002 },
+    "mapper": {
+      "base": "appDz7CEL2KQWpzyC",
+      "table": "tbly1iXdcMvFuqCcY",
+      "formulaField": "formula",
+      "formula": "{Submission ID} = '{{1.`Submission ID`}}'",
+      "maxRecords": 2,
+      "useColumnId": false
+    },
+    "invariant": "Do not use this as the preferred claim path. Airtable performUpsert on Submission ID in a sequential scenario is the selected draft. This legacy search mapper was validated only for configuration shape."
+  },
+  "createdTestOnlyFields": [
+    { "id": "fldDCDuwYdQuWJDmR", "name": "Packaging", "type": "singleSelect", "choices": ["Standard", "Printed Jacket + Labels", "Custom Finish Pack"] },
+    { "id": "fldzWWtP29T4sQYtv", "name": "Vinyl Colour", "type": "singleSelect", "choices": ["Clear", "Black", "Red"] },
+    { "id": "fldsaBEXJkwNKkrPa", "name": "Side A Length", "type": "singleLineText" },
+    { "id": "fld4VpGvvfNlWQDxi", "name": "Side B Length", "type": "singleLineText" }
+  ],
+  "nativeDropboxFileRequest": {
+    "module": "dropbox:createFileRequest",
+    "version": 5,
+    "parameters": { "__IMTCONN__": 13265654 },
+    "mapper": {
+      "title": "JOSH TEST audio upload — {{2.`Job Number`}}",
+      "path": "{{27.path_display}}",
+      "description": "TEST JOSH 21.11 — audio files for a test order only",
+      "open": true
+    },
+    "customerUrl": "{{51.url}}",
+    "staffFolderUrl": "ONLY_VERIFIED_TEAM_ONLY_URL_OR_LEAVE_EMPTY",
+    "invariant": "Old connection 13265327 remains unused. New app-folder connection 13265654 returned the expected JOSH TEST folder via an OAuth-bound /2/files/list_folder API call with disablePathRoot=true in controlled inactive scenario 8714819. The native Make folder picker listFolders RPC failed with 'path root is not supported for sandbox app'; do not assume native createFolder, createFileRequest or createShareLink work. Validate each with this connection or use OAuth-bound dropbox:makeApiCall without raw tokens. Verify actual test upload/write and the exporter's shared namespace. Store the file request URL in Audio Upload fld5G2oHi9NL73kkn; write Internal Folder Link fldFsfOT7hf2Bg4ZO only with a verified team-only URL, otherwise leave it empty and retain a private path for staff. Dropbox's default shared link is public: never create one without explicit team-only settings. Verify the file request is open and uploads to the exporter's same isolated app-folder namespace before email or acknowledgement."
+  },
+  "responseContract": {
+    "serverTimeoutMs": 25000,
+    "withArtwork": ["bound", "already_bound"],
+    "withoutArtwork": ["not_supplied"],
+    "note": "Do not return 202 merely because the webhook queued. Time the entire Make path. If it cannot finish within 25 seconds, change the isolated server and UI to report a persisted queued stage and poll by Submission ID before customer testing."
+  }
+}

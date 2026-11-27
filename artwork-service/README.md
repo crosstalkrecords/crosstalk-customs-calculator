@@ -1,7 +1,45 @@
 # Artwork delivery integration — isolated implementation
 
-This service is not deployed or wired into the live calculator. The production
-calculator, approved editor branch and Make scenarios are unchanged.
+## JOSH TEST tester route (21 November 2026)
+
+The generated `/calculator-preview.html` is an isolated, HTTP Basic gated
+test form. `/designer.html` uses the same gate; the access code is supplied
+separately, never embedded in the link or JavaScript. `ARTWORK_TEST_ACCESS_CODE`,
+`ARTWORK_TEST_WEBHOOK_URL`, `ARTWORK_TEST_MAKE_API_KEY` and
+`ARTWORK_TEST_RECIPIENT` are server-only variables. Configure the dedicated
+Make webhook to require its own API key in `x-make-apikey`, and store that key
+only as `ARTWORK_TEST_MAKE_API_KEY` in the JOSH TEST service environment. The
+test submission route stays closed without it; never put it in the preview
+page, a URL, or a Make blueprint.
+The preview replaces the production Make URL at build time and submits JSON to
+`/v1/test-orders`, which accepts only the fixed TEST JOSH 21.11 identity and
+Josh's test recipient, only in the JOSH TEST Dropbox root with delivery enabled.
+It forwards an allowlisted set of form fields with that fixed identity. The
+shipping test uses a clearly fictional, non-deliverable address; no tester's
+real shipping address is forwarded. A persisted idempotency key and normalized
+request fingerprint limit the entire environment to 30 submissions; the UI shows
+the accepted Make response separately from eventual verified Dropbox delivery.
+The isolated Make scenario is the only recipient of its server-side webhook;
+it is currently deactivated outside controlled tests.
+Its test email is a receipt acknowledgement, not a delivery notification.
+No Airtable record, invoice, payment, staff email, or real audio link is made.
+
+The tester window consists of this guarded route, JOSH TEST exporter delivery,
+and the isolated Make scenario enabled together. Disable the Make scenario and
+delivery mode when the tester window is over. Setup mode stays disabled. The
+`/internal/dropbox/test-delivery` probe also requires setup mode explicitly,
+even when the regular delivery mode is disabled.
+
+The editor already supports front/back jackets and `labelA`/`labelB` surfaces.
+Those label surfaces are versioned project data and separate PSD outputs. A
+future dedicated custom-label UI can target those same surface IDs and project
+schema without changing the order reference or Make binding. Any new tools or
+geometry require renderer and Photoshop acceptance before rollout.
+
+The isolated Railway environment reports a successful review-branch deployment
+containing the mobile and staff-recovery fixes. The newer Airtable intake
+mapping in this branch still requires a JOSH TEST deployment and hosted retest.
+The production calculator and live Make intake remain unchanged.
 
 ## Implemented flow
 
@@ -25,6 +63,24 @@ Three automatic attempts are allowed, after which the job is marked failed.
 Staff-only /internal/jobs lists IDs/status/errors without order names or paths;
 POST /internal/retry/:id retries failed jobs. User status is capability-protected.
 No customer values or provider response bodies are logged.
+
+Terminal failures now retain their artwork until a successful retry. A separate
+`ARTWORK_STAFF_SECRET` (at least 32 characters, server-side only) enables
+`GET /internal/failures?limit=25&offset=0`. It returns paginated failed job
+IDs, order IDs, stage and time, never Dropbox paths or artwork capabilities.
+The staff secret also authorizes the existing retry endpoint; the binding
+secret remains valid there for existing server-side callers. No tester-facing
+staff page or notification is enabled. A verified delivery stores only its
+completion time, byte count and content hash for audit; raw Dropbox responses
+are not kept in the job record. Failed jobs no longer consume the 100 active
+job slots or the 2 GiB active-source quota. New asset uploads and draft
+creation also require 1 GiB of filesystem headroom. Legacy delivered jobs
+receive a completion timestamp on migration so they have a full seven-day
+retention window. Verify that headroom reflects the Railway volume quota;
+rendered PSDs and ZIPs also consume disk, and the threshold is not a
+reservation against concurrent uploads. Accumulated failures can still fill
+the volume. This requires staff monitoring and a reviewed recovery or
+disposal policy.
 
 ## Fonts and editability
 
@@ -67,7 +123,7 @@ Open /calculator-preview.html. The preview removes the real Make endpoint;
 submitting cannot create a real order. /designer.html can also be opened directly.
 Completion uploads a project but does not queue it until trusted order binding.
 
-## Deployment configuration (not provisioned)
+## Production deployment configuration (not provisioned)
 
 Deploy a dedicated single-instance Node service, not a static GitHub Pages page.
 The long-lived SQLite worker needs a persistent disk, bounded concurrency and
@@ -75,6 +131,8 @@ about 2 GiB RAM initially, to be measured under representative source photos.
 Never run two worker replicas against this volume; no distributed lease exists.
 
 - ARTWORK_BIND_SECRET: new server-only random value; enter through secret settings.
+- ARTWORK_STAFF_SECRET: separate server-only recovery value; leave unset until
+  staff access is provisioned. Never put it in a URL or browser script.
 - ARTWORK_ORIGINS: comma-separated exact calculator/editor origins.
 - ARTWORK_DATA_DIR: persistent private volume, writable by the Node user.
 - ARTWORK_DELIVERY_MODE: dropbox for real delivery; synthetic is rejected in production.
@@ -102,11 +160,14 @@ acceptance. Final user-facing limits must be checked against normal orders.
 2. Full font policy and physical print-template approval.
 3. Large-photo, repeated-job, memory and mobile interruption/recovery checks.
 4. Private persistent service, HTTPS, ingress limits, backup/restore and retention verification. Draft/ready jobs expire after 24 hours;
-   delivered/failed jobs expire after seven days. Cleanup runs hourly. These
-   periods must be approved and tested before public customer uploads.
+   delivered jobs expire seven days after confirmed delivery; failed jobs are
+   retained until a successful retry. Cleanup runs hourly. The free-space
+   threshold and deletion periods need approval before public uploads.
 5. Secure provider credentials and real synthetic Dropbox delivery verification.
 6. Inactive Make test copy, optional artwork routing, authenticated binding,
-   visible failure notification and delivery retry verification.
+   visible failure notification and delivery retry verification. The private
+   failure API is a manual recovery tool, not an alert; automatic alerting and
+   a volume backup/restore drill remain go-live gates.
 7. Device interruption/resumption acceptance: session capabilities are retained
    locally, content fingerprints prevent changed designs reusing sealed uploads,
    and repeated source uploads are idempotent. Test on actual target phones.
@@ -124,8 +185,17 @@ uploading or returning a reference. Configure `ARTWORK_ORIGINS` with both the
 exact live form origin and the artwork service's own origin. Once the real Make
 submission succeeds, the production calculator must dispatch
 `crosstalk-order-success` to clear the prior order's reference and session.
-The generated preview still cannot submit an order; this is a browser handoff
-test, not a live form integration.
+The generated preview submits only to the isolated server-side JOSH TEST route;
+it does not submit to the production Make intake or create a real order.
+
+The proposed form handoff appears in Step 3 only for printed packaging, and the
+order review says whether designer artwork is attached. Switching to Standard
+packaging omits the reference from FormData without discarding the uploaded
+design if the customer switches back. The calculator source now dispatches the
+success event after a successful Make response, but does not load the designer
+script in the live form. Desktop and mobile acceptance tests also exercise
+failed submission/retry; a confirmed submission clears the reference. A
+separate guarded preview test exercises the real isolated server-side route.
 
 ## Proposed minimal Make change (not applied)
 
@@ -146,7 +216,9 @@ Never derive the folder from a client field or reconstruct its name: module 12
 has autorename enabled. Artwork-less orders must retain their existing route and
 response. Build/test an inactive copy before selecting the optional routing and
 error handling approach; a filter inserted into the existing linear flow can
-accidentally prevent its webhook response. Current Make permissions are read-only.
+accidentally prevent its webhook response. The isolated JOSH TEST scenario now
+has a dedicated test webhook and Josh-only email; this proposed live Make
+change has not been applied.
 
 The separate file-request/shared-link discrepancy and credential rotation found
 in the audit are not silently changed as part of this integration.

@@ -9,7 +9,7 @@ const FONT_CATALOG = [
 ];
 function fail(message){const e=new Error(message);e.status=422;throw e;}
 function validate(project, assetIds){
-  if(!project || project.format!=='crosstalk-project' || project.version!==1 || project.rendererVersion!=='approved-d5b75f9-v1') fail('Unsupported artwork project version');
+  if(!project || project.format!=='crosstalk-project' || project.version!==1 || !['approved-d5b75f9-v1','approved-spacing-v2'].includes(project.rendererVersion)) fail('Unsupported artwork project version');
   if(!project.surfaces || Array.isArray(project.surfaces) || typeof project.surfaces!=='object') fail('Missing surfaces');
   if(Object.keys(project.surfaces).some(id=>!SURFACES[id])) fail('Unknown surface');
   if(Buffer.byteLength(JSON.stringify(project))>LIMITS.projectBytes) fail('Project is too large');
@@ -31,6 +31,7 @@ function validate(project, assetIds){
       seen.add(l.id);
       for(const key of ['x','y','w','h'])if(typeof l[key]!=='number'||!Number.isFinite(l[key])||Math.abs(l[key])>10)fail('Layer geometry outside limits');
       if(l.w<=0||l.h<=0)fail('Empty layer');
+      for(const key of ['flipX','flipY'])if(l[key]!==undefined&&typeof l[key]!=='boolean')fail('Invalid layer flip');
       if(l.opacity!==undefined&&(typeof l.opacity!=='number'||l.opacity<0||l.opacity>1))fail('Invalid opacity');
       if(l.type==='image'&&(!/^asset:[a-f0-9]{64}$/.test(l.src)||!assetIds.has(l.src.slice(6))))fail('Missing source image');
       if(l.type==='text'&&(typeof l.text!=='string'||l.text.length>5000||typeof l.font!=='string'||l.font.length>300||typeof l.fontSize!=='number'||l.fontSize<=0||l.fontSize>100))fail('Invalid text');

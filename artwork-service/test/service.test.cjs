@@ -9,6 +9,9 @@ test('source references and private order destinations are bounded',()=>{
  assert.throws(()=>validate({...project(),surfaces:{front:Array.from({length:41},(_,i)=>({...project().surfaces.front[0],id:String(i)}))}},new Set()),/40 layers/);
  for(const folder of ['/Elsewhere/A/Uploads','/Crosstalk Customs/Orders/../Uploads','/Crosstalk Customs/Orders/A/Uploads/child'])assert.throws(()=>validateBinding({orderId:'x',folder},'/Crosstalk Customs/Orders'));
  assert.equal(validateBinding({orderId:'x',folder:'/Crosstalk Customs/Orders/A/Uploads'},'/Crosstalk Customs/Orders').orderId,'x');
+ assert.equal(validateBinding({orderId:'recAAAAAAAAAAAAAA',folder:'/Crosstalk Customs/Orders/A/Uploads',jobNumber:'JOB364'},'/Crosstalk Customs/Orders').jobNumber,'JOB364');
+ assert.throws(()=>validateBinding({orderId:'x',folder:'/Crosstalk Customs/Orders/A/Uploads',jobNumber:'../../elsewhere'},'/Crosstalk Customs/Orders'),/Invalid job number/);
+ assert.throws(()=>validate({...project(),surfaces:{front:[{...project().surfaces.front[0],flipX:'true'}]}},new Set()),/Invalid layer flip/);
 });
 test('capabilities, sealing, trusted binding, restart and retry are isolated',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'customs-artwork-'));

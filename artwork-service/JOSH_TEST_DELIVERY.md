@@ -16,14 +16,17 @@ Persistent mount: /data; one replica and one serial renderer.
 Delivery starts disabled; Dropbox test root: /Crosstalk Customs/JOSH TEST.
 ARTWORK_TEST_LABEL=JOSH TEST labels test ZIP names and README contents.
 The deployment is pinned to a reviewed commit rather than following branch pushes.
-No Dropbox credentials have been provisioned.
+Dropbox was reauthorized through its app-folder OAuth flow. Its refresh token
+is encrypted on the JOSH TEST volume. The isolated delivery probe and one
+synthetic Make bind both uploaded a ZIP whose Dropbox metadata/content hash
+was verified. This does not validate the current production order route.
 
 ## Make preparation and activation boundary
 
-The connection currently exposes read-only tools. Prepare the following in a
-separate, inactive copy named JOSH TEST artwork delivery before changing intake.
-The copy must have a separate test webhook; never reuse the live webhook ID.
-Keep invoice creation and customer emails out of the first delivery-only test.
+The separate JOSH TEST artwork delivery scenario has its own test webhook and
+Josh-only test receipt email. It has no invoice, Airtable, staff notification or
+live customer email module. Keep it inactive outside a controlled tester window;
+never reuse the live webhook ID.
 
 The reviewed intake creates the Airtable record in module 2, order folder in
 module 12 and Uploads folder in module 27. Use module 27.path_display as the

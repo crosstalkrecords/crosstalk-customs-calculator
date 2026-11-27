@@ -1,0 +1,2465 @@
+{
+  "name": "JOSH TEST Customer Intake — ASYNC DRAFT (INACTIVE)",
+  "flow": [
+    {
+      "id": 1,
+      "mapper": {},
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "metadata": {
+        "restore": {
+          "parameters": {
+            "hook": {
+              "data": {
+                "editable": "true"
+              },
+              "label": "JOSH TEST Customs intake protected"
+            }
+          }
+        },
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "parameters": [
+          {
+            "name": "hook",
+            "type": "hook:gateway-webhook",
+            "label": "Webhook",
+            "required": true
+          },
+          {
+            "name": "maxResults",
+            "type": "number",
+            "label": "Maximum number of results"
+          }
+        ],
+        "setupValidation": {
+          "result": {
+            "valid": true,
+            "fields": []
+          },
+          "version": 1,
+          "configuration": "59201fb227067bdb"
+        }
+      },
+      "parameters": {
+        "hook": 4151555,
+        "maxResults": 1
+      }
+    },
+    {
+      "id": 2,
+      "mapper": {},
+      "module": "builtin:BasicRouter",
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 5,
+              "filter": {
+                "name": "Validated JOSH TEST payload, intake unavailable",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{ifempty(1.testLabel; emptystring)}}",
+                      "b": "JOSH TEST",
+                      "o": "text:equal"
+                    },
+                    {
+                      "a": "{{ifempty(1.`Test Order Name`; emptystring)}}",
+                      "b": "TEST JOSH 21.11",
+                      "o": "text:equal"
+                    },
+                    {
+                      "a": "{{ifempty(1.`Customer Name`; emptystring)}}",
+                      "b": "TEST JOSH 21.11",
+                      "o": "text:equal"
+                    },
+                    {
+                      "a": "{{ifempty(1.Email; emptystring)}}",
+                      "b": "delousedcomatorium@gmail.com",
+                      "o": "text:equal"
+                    },
+                    {
+                      "a": "{{ifempty(1.`Submission ID`; emptystring)}}",
+                      "b": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                      "o": "text:pattern:ci"
+                    },
+                    {
+                      "a": "{{ifempty(1.`Request Fingerprint`; emptystring)}}",
+                      "b": "^[0-9a-f]{64}$",
+                      "o": "text:pattern:ci"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "v0/appDz7CEL2KQWpzyC/tbly1iXdcMvFuqCcY",
+                "body": "{\"performUpsert\":{\"fieldsToMergeOn\":[\"Submission ID\"]},\"records\":[{\"fields\":{\"Submission ID\":\"{{1.`Submission ID`}}\"}}]}",
+                "method": "PATCH",
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              },
+              "module": "airtable:makeApiCall",
+              "onerror": [
+                {
+                  "id": 40,
+                  "mapper": {
+                    "body": "{\"error\":\"JOSH_TEST_INTAKE_REVIEW_REQUIRED\",\"message\":\"The test submission could not be confirmed. Staff review is required.\"}",
+                    "status": 503,
+                    "headers": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Cache-Control",
+                        "value": "no-store"
+                      }
+                    ]
+                  },
+                  "module": "gateway:WebhookRespond",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 750,
+                      "y": -350
+                    }
+                  },
+                  "parameters": {}
+                },
+                {
+                  "id": 41,
+                  "mapper": {},
+                  "module": "builtin:Commit",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 900,
+                      "y": -350,
+                      "name": "Stop JOSH TEST intake on error — no retry"
+                    }
+                  },
+                  "parameters": {}
+                }
+              ],
+              "version": 3,
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": -150
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 13265002
+              }
+            },
+            {
+              "id": 6,
+              "mapper": {
+                "id": "{{5.body.records[1].id}}",
+                "base": "appDz7CEL2KQWpzyC",
+                "table": "tbly1iXdcMvFuqCcY",
+                "useColumnId": true
+              },
+              "module": "airtable:ActionGetRecord",
+              "onerror": [
+                {
+                  "id": 42,
+                  "mapper": {
+                    "body": "{\"error\":\"JOSH_TEST_INTAKE_REVIEW_REQUIRED\",\"message\":\"The test submission could not be confirmed. Staff review is required.\"}",
+                    "status": 503,
+                    "headers": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Cache-Control",
+                        "value": "no-store"
+                      }
+                    ]
+                  },
+                  "module": "gateway:WebhookRespond",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 1050,
+                      "y": -350
+                    }
+                  },
+                  "parameters": {}
+                },
+                {
+                  "id": 43,
+                  "mapper": {},
+                  "module": "builtin:Commit",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 1200,
+                      "y": -350,
+                      "name": "Stop JOSH TEST intake on error — no retry"
+                    }
+                  },
+                  "parameters": {}
+                }
+              ],
+              "version": 3,
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": -150
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 13265002
+              }
+            },
+            {
+              "id": 7,
+              "mapper": {},
+              "module": "builtin:BasicRouter",
+              "routes": [
+                {
+                  "flow": [
+                    {
+                      "id": 8,
+                      "filter": {
+                        "name": "Fresh sparse claim and exact Submission ID",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{ifempty(6.id; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldro75kOQGnubjQR; emptystring)}}",
+                              "b": "{{1.`Submission ID`}}",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldq46cNTtEpprcgN; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldnYB8vJvo3b6ddu; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldKgbOba0zvKyWRt; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldfkF6sDQsNpXdXk; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldYMxBMG5MubBQ5M; emptystring)}}",
+                              "b": "New Submissions",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldZ3a2PYHZ7LKubs; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldC0OBNOiit8AltO; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fld5G2oHi9NL73kkn; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.flde9LOZGGrHS8par; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldLvBqkU5rIbhFrc; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fld9AkpYIBIfCgeMv; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldiHqm7xEMbVJLmg; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            },
+                            {
+                              "a": "{{ifempty(6.fldZJt4pfO1ldlOia; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "id": "{{6.id}}",
+                        "base": "appDz7CEL2KQWpzyC",
+                        "table": "tbly1iXdcMvFuqCcY",
+                        "record": {
+                          "fld2POlaG4bAY7SCQ": "{{1.`Custom Field 1`}}",
+                          "fld4VpGvvfNlWQDxi": "{{1.`Side B Length`}}",
+                          "fld5F5mKkYYOAGQqD": "{{lower(toString(1.`Shipping Required`)) = \"on\"}}",
+                          "fldDCDuwYdQuWJDmR": "{{1.Packaging}}",
+                          "fldGqpmxYQBhWAFrp": "{{1.Extras}}",
+                          "fldKgbOba0zvKyWRt": "{{1.`Customer Name`}}",
+                          "fldN1FpgWdUHgqC5w": "{{1.`Delivery Method`}}",
+                          "fldQnSLXlzyedrnIO": "{{1.Speed}}",
+                          "fldXlei2WHnueVkFz": "{{1.`Artist Order`}}",
+                          "fldYMxBMG5MubBQ5M": "New Submissions",
+                          "fldZ3a2PYHZ7LKubs": "{{1.`Artwork Job ID`}}",
+                          "fldZJt4pfO1ldlOia": "Pending",
+                          "flddgwWOugRimbwIw": "{{1.Sides}}",
+                          "fldfkF6sDQsNpXdXk": "{{1.Email}}",
+                          "fldiDDxb2Aaz85Jjj": "{{parseNumber(1.Quantity; \".\")}}",
+                          "fldiHqm7xEMbVJLmg": "Pending",
+                          "fldkvqgZfvpOlXaN3": "{{1.`Record Size`}}",
+                          "fldlipVWj9gGrEEVR": "{{if(lower(toString(1.`Shipping Required`)) = \"on\"; \"TEST JOSH 21.11, 1 TEST ONLY LANE TESTVILLE 0000 NSW\"; emptystring)}}",
+                          "fldnYB8vJvo3b6ddu": "Record ready",
+                          "fldq46cNTtEpprcgN": "{{1.`Request Fingerprint`}}",
+                          "fldrkJPDoAPG0kS7s": "{{if(trim(ifempty(1.`Estimated Price Given`; emptystring)) = emptystring; erase; parseNumber(1.`Estimated Price Given`; \".\"))}}",
+                          "fldsaBEXJkwNKkrPa": "{{1.`Side A Length`}}",
+                          "flduI8PgnORR8I71d": "{{1.Tracklist}}",
+                          "fldwAXAFk0CWyp1Oy": "{{lower(toString(1.Rush)) = \"on\"}}",
+                          "fldxlk24RQeHUAPcp": "{{1.Tracklist}}",
+                          "fldzWWtP29T4sQYtv": "{{1.`Vinyl Colour`}}"
+                        },
+                        "typecast": true,
+                        "useColumnId": true
+                      },
+                      "module": "airtable:ActionUpdateRecords",
+                      "onerror": [
+                        {
+                          "id": 44,
+                          "mapper": {
+                            "body": "{\"error\":\"JOSH_TEST_INTAKE_REVIEW_REQUIRED\",\"message\":\"The test submission could not be confirmed. Staff review is required.\"}",
+                            "status": 503,
+                            "headers": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Cache-Control",
+                                "value": "no-store"
+                              }
+                            ]
+                          },
+                          "module": "gateway:WebhookRespond",
+                          "version": 1,
+                          "metadata": {
+                            "designer": {
+                              "x": 1350,
+                              "y": -500
+                            }
+                          },
+                          "parameters": {}
+                        },
+                        {
+                          "id": 45,
+                          "mapper": {},
+                          "module": "builtin:Commit",
+                          "version": 1,
+                          "metadata": {
+                            "designer": {
+                              "x": 1500,
+                              "y": -500,
+                              "name": "Stop JOSH TEST intake on error — no retry"
+                            }
+                          },
+                          "parameters": {}
+                        }
+                      ],
+                      "version": 3,
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -300
+                        }
+                      },
+                      "parameters": {
+                        "__IMTCONN__": 13265002
+                      }
+                    },
+                    {
+                      "id": 100,
+                      "mapper": {
+                        "status": 202,
+                        "headers": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Cache-Control",
+                            "value": "no-store"
+                          }
+                        ],
+                        "body": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"accepted\"}"
+                      },
+                      "module": "gateway:WebhookRespond",
+                      "version": 1,
+                      "metadata": {
+                        "designer": {
+                          "x": 1500,
+                          "y": -300
+                        }
+                      },
+                      "parameters": {}
+                    },
+                    {
+                      "id": 10,
+                      "mapper": {
+                        "id": "{{6.id}}",
+                        "base": "appDz7CEL2KQWpzyC",
+                        "table": "tbly1iXdcMvFuqCcY",
+                        "record": {
+                          "fldnYB8vJvo3b6ddu": "Folder uncertain"
+                        },
+                        "typecast": false,
+                        "useColumnId": true
+                      },
+                      "module": "airtable:ActionUpdateRecords",
+                      "onerror": [
+                        {
+                          "id": 200,
+                          "module": "http:MakeRequest",
+                          "version": 4,
+                          "parameters": {
+                            "tlsType": "",
+                            "apiKeyAccount": 12211852,
+                            "authenticationType": "apiKeyConnection"
+                          },
+                          "mapper": {
+                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                            "method": "post",
+                            "timeout": 10,
+                            "contentType": "json",
+                            "inputMethod": "jsonString",
+                            "shareCookies": false,
+                            "parseResponse": true,
+                            "allowRedirects": false,
+                            "stopOnHttpError": true,
+                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"folder_uncertain\"}",
+                            "requestCompressedContent": false
+                          }
+                        },
+                        {
+                          "id": 201,
+                          "module": "builtin:Commit",
+                          "version": 1,
+                          "mapper": {}
+                        }
+                      ],
+                      "version": 3,
+                      "parameters": {
+                        "__IMTCONN__": 13265002
+                      }
+                    },
+                    {
+                      "id": 11,
+                      "mapper": {
+                        "url": "/2/files/create_folder_v2",
+                        "body": "{\"path\":\"/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}\",\"autorename\":false}",
+                        "type": "api",
+                        "method": "POST",
+                        "headers": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          }
+                        ],
+                        "disablePathRoot": true
+                      },
+                      "module": "dropbox:makeApiCall",
+                      "onerror": [
+                        {
+                          "id": 202,
+                          "module": "http:MakeRequest",
+                          "version": 4,
+                          "parameters": {
+                            "tlsType": "",
+                            "apiKeyAccount": 12211852,
+                            "authenticationType": "apiKeyConnection"
+                          },
+                          "mapper": {
+                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                            "method": "post",
+                            "timeout": 10,
+                            "contentType": "json",
+                            "inputMethod": "jsonString",
+                            "shareCookies": false,
+                            "parseResponse": true,
+                            "allowRedirects": false,
+                            "stopOnHttpError": true,
+                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"folder_uncertain\"}",
+                            "requestCompressedContent": false
+                          }
+                        },
+                        {
+                          "id": 203,
+                          "module": "builtin:Commit",
+                          "version": 1,
+                          "mapper": {}
+                        }
+                      ],
+                      "version": 5,
+                      "parameters": {
+                        "__IMTCONN__": 13265654
+                      }
+                    },
+                    {
+                      "id": 12,
+                      "mapper": {
+                        "url": "/2/files/create_folder_v2",
+                        "body": "{\"path\":\"/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads\",\"autorename\":false}",
+                        "type": "api",
+                        "method": "POST",
+                        "headers": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          }
+                        ],
+                        "disablePathRoot": true
+                      },
+                      "module": "dropbox:makeApiCall",
+                      "onerror": [
+                        {
+                          "id": 204,
+                          "module": "http:MakeRequest",
+                          "version": 4,
+                          "parameters": {
+                            "tlsType": "",
+                            "apiKeyAccount": 12211852,
+                            "authenticationType": "apiKeyConnection"
+                          },
+                          "mapper": {
+                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                            "method": "post",
+                            "timeout": 10,
+                            "contentType": "json",
+                            "inputMethod": "jsonString",
+                            "shareCookies": false,
+                            "parseResponse": true,
+                            "allowRedirects": false,
+                            "stopOnHttpError": true,
+                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"folder_uncertain\"}",
+                            "requestCompressedContent": false
+                          }
+                        },
+                        {
+                          "id": 205,
+                          "module": "builtin:Commit",
+                          "version": 1,
+                          "mapper": {}
+                        }
+                      ],
+                      "version": 5,
+                      "parameters": {
+                        "__IMTCONN__": 13265654
+                      }
+                    },
+                    {
+                      "id": 13,
+                      "mapper": {
+                        "url": "/2/files/get_metadata",
+                        "body": "{\"path\":\"/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads\",\"include_media_info\":false,\"include_deleted\":false}",
+                        "type": "api",
+                        "method": "POST",
+                        "headers": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          }
+                        ],
+                        "disablePathRoot": true
+                      },
+                      "module": "dropbox:makeApiCall",
+                      "onerror": [
+                        {
+                          "id": 206,
+                          "module": "http:MakeRequest",
+                          "version": 4,
+                          "parameters": {
+                            "tlsType": "",
+                            "apiKeyAccount": 12211852,
+                            "authenticationType": "apiKeyConnection"
+                          },
+                          "mapper": {
+                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                            "method": "post",
+                            "timeout": 10,
+                            "contentType": "json",
+                            "inputMethod": "jsonString",
+                            "shareCookies": false,
+                            "parseResponse": true,
+                            "allowRedirects": false,
+                            "stopOnHttpError": true,
+                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"folder_uncertain\"}",
+                            "requestCompressedContent": false
+                          }
+                        },
+                        {
+                          "id": 207,
+                          "module": "builtin:Commit",
+                          "version": 1,
+                          "mapper": {}
+                        }
+                      ],
+                      "version": 5,
+                      "parameters": {
+                        "__IMTCONN__": 13265654
+                      }
+                    },
+                    {
+                      "id": 20,
+                      "mapper": {},
+                      "module": "builtin:BasicRouter",
+                      "routes": [
+                        {
+                          "flow": [
+                            {
+                              "id": 14,
+                              "filter": {
+                                "name": "Verify exact JOSH TEST folder paths",
+                                "conditions": [
+                                  [
+                                    {
+                                      "a": "{{toString(11.statusCode)}}",
+                                      "b": "200",
+                                      "o": "text:equal"
+                                    },
+                                    {
+                                      "a": "{{11.body.metadata.path_display}}",
+                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}",
+                                      "o": "text:equal"
+                                    },
+                                    {
+                                      "a": "{{toString(12.statusCode)}}",
+                                      "b": "200",
+                                      "o": "text:equal"
+                                    },
+                                    {
+                                      "a": "{{12.body.metadata.path_display}}",
+                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads",
+                                      "o": "text:equal"
+                                    },
+                                    {
+                                      "a": "{{toString(13.statusCode)}}",
+                                      "b": "200",
+                                      "o": "text:equal"
+                                    },
+                                    {
+                                      "a": "{{13.body.path_display}}",
+                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads",
+                                      "o": "text:equal"
+                                    }
+                                  ]
+                                ]
+                              },
+                              "mapper": {
+                                "id": "{{6.id}}",
+                                "base": "appDz7CEL2KQWpzyC",
+                                "table": "tbly1iXdcMvFuqCcY",
+                                "record": {
+                                  "fldLvBqkU5rIbhFrc": "{{13.body.path_display}}",
+                                  "flde9LOZGGrHS8par": "{{11.body.metadata.path_display}}",
+                                  "fldnYB8vJvo3b6ddu": "Folders ready"
+                                },
+                                "typecast": false,
+                                "useColumnId": true
+                              },
+                              "module": "airtable:ActionUpdateRecords",
+                              "onerror": [
+                                {
+                                  "id": 208,
+                                  "module": "http:MakeRequest",
+                                  "version": 4,
+                                  "parameters": {
+                                    "tlsType": "",
+                                    "apiKeyAccount": 12211852,
+                                    "authenticationType": "apiKeyConnection"
+                                  },
+                                  "mapper": {
+                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                    "method": "post",
+                                    "timeout": 10,
+                                    "contentType": "json",
+                                    "inputMethod": "jsonString",
+                                    "shareCookies": false,
+                                    "parseResponse": true,
+                                    "allowRedirects": false,
+                                    "stopOnHttpError": true,
+                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"folder_uncertain\"}",
+                                    "requestCompressedContent": false
+                                  }
+                                },
+                                {
+                                  "id": 209,
+                                  "module": "builtin:Commit",
+                                  "version": 1,
+                                  "mapper": {}
+                                }
+                              ],
+                              "version": 3,
+                              "parameters": {
+                                "__IMTCONN__": 13265002
+                              }
+                            },
+                            {
+                              "id": 15,
+                              "mapper": {
+                                "id": "{{6.id}}",
+                                "base": "appDz7CEL2KQWpzyC",
+                                "table": "tbly1iXdcMvFuqCcY",
+                                "record": {
+                                  "fldnYB8vJvo3b6ddu": "File request uncertain"
+                                },
+                                "typecast": false,
+                                "useColumnId": true
+                              },
+                              "module": "airtable:ActionUpdateRecords",
+                              "onerror": [
+                                {
+                                  "id": 210,
+                                  "module": "http:MakeRequest",
+                                  "version": 4,
+                                  "parameters": {
+                                    "tlsType": "",
+                                    "apiKeyAccount": 12211852,
+                                    "authenticationType": "apiKeyConnection"
+                                  },
+                                  "mapper": {
+                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                    "method": "post",
+                                    "timeout": 10,
+                                    "contentType": "json",
+                                    "inputMethod": "jsonString",
+                                    "shareCookies": false,
+                                    "parseResponse": true,
+                                    "allowRedirects": false,
+                                    "stopOnHttpError": true,
+                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"request_uncertain\"}",
+                                    "requestCompressedContent": false
+                                  }
+                                },
+                                {
+                                  "id": 211,
+                                  "module": "builtin:Commit",
+                                  "version": 1,
+                                  "mapper": {}
+                                }
+                              ],
+                              "version": 3,
+                              "parameters": {
+                                "__IMTCONN__": 13265002
+                              }
+                            },
+                            {
+                              "id": 16,
+                              "mapper": {
+                                "url": "/2/file_requests/create",
+                                "body": "{\"title\":\"JOSH TEST audio upload — {{1.`Submission ID`}}\",\"destination\":\"/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads\",\"open\":false}",
+                                "type": "api",
+                                "method": "POST",
+                                "headers": [
+                                  {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                  }
+                                ],
+                                "disablePathRoot": true
+                              },
+                              "module": "dropbox:makeApiCall",
+                              "onerror": [
+                                {
+                                  "id": 212,
+                                  "module": "http:MakeRequest",
+                                  "version": 4,
+                                  "parameters": {
+                                    "tlsType": "",
+                                    "apiKeyAccount": 12211852,
+                                    "authenticationType": "apiKeyConnection"
+                                  },
+                                  "mapper": {
+                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                    "method": "post",
+                                    "timeout": 10,
+                                    "contentType": "json",
+                                    "inputMethod": "jsonString",
+                                    "shareCookies": false,
+                                    "parseResponse": true,
+                                    "allowRedirects": false,
+                                    "stopOnHttpError": true,
+                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"request_uncertain\"}",
+                                    "requestCompressedContent": false
+                                  }
+                                },
+                                {
+                                  "id": 213,
+                                  "module": "builtin:Commit",
+                                  "version": 1,
+                                  "mapper": {}
+                                }
+                              ],
+                              "version": 5,
+                              "parameters": {
+                                "__IMTCONN__": 13265654
+                              }
+                            },
+                            {
+                              "id": 21,
+                              "mapper": {},
+                              "module": "builtin:BasicRouter",
+                              "routes": [
+                                {
+                                  "flow": [
+                                    {
+                                      "id": 17,
+                                      "filter": {
+                                        "name": "Closed test file request verified; continue to open",
+                                        "conditions": [
+                                          [
+                                            {
+                                              "a": "{{toString(16.statusCode)}}",
+                                              "b": "200",
+                                              "o": "text:equal"
+                                            },
+                                            {
+                                              "a": "{{16.body.destination}}",
+                                              "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads",
+                                              "o": "text:equal"
+                                            },
+                                            {
+                                              "a": "{{toString(16.body.is_open)}}",
+                                              "b": "false",
+                                              "o": "text:equal"
+                                            },
+                                            {
+                                              "a": "{{ifempty(16.body.id; emptystring)}}",
+                                              "b": "",
+                                              "o": "text:notequal"
+                                            },
+                                            {
+                                              "a": "{{ifempty(16.body.url; emptystring)}}",
+                                              "b": "",
+                                              "o": "text:notequal"
+                                            }
+                                          ]
+                                        ]
+                                      },
+                                      "mapper": {
+                                        "id": "{{6.id}}",
+                                        "base": "appDz7CEL2KQWpzyC",
+                                        "table": "tbly1iXdcMvFuqCcY",
+                                        "record": {
+                                          "fld9AkpYIBIfCgeMv": "{{16.body.id}}",
+                                          "fldnYB8vJvo3b6ddu": "File request uncertain"
+                                        },
+                                        "typecast": false,
+                                        "useColumnId": true
+                                      },
+                                      "module": "airtable:ActionUpdateRecords",
+                                      "onerror": [
+                                        {
+                                          "id": 214,
+                                          "module": "http:MakeRequest",
+                                          "version": 4,
+                                          "parameters": {
+                                            "tlsType": "",
+                                            "apiKeyAccount": 12211852,
+                                            "authenticationType": "apiKeyConnection"
+                                          },
+                                          "mapper": {
+                                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                            "method": "post",
+                                            "timeout": 10,
+                                            "contentType": "json",
+                                            "inputMethod": "jsonString",
+                                            "shareCookies": false,
+                                            "parseResponse": true,
+                                            "allowRedirects": false,
+                                            "stopOnHttpError": true,
+                                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"request_uncertain\"}",
+                                            "requestCompressedContent": false
+                                          }
+                                        },
+                                        {
+                                          "id": 215,
+                                          "module": "builtin:Commit",
+                                          "version": 1,
+                                          "mapper": {}
+                                        }
+                                      ],
+                                      "version": 3,
+                                      "parameters": {
+                                        "__IMTCONN__": 13265002
+                                      }
+                                    },
+                                    {
+                                      "id": 101,
+                                      "mapper": {
+                                        "id": "{{6.id}}",
+                                        "base": "appDz7CEL2KQWpzyC",
+                                        "table": "tbly1iXdcMvFuqCcY",
+                                        "record": {
+                                          "fldnYB8vJvo3b6ddu": "File request uncertain"
+                                        },
+                                        "typecast": false,
+                                        "useColumnId": true
+                                      },
+                                      "module": "airtable:ActionUpdateRecords",
+                                      "version": 3,
+                                      "parameters": {
+                                        "__IMTCONN__": 13265002
+                                      },
+                                      "onerror": [
+                                        {
+                                          "id": 216,
+                                          "module": "http:MakeRequest",
+                                          "version": 4,
+                                          "parameters": {
+                                            "tlsType": "",
+                                            "apiKeyAccount": 12211852,
+                                            "authenticationType": "apiKeyConnection"
+                                          },
+                                          "mapper": {
+                                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                            "method": "post",
+                                            "timeout": 10,
+                                            "contentType": "json",
+                                            "inputMethod": "jsonString",
+                                            "shareCookies": false,
+                                            "parseResponse": true,
+                                            "allowRedirects": false,
+                                            "stopOnHttpError": true,
+                                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"open_uncertain\"}",
+                                            "requestCompressedContent": false
+                                          }
+                                        },
+                                        {
+                                          "id": 217,
+                                          "module": "builtin:Commit",
+                                          "version": 1,
+                                          "mapper": {}
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": 102,
+                                      "mapper": {
+                                        "url": "/2/file_requests/update",
+                                        "body": "{\"id\":\"{{16.body.id}}\",\"open\":true}",
+                                        "type": "api",
+                                        "method": "POST",
+                                        "headers": [
+                                          {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                          }
+                                        ],
+                                        "disablePathRoot": true
+                                      },
+                                      "module": "dropbox:makeApiCall",
+                                      "onerror": [
+                                        {
+                                          "id": 218,
+                                          "module": "http:MakeRequest",
+                                          "version": 4,
+                                          "parameters": {
+                                            "tlsType": "",
+                                            "apiKeyAccount": 12211852,
+                                            "authenticationType": "apiKeyConnection"
+                                          },
+                                          "mapper": {
+                                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                            "method": "post",
+                                            "timeout": 10,
+                                            "contentType": "json",
+                                            "inputMethod": "jsonString",
+                                            "shareCookies": false,
+                                            "parseResponse": true,
+                                            "allowRedirects": false,
+                                            "stopOnHttpError": true,
+                                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"open_uncertain\"}",
+                                            "requestCompressedContent": false
+                                          }
+                                        },
+                                        {
+                                          "id": 219,
+                                          "module": "builtin:Commit",
+                                          "version": 1,
+                                          "mapper": {}
+                                        }
+                                      ],
+                                      "version": 5,
+                                      "parameters": {
+                                        "__IMTCONN__": 13265654
+                                      }
+                                    },
+                                    {
+                                      "id": 103,
+                                      "module": "builtin:BasicRouter",
+                                      "version": 1,
+                                      "mapper": {},
+                                      "routes": [
+                                        {
+                                          "flow": [
+                                            {
+                                              "id": 104,
+                                              "mapper": {
+                                                "id": "{{6.id}}",
+                                                "base": "appDz7CEL2KQWpzyC",
+                                                "table": "tbly1iXdcMvFuqCcY",
+                                                "record": {
+                                                  "fld5G2oHi9NL73kkn": "{{102.body.url}}",
+                                                  "fldnYB8vJvo3b6ddu": "Upload link ready",
+                                                  "fldbYG3ngxEuBTjQS": ""
+                                                },
+                                                "typecast": false,
+                                                "useColumnId": true
+                                              },
+                                              "module": "airtable:ActionUpdateRecords",
+                                              "version": 3,
+                                              "parameters": {
+                                                "__IMTCONN__": 13265002
+                                              },
+                                              "filter": {
+                                                "name": "Verified open JOSH TEST request",
+                                                "conditions": [
+                                                  [
+                                                    {
+                                                      "a": "{{toString(102.statusCode)}}",
+                                                      "o": "text:equal",
+                                                      "b": "200"
+                                                    },
+                                                    {
+                                                      "a": "{{102.body.id}}",
+                                                      "o": "text:equal",
+                                                      "b": "{{16.body.id}}"
+                                                    },
+                                                    {
+                                                      "a": "{{102.body.destination}}",
+                                                      "o": "text:equal",
+                                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads"
+                                                    },
+                                                    {
+                                                      "a": "{{toString(102.body.is_open)}}",
+                                                      "o": "text:equal",
+                                                      "b": "true"
+                                                    },
+                                                    {
+                                                      "a": "{{ifempty(102.body.url; emptystring)}}",
+                                                      "o": "text:notequal",
+                                                      "b": ""
+                                                    },
+                                                    {
+                                                      "a": "{{102.body.url}}",
+                                                      "o": "text:equal",
+                                                      "b": "{{16.body.url}}"
+                                                    },
+                                                    {
+                                                      "a": "{{102.body.url}}",
+                                                      "o": "text:pattern:ci",
+                                                      "b": "^https://www\\.dropbox\\.com/request/[A-Za-z0-9_-]+$"
+                                                    }
+                                                  ]
+                                                ]
+                                              },
+                                              "onerror": [
+                                                {
+                                                  "id": 220,
+                                                  "module": "http:MakeRequest",
+                                                  "version": 4,
+                                                  "parameters": {
+                                                    "tlsType": "",
+                                                    "apiKeyAccount": 12211852,
+                                                    "authenticationType": "apiKeyConnection"
+                                                  },
+                                                  "mapper": {
+                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                    "method": "post",
+                                                    "timeout": 10,
+                                                    "contentType": "json",
+                                                    "inputMethod": "jsonString",
+                                                    "shareCookies": false,
+                                                    "parseResponse": true,
+                                                    "allowRedirects": false,
+                                                    "stopOnHttpError": true,
+                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"open_uncertain\"}",
+                                                    "requestCompressedContent": false
+                                                  }
+                                                },
+                                                {
+                                                  "id": 221,
+                                                  "module": "builtin:Commit",
+                                                  "version": 1,
+                                                  "mapper": {}
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": 106,
+                                              "mapper": {
+                                                "id": "{{6.id}}",
+                                                "base": "appDz7CEL2KQWpzyC",
+                                                "table": "tbly1iXdcMvFuqCcY",
+                                                "record": {
+                                                  "fldiHqm7xEMbVJLmg": "Uncertain"
+                                                },
+                                                "typecast": false,
+                                                "useColumnId": true
+                                              },
+                                              "module": "airtable:ActionUpdateRecords",
+                                              "version": 3,
+                                              "parameters": {
+                                                "__IMTCONN__": 13265002
+                                              },
+                                              "onerror": [
+                                                {
+                                                  "id": 222,
+                                                  "module": "http:MakeRequest",
+                                                  "version": 4,
+                                                  "parameters": {
+                                                    "tlsType": "",
+                                                    "apiKeyAccount": 12211852,
+                                                    "authenticationType": "apiKeyConnection"
+                                                  },
+                                                  "mapper": {
+                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                    "method": "post",
+                                                    "timeout": 10,
+                                                    "contentType": "json",
+                                                    "inputMethod": "jsonString",
+                                                    "shareCookies": false,
+                                                    "parseResponse": true,
+                                                    "allowRedirects": false,
+                                                    "stopOnHttpError": true,
+                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"customer_email_uncertain\"}",
+                                                    "requestCompressedContent": false
+                                                  }
+                                                },
+                                                {
+                                                  "id": 223,
+                                                  "module": "builtin:Commit",
+                                                  "version": 1,
+                                                  "mapper": {}
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": 107,
+                                              "module": "microsoft-email:createAndSendAMessage",
+                                              "version": 2,
+                                              "parameters": {
+                                                "__IMTCONN__": 5899040
+                                              },
+                                              "mapper": {
+                                                "toRecipients": [
+                                                  {
+                                                    "address": "delousedcomatorium@gmail.com",
+                                                    "name": "Josh"
+                                                  }
+                                                ],
+                                                "subject": "TEST JOSH 21.11 — Crosstalk Customs JOSH TEST receipt",
+                                                "content": "TEST JOSH 21.11 — Crosstalk Customs JOSH TEST\n\nWe recorded the isolated test order details. This is a test only: no genuine customer order, payment, charge or invoice has been created.\n\nTest audio upload link: {{102.body.url}}\n\nTo provide audio, open the link, choose your file, then complete Dropbox's final Upload action. Wait until Dropbox confirms the upload has finished before closing the page. Having a link or selecting a file does not confirm that we received audio.\n\nThis message confirms the test order details, not receipt of audio or completed artwork delivery. If Dropbox does not show success, the upload is still pending.\n\nCrosstalk Customs — JOSH TEST",
+                                                "contentType": "text"
+                                              },
+                                              "onerror": [
+                                                {
+                                                  "id": 224,
+                                                  "module": "http:MakeRequest",
+                                                  "version": 4,
+                                                  "parameters": {
+                                                    "tlsType": "",
+                                                    "apiKeyAccount": 12211852,
+                                                    "authenticationType": "apiKeyConnection"
+                                                  },
+                                                  "mapper": {
+                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                    "method": "post",
+                                                    "timeout": 10,
+                                                    "contentType": "json",
+                                                    "inputMethod": "jsonString",
+                                                    "shareCookies": false,
+                                                    "parseResponse": true,
+                                                    "allowRedirects": false,
+                                                    "stopOnHttpError": true,
+                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"customer_email_uncertain\"}",
+                                                    "requestCompressedContent": false
+                                                  }
+                                                },
+                                                {
+                                                  "id": 225,
+                                                  "module": "builtin:Commit",
+                                                  "version": 1,
+                                                  "mapper": {}
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": 108,
+                                              "mapper": {
+                                                "id": "{{6.id}}",
+                                                "base": "appDz7CEL2KQWpzyC",
+                                                "table": "tbly1iXdcMvFuqCcY",
+                                                "record": {
+                                                  "fldiHqm7xEMbVJLmg": "Sent"
+                                                },
+                                                "typecast": false,
+                                                "useColumnId": true
+                                              },
+                                              "module": "airtable:ActionUpdateRecords",
+                                              "version": 3,
+                                              "parameters": {
+                                                "__IMTCONN__": 13265002
+                                              },
+                                              "onerror": [
+                                                {
+                                                  "id": 226,
+                                                  "module": "http:MakeRequest",
+                                                  "version": 4,
+                                                  "parameters": {
+                                                    "tlsType": "",
+                                                    "apiKeyAccount": 12211852,
+                                                    "authenticationType": "apiKeyConnection"
+                                                  },
+                                                  "mapper": {
+                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                    "method": "post",
+                                                    "timeout": 10,
+                                                    "contentType": "json",
+                                                    "inputMethod": "jsonString",
+                                                    "shareCookies": false,
+                                                    "parseResponse": true,
+                                                    "allowRedirects": false,
+                                                    "stopOnHttpError": true,
+                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"customer_email_uncertain\"}",
+                                                    "requestCompressedContent": false
+                                                  }
+                                                },
+                                                {
+                                                  "id": 227,
+                                                  "module": "builtin:Commit",
+                                                  "version": 1,
+                                                  "mapper": {}
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": 109,
+                                              "mapper": {
+                                                "id": "{{6.id}}",
+                                                "base": "appDz7CEL2KQWpzyC",
+                                                "table": "tbly1iXdcMvFuqCcY",
+                                                "record": {
+                                                  "fldZJt4pfO1ldlOia": "Uncertain"
+                                                },
+                                                "typecast": false,
+                                                "useColumnId": true
+                                              },
+                                              "module": "airtable:ActionUpdateRecords",
+                                              "version": 3,
+                                              "parameters": {
+                                                "__IMTCONN__": 13265002
+                                              },
+                                              "onerror": [
+                                                {
+                                                  "id": 228,
+                                                  "module": "http:MakeRequest",
+                                                  "version": 4,
+                                                  "parameters": {
+                                                    "tlsType": "",
+                                                    "apiKeyAccount": 12211852,
+                                                    "authenticationType": "apiKeyConnection"
+                                                  },
+                                                  "mapper": {
+                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                    "method": "post",
+                                                    "timeout": 10,
+                                                    "contentType": "json",
+                                                    "inputMethod": "jsonString",
+                                                    "shareCookies": false,
+                                                    "parseResponse": true,
+                                                    "allowRedirects": false,
+                                                    "stopOnHttpError": true,
+                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"staff_email_uncertain\"}",
+                                                    "requestCompressedContent": false
+                                                  }
+                                                },
+                                                {
+                                                  "id": 229,
+                                                  "module": "builtin:Commit",
+                                                  "version": 1,
+                                                  "mapper": {}
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": 110,
+                                              "mapper": {
+                                                "content": "JOSH TEST staff notification — TEST JOSH 21.11\n\nThe isolated synthetic order reached Upload link ready. This records an open Dropbox file request, not an audio upload. Do not mark audio received or files approved until the exact JOSH TEST Uploads folder has a verified file.\n\nThis is a test record only; no genuine customer order, invoice, payment or charge was created.\n\nAirtable test record: {{6.id}}\nSubmission ID: {{1.`Submission ID`}}\nCustomer test recipient: delousedcomatorium@gmail.com\nPrivate order folder path: /Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}\n\nCustomer email provider send was marked Sent in the test ledger. Confirm actual inbox arrival separately for this submission. Open the restricted JOSH TEST Airtable record for status. Do not invoice or process this as a real order.",
+                                                "subject": "TEST JOSH 21.11 — Crosstalk Customs JOSH TEST staff notice",
+                                                "contentType": "text",
+                                                "toRecipients": [
+                                                  {
+                                                    "name": "Josh",
+                                                    "address": "delousedcomatorium@gmail.com"
+                                                  }
+                                                ]
+                                              },
+                                              "module": "microsoft-email:createAndSendAMessage",
+                                              "onerror": [
+                                                {
+                                                  "id": 230,
+                                                  "module": "http:MakeRequest",
+                                                  "version": 4,
+                                                  "parameters": {
+                                                    "tlsType": "",
+                                                    "apiKeyAccount": 12211852,
+                                                    "authenticationType": "apiKeyConnection"
+                                                  },
+                                                  "mapper": {
+                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                    "method": "post",
+                                                    "timeout": 10,
+                                                    "contentType": "json",
+                                                    "inputMethod": "jsonString",
+                                                    "shareCookies": false,
+                                                    "parseResponse": true,
+                                                    "allowRedirects": false,
+                                                    "stopOnHttpError": true,
+                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"staff_email_uncertain\"}",
+                                                    "requestCompressedContent": false
+                                                  }
+                                                },
+                                                {
+                                                  "id": 231,
+                                                  "module": "builtin:Commit",
+                                                  "version": 1,
+                                                  "mapper": {}
+                                                }
+                                              ],
+                                              "version": 2,
+                                              "parameters": {
+                                                "__IMTCONN__": 5899040
+                                              }
+                                            },
+                                            {
+                                              "id": 111,
+                                              "mapper": {
+                                                "id": "{{6.id}}",
+                                                "base": "appDz7CEL2KQWpzyC",
+                                                "table": "tbly1iXdcMvFuqCcY",
+                                                "record": {
+                                                  "fldZJt4pfO1ldlOia": "Sent"
+                                                },
+                                                "typecast": false,
+                                                "useColumnId": true
+                                              },
+                                              "module": "airtable:ActionUpdateRecords",
+                                              "version": 3,
+                                              "parameters": {
+                                                "__IMTCONN__": 13265002
+                                              },
+                                              "onerror": [
+                                                {
+                                                  "id": 232,
+                                                  "module": "http:MakeRequest",
+                                                  "version": 4,
+                                                  "parameters": {
+                                                    "tlsType": "",
+                                                    "apiKeyAccount": 12211852,
+                                                    "authenticationType": "apiKeyConnection"
+                                                  },
+                                                  "mapper": {
+                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                    "method": "post",
+                                                    "timeout": 10,
+                                                    "contentType": "json",
+                                                    "inputMethod": "jsonString",
+                                                    "shareCookies": false,
+                                                    "parseResponse": true,
+                                                    "allowRedirects": false,
+                                                    "stopOnHttpError": true,
+                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"staff_email_uncertain\"}",
+                                                    "requestCompressedContent": false
+                                                  }
+                                                },
+                                                {
+                                                  "id": 233,
+                                                  "module": "builtin:Commit",
+                                                  "version": 1,
+                                                  "mapper": {}
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": 112,
+                                              "module": "builtin:BasicRouter",
+                                              "version": 1,
+                                              "mapper": {},
+                                              "routes": [
+                                                {
+                                                  "flow": [
+                                                    {
+                                                      "id": 113,
+                                                      "mapper": {
+                                                        "id": "{{6.id}}",
+                                                        "base": "appDz7CEL2KQWpzyC",
+                                                        "table": "tbly1iXdcMvFuqCcY",
+                                                        "record": {
+                                                          "fldnYB8vJvo3b6ddu": "Completed",
+                                                          "fldC0OBNOiit8AltO": "Not supplied"
+                                                        },
+                                                        "typecast": false,
+                                                        "useColumnId": true
+                                                      },
+                                                      "module": "airtable:ActionUpdateRecords",
+                                                      "version": 3,
+                                                      "parameters": {
+                                                        "__IMTCONN__": 13265002
+                                                      },
+                                                      "filter": {
+                                                        "name": "No artwork job; no bind",
+                                                        "conditions": [
+                                                          [
+                                                            {
+                                                              "a": "{{trim(ifempty(1.`Artwork Job ID`; emptystring))}}",
+                                                              "o": "text:equal",
+                                                              "b": ""
+                                                            }
+                                                          ]
+                                                        ]
+                                                      },
+                                                      "onerror": [
+                                                        {
+                                                          "id": 234,
+                                                          "module": "http:MakeRequest",
+                                                          "version": 4,
+                                                          "parameters": {
+                                                            "tlsType": "",
+                                                            "apiKeyAccount": 12211852,
+                                                            "authenticationType": "apiKeyConnection"
+                                                          },
+                                                          "mapper": {
+                                                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                            "method": "post",
+                                                            "timeout": 10,
+                                                            "contentType": "json",
+                                                            "inputMethod": "jsonString",
+                                                            "shareCookies": false,
+                                                            "parseResponse": true,
+                                                            "allowRedirects": false,
+                                                            "stopOnHttpError": true,
+                                                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"finalization_uncertain\"}",
+                                                            "requestCompressedContent": false
+                                                          }
+                                                        },
+                                                        {
+                                                          "id": 235,
+                                                          "module": "builtin:Commit",
+                                                          "version": 1,
+                                                          "mapper": {}
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "id": 114,
+                                                      "module": "http:MakeRequest",
+                                                      "version": 4,
+                                                      "parameters": {
+                                                        "tlsType": "",
+                                                        "apiKeyAccount": 12211852,
+                                                        "authenticationType": "apiKeyConnection"
+                                                      },
+                                                      "mapper": {
+                                                        "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                        "method": "post",
+                                                        "timeout": 10,
+                                                        "contentType": "json",
+                                                        "inputMethod": "jsonString",
+                                                        "shareCookies": false,
+                                                        "parseResponse": true,
+                                                        "allowRedirects": false,
+                                                        "stopOnHttpError": true,
+                                                        "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"complete\",\"artwork_status\":\"not_supplied\"}",
+                                                        "requestCompressedContent": false
+                                                      },
+                                                      "onerror": [
+                                                        {
+                                                          "id": 236,
+                                                          "module": "util:ComposeTransformer",
+                                                          "version": 1,
+                                                          "mapper": {
+                                                            "value": "JOSH TEST final callback outcome uncertain; inspect server and test ledger. Do not retry."
+                                                          }
+                                                        },
+                                                        {
+                                                          "id": 237,
+                                                          "module": "builtin:Commit",
+                                                          "version": 1,
+                                                          "mapper": {}
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "flow": [
+                                                    {
+                                                      "id": 115,
+                                                      "mapper": {
+                                                        "id": "{{6.id}}",
+                                                        "base": "appDz7CEL2KQWpzyC",
+                                                        "table": "tbly1iXdcMvFuqCcY",
+                                                        "record": {
+                                                          "fldnYB8vJvo3b6ddu": "Artwork bind uncertain"
+                                                        },
+                                                        "typecast": false,
+                                                        "useColumnId": true
+                                                      },
+                                                      "module": "airtable:ActionUpdateRecords",
+                                                      "version": 3,
+                                                      "parameters": {
+                                                        "__IMTCONN__": 13265002
+                                                      },
+                                                      "filter": {
+                                                        "name": "Opaque artwork job ID present",
+                                                        "conditions": [
+                                                          [
+                                                            {
+                                                              "a": "{{trim(ifempty(1.`Artwork Job ID`; emptystring))}}",
+                                                              "o": "text:pattern:ci",
+                                                              "b": "^[a-f0-9]{32}$"
+                                                            }
+                                                          ]
+                                                        ]
+                                                      },
+                                                      "onerror": [
+                                                        {
+                                                          "id": 238,
+                                                          "module": "http:MakeRequest",
+                                                          "version": 4,
+                                                          "parameters": {
+                                                            "tlsType": "",
+                                                            "apiKeyAccount": 12211852,
+                                                            "authenticationType": "apiKeyConnection"
+                                                          },
+                                                          "mapper": {
+                                                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                            "method": "post",
+                                                            "timeout": 10,
+                                                            "contentType": "json",
+                                                            "inputMethod": "jsonString",
+                                                            "shareCookies": false,
+                                                            "parseResponse": true,
+                                                            "allowRedirects": false,
+                                                            "stopOnHttpError": true,
+                                                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"artwork_bind_uncertain\"}",
+                                                            "requestCompressedContent": false
+                                                          }
+                                                        },
+                                                        {
+                                                          "id": 239,
+                                                          "module": "builtin:Commit",
+                                                          "version": 1,
+                                                          "mapper": {}
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "id": 116,
+                                                      "module": "http:MakeRequest",
+                                                      "version": 4,
+                                                      "parameters": {
+                                                        "tlsType": "",
+                                                        "apiKeyAccount": 12211852,
+                                                        "authenticationType": "apiKeyConnection"
+                                                      },
+                                                      "mapper": {
+                                                        "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-bind",
+                                                        "method": "post",
+                                                        "timeout": 10,
+                                                        "contentType": "json",
+                                                        "inputMethod": "jsonString",
+                                                        "shareCookies": false,
+                                                        "parseResponse": true,
+                                                        "allowRedirects": false,
+                                                        "stopOnHttpError": true,
+                                                        "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"artworkJobId\":\"{{1.`Artwork Job ID`}}\",\"folder\":\"{{13.body.path_display}}\"}",
+                                                        "requestCompressedContent": false
+                                                      },
+                                                      "onerror": [
+                                                        {
+                                                          "id": 240,
+                                                          "module": "http:MakeRequest",
+                                                          "version": 4,
+                                                          "parameters": {
+                                                            "tlsType": "",
+                                                            "apiKeyAccount": 12211852,
+                                                            "authenticationType": "apiKeyConnection"
+                                                          },
+                                                          "mapper": {
+                                                            "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                            "method": "post",
+                                                            "timeout": 10,
+                                                            "contentType": "json",
+                                                            "inputMethod": "jsonString",
+                                                            "shareCookies": false,
+                                                            "parseResponse": true,
+                                                            "allowRedirects": false,
+                                                            "stopOnHttpError": true,
+                                                            "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"artwork_bind_uncertain\"}",
+                                                            "requestCompressedContent": false
+                                                          }
+                                                        },
+                                                        {
+                                                          "id": 241,
+                                                          "module": "builtin:Commit",
+                                                          "version": 1,
+                                                          "mapper": {}
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "id": 117,
+                                                      "module": "builtin:BasicRouter",
+                                                      "version": 1,
+                                                      "mapper": {},
+                                                      "routes": [
+                                                        {
+                                                          "flow": [
+                                                            {
+                                                              "id": 118,
+                                                              "mapper": {
+                                                                "id": "{{6.id}}",
+                                                                "base": "appDz7CEL2KQWpzyC",
+                                                                "table": "tbly1iXdcMvFuqCcY",
+                                                                "record": {
+                                                                  "fldnYB8vJvo3b6ddu": "Completed",
+                                                                  "fldC0OBNOiit8AltO": "Queued"
+                                                                },
+                                                                "typecast": false,
+                                                                "useColumnId": true
+                                                              },
+                                                              "module": "airtable:ActionUpdateRecords",
+                                                              "version": 3,
+                                                              "parameters": {
+                                                                "__IMTCONN__": 13265002
+                                                              },
+                                                              "filter": {
+                                                                "name": "Test bind accepted for exact job",
+                                                                "conditions": [
+                                                                  [
+                                                                    {
+                                                                      "a": "{{116.statusCode}}",
+                                                                      "o": "number:equal",
+                                                                      "b": "202"
+                                                                    }
+                                                                  ]
+                                                                ]
+                                                              },
+                                                              "onerror": [
+                                                                {
+                                                                  "id": 242,
+                                                                  "module": "http:MakeRequest",
+                                                                  "version": 4,
+                                                                  "parameters": {
+                                                                    "tlsType": "",
+                                                                    "apiKeyAccount": 12211852,
+                                                                    "authenticationType": "apiKeyConnection"
+                                                                  },
+                                                                  "mapper": {
+                                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                                    "method": "post",
+                                                                    "timeout": 10,
+                                                                    "contentType": "json",
+                                                                    "inputMethod": "jsonString",
+                                                                    "shareCookies": false,
+                                                                    "parseResponse": true,
+                                                                    "allowRedirects": false,
+                                                                    "stopOnHttpError": true,
+                                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"finalization_uncertain\"}",
+                                                                    "requestCompressedContent": false
+                                                                  }
+                                                                },
+                                                                {
+                                                                  "id": 243,
+                                                                  "module": "builtin:Commit",
+                                                                  "version": 1,
+                                                                  "mapper": {}
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "id": 119,
+                                                              "module": "http:MakeRequest",
+                                                              "version": 4,
+                                                              "parameters": {
+                                                                "tlsType": "",
+                                                                "apiKeyAccount": 12211852,
+                                                                "authenticationType": "apiKeyConnection"
+                                                              },
+                                                              "mapper": {
+                                                                "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                                "method": "post",
+                                                                "timeout": 10,
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": false,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"complete\",\"artwork_status\":\"bound\"}",
+                                                                "requestCompressedContent": false
+                                                              },
+                                                              "onerror": [
+                                                                {
+                                                                  "id": 244,
+                                                                  "module": "util:ComposeTransformer",
+                                                                  "version": 1,
+                                                                  "mapper": {
+                                                                    "value": "JOSH TEST final callback outcome uncertain; inspect server and test ledger. Do not retry."
+                                                                  }
+                                                                },
+                                                                {
+                                                                  "id": 245,
+                                                                  "module": "builtin:Commit",
+                                                                  "version": 1,
+                                                                  "mapper": {}
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "flow": [
+                                                            {
+                                                              "id": 120,
+                                                              "mapper": {
+                                                                "id": "{{6.id}}",
+                                                                "base": "appDz7CEL2KQWpzyC",
+                                                                "table": "tbly1iXdcMvFuqCcY",
+                                                                "record": {
+                                                                  "fldnYB8vJvo3b6ddu": "Completed",
+                                                                  "fldC0OBNOiit8AltO": "Queued"
+                                                                },
+                                                                "typecast": false,
+                                                                "useColumnId": true
+                                                              },
+                                                              "module": "airtable:ActionUpdateRecords",
+                                                              "version": 3,
+                                                              "parameters": {
+                                                                "__IMTCONN__": 13265002
+                                                              },
+                                                              "filter": {
+                                                                "name": "Idempotent same-order test bind",
+                                                                "conditions": [
+                                                                  [
+                                                                    {
+                                                                      "a": "{{116.statusCode}}",
+                                                                      "o": "number:equal",
+                                                                      "b": "200"
+                                                                    }
+                                                                  ]
+                                                                ]
+                                                              },
+                                                              "onerror": [
+                                                                {
+                                                                  "id": 246,
+                                                                  "module": "http:MakeRequest",
+                                                                  "version": 4,
+                                                                  "parameters": {
+                                                                    "tlsType": "",
+                                                                    "apiKeyAccount": 12211852,
+                                                                    "authenticationType": "apiKeyConnection"
+                                                                  },
+                                                                  "mapper": {
+                                                                    "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                                    "method": "post",
+                                                                    "timeout": 10,
+                                                                    "contentType": "json",
+                                                                    "inputMethod": "jsonString",
+                                                                    "shareCookies": false,
+                                                                    "parseResponse": true,
+                                                                    "allowRedirects": false,
+                                                                    "stopOnHttpError": true,
+                                                                    "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"finalization_uncertain\"}",
+                                                                    "requestCompressedContent": false
+                                                                  }
+                                                                },
+                                                                {
+                                                                  "id": 247,
+                                                                  "module": "builtin:Commit",
+                                                                  "version": 1,
+                                                                  "mapper": {}
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "id": 121,
+                                                              "module": "http:MakeRequest",
+                                                              "version": 4,
+                                                              "parameters": {
+                                                                "tlsType": "",
+                                                                "apiKeyAccount": 12211852,
+                                                                "authenticationType": "apiKeyConnection"
+                                                              },
+                                                              "mapper": {
+                                                                "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                                "method": "post",
+                                                                "timeout": 10,
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": false,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"complete\",\"artwork_status\":\"already_bound\"}",
+                                                                "requestCompressedContent": false
+                                                              },
+                                                              "onerror": [
+                                                                {
+                                                                  "id": 248,
+                                                                  "module": "util:ComposeTransformer",
+                                                                  "version": 1,
+                                                                  "mapper": {
+                                                                    "value": "JOSH TEST final callback outcome uncertain; inspect server and test ledger. Do not retry."
+                                                                  }
+                                                                },
+                                                                {
+                                                                  "id": 249,
+                                                                  "module": "builtin:Commit",
+                                                                  "version": 1,
+                                                                  "mapper": {}
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "flow": [
+                                                            {
+                                                              "id": 122,
+                                                              "module": "http:MakeRequest",
+                                                              "version": 4,
+                                                              "parameters": {
+                                                                "tlsType": "",
+                                                                "apiKeyAccount": 12211852,
+                                                                "authenticationType": "apiKeyConnection"
+                                                              },
+                                                              "mapper": {
+                                                                "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                                "method": "post",
+                                                                "timeout": 10,
+                                                                "contentType": "json",
+                                                                "inputMethod": "jsonString",
+                                                                "shareCookies": false,
+                                                                "parseResponse": true,
+                                                                "allowRedirects": false,
+                                                                "stopOnHttpError": true,
+                                                                "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"artwork_bind_uncertain\"}",
+                                                                "requestCompressedContent": false
+                                                              },
+                                                              "filter": {
+                                                                "name": "Unexpected bind status — manual review",
+                                                                "conditions": [
+                                                                  [
+                                                                    {
+                                                                      "a": "{{toString(116.statusCode)}}",
+                                                                      "o": "text:notequal",
+                                                                      "b": "202"
+                                                                    },
+                                                                    {
+                                                                      "a": "{{toString(116.statusCode)}}",
+                                                                      "o": "text:notequal",
+                                                                      "b": "200"
+                                                                    }
+                                                                  ]
+                                                                ]
+                                                              }
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "flow": [
+                                                    {
+                                                      "id": 123,
+                                                      "module": "http:MakeRequest",
+                                                      "version": 4,
+                                                      "parameters": {
+                                                        "tlsType": "",
+                                                        "apiKeyAccount": 12211852,
+                                                        "authenticationType": "apiKeyConnection"
+                                                      },
+                                                      "mapper": {
+                                                        "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                        "method": "post",
+                                                        "timeout": 10,
+                                                        "contentType": "json",
+                                                        "inputMethod": "jsonString",
+                                                        "shareCookies": false,
+                                                        "parseResponse": true,
+                                                        "allowRedirects": false,
+                                                        "stopOnHttpError": true,
+                                                        "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"artwork_bind_uncertain\"}",
+                                                        "requestCompressedContent": false
+                                                      },
+                                                      "filter": {
+                                                        "name": "Invalid opaque job ID — manual review",
+                                                        "conditions": [
+                                                          [
+                                                            {
+                                                              "a": "{{trim(ifempty(1.`Artwork Job ID`; emptystring))}}",
+                                                              "o": "text:notequal",
+                                                              "b": ""
+                                                            },
+                                                            {
+                                                              "a": "{{trim(ifempty(1.`Artwork Job ID`; emptystring))}}",
+                                                              "o": "text:notpattern:ci",
+                                                              "b": "^[a-f0-9]{32}$"
+                                                            }
+                                                          ]
+                                                        ]
+                                                      }
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "flow": [
+                                            {
+                                              "id": 105,
+                                              "module": "http:MakeRequest",
+                                              "version": 4,
+                                              "parameters": {
+                                                "tlsType": "",
+                                                "apiKeyAccount": 12211852,
+                                                "authenticationType": "apiKeyConnection"
+                                              },
+                                              "mapper": {
+                                                "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                                "method": "post",
+                                                "timeout": 10,
+                                                "contentType": "json",
+                                                "inputMethod": "jsonString",
+                                                "shareCookies": false,
+                                                "parseResponse": true,
+                                                "allowRedirects": false,
+                                                "stopOnHttpError": true,
+                                                "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"open_uncertain\"}",
+                                                "requestCompressedContent": false
+                                              },
+                                              "filter": {
+                                                "name": "Open request mismatch — manual review",
+                                                "conditions": [
+                                                  [
+                                                    {
+                                                      "a": "{{toString(102.statusCode)}}",
+                                                      "o": "text:notequal",
+                                                      "b": "200"
+                                                    }
+                                                  ],
+                                                  [
+                                                    {
+                                                      "a": "{{102.body.id}}",
+                                                      "o": "text:notequal",
+                                                      "b": "{{16.body.id}}"
+                                                    }
+                                                  ],
+                                                  [
+                                                    {
+                                                      "a": "{{102.body.destination}}",
+                                                      "o": "text:notequal",
+                                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads"
+                                                    }
+                                                  ],
+                                                  [
+                                                    {
+                                                      "a": "{{toString(102.body.is_open)}}",
+                                                      "o": "text:notequal",
+                                                      "b": "true"
+                                                    }
+                                                  ],
+                                                  [
+                                                    {
+                                                      "a": "{{ifempty(102.body.url; emptystring)}}",
+                                                      "o": "text:equal",
+                                                      "b": ""
+                                                    }
+                                                  ],
+                                                  [
+                                                    {
+                                                      "a": "{{102.body.url}}",
+                                                      "o": "text:notequal",
+                                                      "b": "{{16.body.url}}"
+                                                    }
+                                                  ],
+                                                  [
+                                                    {
+                                                      "a": "{{102.body.url}}",
+                                                      "o": "text:notpattern:ci",
+                                                      "b": "^https://www\\.dropbox\\.com/request/[A-Za-z0-9_-]+$"
+                                                    }
+                                                  ]
+                                                ]
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "flow": [
+                                    {
+                                      "id": 23,
+                                      "filter": {
+                                        "name": "File request mismatch — manual review",
+                                        "conditions": [
+                                          [
+                                            {
+                                              "a": "{{toString(16.statusCode)}}",
+                                              "b": "200",
+                                              "o": "text:notequal"
+                                            }
+                                          ],
+                                          [
+                                            {
+                                              "a": "{{16.body.destination}}",
+                                              "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads",
+                                              "o": "text:notequal"
+                                            }
+                                          ],
+                                          [
+                                            {
+                                              "a": "{{toString(16.body.is_open)}}",
+                                              "b": "false",
+                                              "o": "text:notequal"
+                                            }
+                                          ],
+                                          [
+                                            {
+                                              "a": "{{ifempty(16.body.id; emptystring)}}",
+                                              "b": "",
+                                              "o": "text:equal"
+                                            }
+                                          ],
+                                          [
+                                            {
+                                              "a": "{{ifempty(16.body.url; emptystring)}}",
+                                              "b": "",
+                                              "o": "text:equal"
+                                            }
+                                          ]
+                                        ]
+                                      },
+                                      "mapper": {
+                                        "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                        "method": "post",
+                                        "timeout": 10,
+                                        "contentType": "json",
+                                        "inputMethod": "jsonString",
+                                        "shareCookies": false,
+                                        "parseResponse": true,
+                                        "allowRedirects": false,
+                                        "stopOnHttpError": true,
+                                        "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"request_uncertain\"}",
+                                        "requestCompressedContent": false
+                                      },
+                                      "module": "http:MakeRequest",
+                                      "version": 4,
+                                      "metadata": {
+                                        "designer": {
+                                          "name": "Unverified closed file request"
+                                        }
+                                      },
+                                      "parameters": {
+                                        "tlsType": "",
+                                        "apiKeyAccount": 12211852,
+                                        "authenticationType": "apiKeyConnection"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ],
+                              "version": 1,
+                              "parameters": {}
+                            }
+                          ]
+                        },
+                        {
+                          "flow": [
+                            {
+                              "id": 22,
+                              "filter": {
+                                "name": "Folder metadata mismatch — manual review",
+                                "conditions": [
+                                  [
+                                    {
+                                      "a": "{{toString(11.statusCode)}}",
+                                      "b": "200",
+                                      "o": "text:notequal"
+                                    }
+                                  ],
+                                  [
+                                    {
+                                      "a": "{{11.body.metadata.path_display}}",
+                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}",
+                                      "o": "text:notequal"
+                                    }
+                                  ],
+                                  [
+                                    {
+                                      "a": "{{toString(12.statusCode)}}",
+                                      "b": "200",
+                                      "o": "text:notequal"
+                                    }
+                                  ],
+                                  [
+                                    {
+                                      "a": "{{12.body.metadata.path_display}}",
+                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads",
+                                      "o": "text:notequal"
+                                    }
+                                  ],
+                                  [
+                                    {
+                                      "a": "{{toString(13.statusCode)}}",
+                                      "b": "200",
+                                      "o": "text:notequal"
+                                    }
+                                  ],
+                                  [
+                                    {
+                                      "a": "{{13.body.path_display}}",
+                                      "b": "/Crosstalk Customs/JOSH TEST/{{1.`Submission ID`}}/Uploads",
+                                      "o": "text:notequal"
+                                    }
+                                  ]
+                                ]
+                              },
+                              "mapper": {
+                                "url": "https://josh-test-artwork-exporter-josh-test.up.railway.app/internal/test-submissions/{{1.`Submission ID`}}/outcome",
+                                "method": "post",
+                                "timeout": 10,
+                                "contentType": "json",
+                                "inputMethod": "jsonString",
+                                "shareCookies": false,
+                                "parseResponse": true,
+                                "allowRedirects": false,
+                                "stopOnHttpError": true,
+                                "jsonStringBodyContent": "{\"testLabel\":\"JOSH TEST\",\"submissionId\":\"{{1.`Submission ID`}}\",\"requestFingerprint\":\"{{1.`Request Fingerprint`}}\",\"airtableRecordId\":\"{{6.id}}\",\"state\":\"manual_review\",\"stage\":\"folder_uncertain\"}",
+                                "requestCompressedContent": false
+                              },
+                              "module": "http:MakeRequest",
+                              "version": 4,
+                              "metadata": {
+                                "designer": {
+                                  "name": "Folder mismatch — manual review"
+                                }
+                              },
+                              "parameters": {
+                                "tlsType": "",
+                                "apiKeyAccount": 12211852,
+                                "authenticationType": "apiKeyConnection"
+                              }
+                            }
+                          ]
+                        }
+                      ],
+                      "version": 1,
+                      "parameters": {}
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 9,
+                      "filter": {
+                        "name": "Existing or changed claim — manual review",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{ifempty(6.id; emptystring)}}",
+                              "b": "",
+                              "o": "text:equal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldro75kOQGnubjQR; emptystring)}}",
+                              "b": "{{1.`Submission ID`}}",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldq46cNTtEpprcgN; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldnYB8vJvo3b6ddu; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldKgbOba0zvKyWRt; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldfkF6sDQsNpXdXk; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldYMxBMG5MubBQ5M; emptystring)}}",
+                              "b": "New Submissions",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldZ3a2PYHZ7LKubs; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldC0OBNOiit8AltO; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fld5G2oHi9NL73kkn; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.flde9LOZGGrHS8par; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldLvBqkU5rIbhFrc; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fld9AkpYIBIfCgeMv; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldiHqm7xEMbVJLmg; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ],
+                          [
+                            {
+                              "a": "{{ifempty(6.fldZJt4pfO1ldlOia; emptystring)}}",
+                              "b": "",
+                              "o": "text:notequal"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "body": "{\"error\":\"JOSH_TEST_CLAIM_REVIEW_REQUIRED\",\"message\":\"This test submission needs staff review.\"}",
+                        "status": 409,
+                        "headers": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Cache-Control",
+                            "value": "no-store"
+                          }
+                        ]
+                      },
+                      "module": "gateway:WebhookRespond",
+                      "version": 1,
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 0
+                        }
+                      },
+                      "parameters": {}
+                    }
+                  ]
+                }
+              ],
+              "version": 1,
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": -150
+                }
+              },
+              "parameters": {}
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 4,
+              "filter": {
+                "name": "Reject invalid JOSH TEST payload",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{ifempty(1.testLabel; emptystring)}}",
+                      "b": "JOSH TEST",
+                      "o": "text:notequal"
+                    }
+                  ],
+                  [
+                    {
+                      "a": "{{ifempty(1.`Test Order Name`; emptystring)}}",
+                      "b": "TEST JOSH 21.11",
+                      "o": "text:notequal"
+                    }
+                  ],
+                  [
+                    {
+                      "a": "{{ifempty(1.`Customer Name`; emptystring)}}",
+                      "b": "TEST JOSH 21.11",
+                      "o": "text:notequal"
+                    }
+                  ],
+                  [
+                    {
+                      "a": "{{ifempty(1.Email; emptystring)}}",
+                      "b": "delousedcomatorium@gmail.com",
+                      "o": "text:notequal"
+                    }
+                  ],
+                  [
+                    {
+                      "a": "{{ifempty(1.`Submission ID`; emptystring)}}",
+                      "b": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                      "o": "text:notpattern:ci"
+                    }
+                  ],
+                  [
+                    {
+                      "a": "{{ifempty(1.`Request Fingerprint`; emptystring)}}",
+                      "b": "^[0-9a-f]{64}$",
+                      "o": "text:notpattern:ci"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "body": "{\"error\":\"JOSH_TEST_PAYLOAD_REJECTED\",\"message\":\"Invalid test submission.\"}",
+                "status": 422,
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Cache-Control",
+                    "value": "no-store"
+                  }
+                ]
+              },
+              "module": "gateway:WebhookRespond",
+              "version": 1,
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": 150
+                }
+              },
+              "parameters": {}
+            }
+          ]
+        }
+      ],
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      },
+      "parameters": {}
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "designer": {
+      "orphans": []
+    },
+    "scenario": {
+      "dlq": false,
+      "slots": null,
+      "dataloss": false,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "roundtrips": 1,
+      "sequential": true,
+      "confidential": true,
+      "freshVariables": false,
+      "autoCommitTriggerLast": true
+    }
+  }
+}

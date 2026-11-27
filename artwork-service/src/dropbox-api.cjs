@@ -3,7 +3,11 @@ const fs=require('node:fs/promises'),crypto=require('node:crypto');
 async function accessToken(config,request=fetch){
  const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:config.refreshToken,client_id:config.clientId,client_secret:config.clientSecret});
  const response=await request('https://api.dropbox.com/oauth2/token',{method:'POST',body,signal:AbortSignal.timeout(30000)});
- if(!response.ok)throw Error('Dropbox authentication failed');
+ if(!response.ok){
+  let reason='';
+  try{const result=await response.json();if(['invalid_grant','invalid_client'].includes(result?.error))reason='; '+result.error;}catch(_){}
+  throw Error('Dropbox authentication failed (HTTP '+response.status+reason+')');
+ }
  const {access_token}=await response.json();if(!access_token)throw Error('Dropbox authentication failed');return access_token;
 }
 async function rpc(token,route,body,request=fetch){
