@@ -21,6 +21,7 @@ function validate(m){
 function unwrap(data,key){return data?.response?.[key]??data?.[key]??data?.response??data;}
 async function rollback(m,{request,report=()=>{},execute=false,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),pageAttempts=144,pageIntervalMs=5000}){
  validate(m);
+ report('This command verifies or restores the old GitHub Pages file only; it does NOT change the Common Ground iframe. For a dual-URL cutover, point that iframe back to calculator.html separately');
  const repo=`repos/${m.repository}`;
  const ref=await request('github',`${repo}/git/ref/heads/main`);
  const head=ref.object?.sha;
@@ -78,7 +79,7 @@ async function rollback(m,{request,report=()=>{},execute=false,wait=ms=>new Prom
   }
  }
  if(currentBlob===m.oldFormBlobSha){
-  report('Form already restored; verifying served bytes and in-flight orders');
+  report('Old form file is already intact; verifying its served bytes and candidate orders');
  }else if(execute){
   // GitHub's contents API creates a forward commit. The current blob SHA is
   // a compare-and-swap guard; no force push or history rewrite is used.
