@@ -10,14 +10,16 @@ function validate(m){
  if(!m||m.version!==1||m.repository!=='crosstalkrecords/crosstalk-customs-calculator'||m.branch!=='main'||
     !/^https:\/\/crosstalkrecords\.github\.io\/crosstalk-customs-calculator\/calculator\.html$/.test(m.pagesUrl)||
     ![m.oldHeadSha,m.candidateHeadSha,m.oldFormBlobSha,m.candidateFormBlobSha].every(sha)||
-    m.oldFormBlobSha===m.candidateFormBlobSha||m.liveMakeScenarioId!==4762364||m.liveMakeWasActive!==true||
+    m.oldHeadSha===m.candidateHeadSha||m.oldFormBlobSha===m.candidateFormBlobSha||
+    !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(m.releaseId||'')||
+    m.liveMakeScenarioId!==4762364||m.liveMakeHookId!==2620320||m.liveMakeWasActive!==true||
     !/^[a-f0-9]{64}$/.test(m.liveMakeBlueprintSha256||'')||m.oldMakeUnchanged!==true||
     !/^https:\/\/[a-z0-9-]+\.up\.railway\.app$/.test(m.productionGatewayUrl||''))
   throw Error('Rollback manifest is incomplete or does not match the approved release contract');
  return m;
 }
 function unwrap(data,key){return data?.response?.[key]??data?.[key]??data?.response??data;}
-async function rollback(m,{request,report=()=>{},execute=false}){
+async function rollback(m,{request,report=()=>{},execute=false,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),pageAttempts=144,pageIntervalMs=5000}){
  validate(m);
  const repo=`repos/${m.repository}`;
  const ref=await request('github',`${repo}/git/ref/heads/main`);
@@ -28,13 +30,21 @@ async function rollback(m,{request,report=()=>{},execute=false}){
   throw Error('Main changed since the approved cutover; refusing to overwrite a later change');
  if(currentBlob!==m.candidateFormBlobSha&&currentBlob!==m.oldFormBlobSha)
   throw Error('The served form source differs from both approved revisions');
- const details=unwrap(await request('make',`scenarios/${m.liveMakeScenarioId}`),'scenario');
- if(details.isActive!==true)throw Error('The original Make intake is not active');
- const blueprintResponse=await request('make',`scenarios/${m.liveMakeScenarioId}/blueprint`);
- const value=unwrap(blueprintResponse,'blueprint');
- const blueprint=typeof value==='string'?JSON.parse(value):value;
- if(digest(canonical(blueprint))!==m.liveMakeBlueprintSha256)
-  throw Error('The original Make blueprint changed; refusing an incomplete rollback');
+ let liveMakeVerified=false;
+ try{
+  const details=unwrap(await request('make',`scenarios/${m.liveMakeScenarioId}`),'scenario');
+  if(details.isActive!==true)throw Error('The original Make intake is not active');
+  if(details.hookId!==m.liveMakeHookId)throw Error('The original Make intake is not bound to the saved hook');
+  const blueprintResponse=await request('make',`scenarios/${m.liveMakeScenarioId}/blueprint`);
+  const value=unwrap(blueprintResponse,'blueprint');
+  const blueprint=typeof value==='string'?JSON.parse(value):value;
+  if(digest(canonical(blueprint))!==m.liveMakeBlueprintSha256)
+   throw Error('The original Make blueprint changed');
+  liveMakeVerified=true;
+ }catch(error){
+  if(!execute)throw error;
+  report(`WARNING: ${error.message}. Continuing emergency form restore; the original Make intake must be checked manually`);
+ }
  const old=await request('github',`${repo}/contents/calculator.html?ref=${m.oldHeadSha}`);
  const bytes=Buffer.from((old.content||'').replace(/\s/g,''),'base64');
  if(gitBlob(bytes)!==m.oldFormBlobSha||old.sha!==m.oldFormBlobSha)
@@ -48,7 +58,11 @@ async function rollback(m,{request,report=()=>{},execute=false}){
   ledger=null;
   report('WARNING: Candidate ledger unavailable; accepted orders and delivery state are unknown. Reconcile Make, Airtable and the gateway before any replay');
  }
- let inFlightOrderIds=ledger?ledger.items.filter(item=>item.state!=='complete').map(item=>item.submissionId):null;
+ // Intake completion does not prove that an attached artwork ZIP was delivered.
+ // The staff ledger has hasArtwork but no terminal delivery status, so retain
+ // every artwork order for reconciliation even when its intake is complete.
+ const needsReview=item=>item.state!=='complete'||item.hasArtwork===true;
+ let inFlightOrderIds=ledger?ledger.items.filter(needsReview).map(item=>item.submissionId):null;
  if(execute){
   try{
    const stopped=await request('gateway',m.productionGatewayUrl+'/internal/production-pause',{method:'POST',body:{paused:true}});
@@ -56,7 +70,7 @@ async function rollback(m,{request,report=()=>{},execute=false}){
    paused=true;
    const afterPause=await request('gateway',m.productionGatewayUrl+'/internal/production-ledger');
    if(!validLedger(afterPause)||afterPause.paused!==true)throw Error('Paused ledger was not confirmed');
-   inFlightOrderIds=afterPause.items.filter(item=>item.state!=='complete').map(item=>item.submissionId);
+   inFlightOrderIds=afterPause.items.filter(needsReview).map(item=>item.submissionId);
    report('New candidate intake paused; already accepted orders remain queued for delivery or reconciliation');
   }catch(_){
    inFlightOrderIds=null;
@@ -76,13 +90,21 @@ async function rollback(m,{request,report=()=>{},execute=false}){
  if(execute||currentBlob===m.oldFormBlobSha){
   const after=await request('github',`${repo}/contents/calculator.html?ref=main`);
   if(after.sha!==m.oldFormBlobSha)throw Error('GitHub has not confirmed the restored form blob');
-  const served=await request('page',m.pagesUrl);
-  if(digest(served)!==digest(bytes))throw Error('Pages has not yet served the restored form; keep monitoring CDN propagation');
+  if(!Number.isInteger(pageAttempts)||pageAttempts<1||pageAttempts>180)throw Error('Invalid Pages verification attempts');
+  let servedOld=false;
+  for(let attempt=1;attempt<=pageAttempts;attempt++){
+   try{servedOld=digest(await request('page',m.pagesUrl))===digest(bytes);}catch(_){/* A transient Pages fetch is not proof of propagation. */}
+   if(servedOld)break;
+   if(attempt===1||attempt%6===0)report(`Waiting for the old form at GitHub Pages (${attempt}/${pageAttempts}); the source commit has been restored`);
+   if(attempt<pageAttempts)await wait(pageIntervalMs);
+  }
+  if(!servedOld)throw Error('GitHub source was restored, but Pages has not verified the old form; keep monitoring the public URL and do not declare rollback complete');
   report('Old form bytes verified at the public Pages URL');
  }
  report(inFlightOrderIds===null?'New-route order count is unknown; do not delete or retry blindly':
-  `${inFlightOrderIds.length} new-route order(s) require outcome reconciliation; do not delete or retry blindly`);
- return {restored:execute||currentBlob===m.oldFormBlobSha,inFlightOrderIds,paused};
+  `${inFlightOrderIds.length} new-route order(s) require intake or artwork delivery reconciliation; do not delete or retry blindly`);
+ if(!liveMakeVerified)throw Error('Old form restored, but the original Make intake was not verified; check or restore it before declaring the public order flow recovered');
+ return {restored:execute||currentBlob===m.oldFormBlobSha,inFlightOrderIds,paused,liveMakeVerified};
 }
 async function main(){
  const [manifestPath,flag]=process.argv.slice(2);
