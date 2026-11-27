@@ -29,6 +29,7 @@ function fixture(overrides={}){
    return {response:{scenario:{isActive:overrides.active??active}}};
   }
   if(provider==='gateway'){
+   if(overrides.gatewayDown)throw Error('Candidate gateway unavailable');
    if(target.endsWith('/internal/production-pause')&&options.method==='POST'){
     writes.push({gatewayPause:options.body});paused=!overrides.pauseFails;return {paused};
    }
@@ -67,10 +68,29 @@ test('restoration reports Pages propagation failure after GitHub commit',async()
  await assert.rejects(rollback(manifest,{request:f.request,execute:true}),/Pages has not yet served/);
  assert.equal(f.writes.length,2);
 });
-test('bad ledger or failed pause blocks the form switch',async()=>{
- for(const overrides of [{badLedger:true},{pauseFails:true}]){
+test('dry run refuses to certify an unavailable ledger',async()=>{
+ for(const overrides of [{badLedger:true},{gatewayDown:true}]){
   const f=fixture(overrides);
-  await assert.rejects(rollback(manifest,{request:f.request,execute:true}),/ledger is unavailable|intake pause/);
-  assert.equal(f.writes.some(x=>x.content),false);
+  await assert.rejects(rollback(manifest,{request:f.request}),/ledger is unavailable/);
+  assert.deepEqual(f.writes,[]);
  }
+});
+test('emergency execution restores the old form even when the candidate gateway is down',async()=>{
+ const f=fixture({gatewayDown:true}),warnings=[];
+ const r=await rollback(manifest,{request:f.request,execute:true,report:x=>warnings.push(x)});
+ assert.equal(r.restored,true);assert.equal(r.paused,false);assert.equal(r.inFlightOrderIds,null);
+ assert.equal(f.writes.length,1);assert.equal(Buffer.from(f.writes[0].content,'base64').toString(),old.toString());
+ assert(warnings.some(x=>x.includes('order count is unknown')));
+});
+test('failed pause restores the old form and marks the candidate ledger uncertain',async()=>{
+ const f=fixture({pauseFails:true}),warnings=[];
+ const r=await rollback(manifest,{request:f.request,execute:true,report:x=>warnings.push(x)});
+ assert.equal(r.restored,true);assert.equal(r.paused,false);assert.equal(r.inFlightOrderIds,null);
+ assert.equal(f.writes.length,2);assert(warnings.some(x=>x.includes('pause or ledger was not confirmed')));
+});
+test('emergency rollback is idempotent after the old form is restored',async()=>{
+ const f=fixture({gatewayDown:true,formSha:oldSha}),warnings=[];
+ const r=await rollback(manifest,{request:f.request,execute:true,report:x=>warnings.push(x)});
+ assert.equal(r.restored,true);assert.equal(r.inFlightOrderIds,null);
+ assert.equal(f.writes.some(x=>x.content),false);
 });
