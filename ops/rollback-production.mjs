@@ -12,7 +12,7 @@ function validate(m){
     ![m.oldHeadSha,m.candidateHeadSha,m.oldFormBlobSha,m.candidateFormBlobSha].every(sha)||
     m.oldFormBlobSha===m.candidateFormBlobSha||m.liveMakeScenarioId!==4762364||m.liveMakeWasActive!==true||
     !/^[a-f0-9]{64}$/.test(m.liveMakeBlueprintSha256||'')||m.oldMakeUnchanged!==true||
-    !Array.isArray(m.inFlightOrderIds)||m.inFlightOrderIds.some(x=>typeof x!=='string'||x.length>150))
+    !/^https:\/\/[a-z0-9-]+\.up\.railway\.app$/.test(m.productionGatewayUrl||''))
   throw Error('Rollback manifest is incomplete or does not match the approved release contract');
  return m;
 }
@@ -39,6 +39,19 @@ async function rollback(m,{request,report=()=>{},execute=false}){
  const bytes=Buffer.from((old.content||'').replace(/\s/g,''),'base64');
  if(gitBlob(bytes)!==m.oldFormBlobSha||old.sha!==m.oldFormBlobSha)
   throw Error('The saved old form failed its immutable blob check');
+ const ledger=await request('gateway',m.productionGatewayUrl+'/internal/production-ledger');
+ if(!ledger||typeof ledger.paused!=='boolean'||!Array.isArray(ledger.items)||ledger.items.some(item=>
+   typeof item.submissionId!=='string'||!['queued','dispatching','processing','unknown','manual_review','complete'].includes(item.state)))
+  throw Error('The production order ledger is unavailable or malformed');
+ let inFlightOrderIds=ledger.items.filter(item=>item.state!=='complete').map(item=>item.submissionId);
+ if(execute){
+  const stopped=await request('gateway',m.productionGatewayUrl+'/internal/production-pause',{method:'POST',body:{paused:true}});
+  if(stopped?.paused!==true)throw Error('The production gateway did not confirm the intake pause');
+  const afterPause=await request('gateway',m.productionGatewayUrl+'/internal/production-ledger');
+  if(afterPause?.paused!==true||!Array.isArray(afterPause.items))throw Error('The paused production ledger is unavailable');
+  inFlightOrderIds=afterPause.items.filter(item=>item.state!=='complete').map(item=>item.submissionId);
+  report('New candidate intake paused; already accepted orders remain queued for delivery or reconciliation');
+ }
  if(currentBlob===m.oldFormBlobSha){
   report('Form already restored; verifying served bytes and in-flight orders');
  }else if(execute){
@@ -56,18 +69,20 @@ async function rollback(m,{request,report=()=>{},execute=false}){
   if(digest(served)!==digest(bytes))throw Error('Pages has not yet served the restored form; keep monitoring CDN propagation');
   report('Old form bytes verified at the public Pages URL');
  }
- report(`${m.inFlightOrderIds.length} new-route order(s) require outcome reconciliation; do not delete or retry blindly`);
- return {restored:execute||currentBlob===m.oldFormBlobSha,inFlightOrderIds:m.inFlightOrderIds};
+ report(`${inFlightOrderIds.length} new-route order(s) require outcome reconciliation; do not delete or retry blindly`);
+ return {restored:execute||currentBlob===m.oldFormBlobSha,inFlightOrderIds};
 }
 async function main(){
  const [manifestPath,flag]=process.argv.slice(2);
  if(!manifestPath||!['--dry-run','--execute'].includes(flag))throw Error('Usage: rollback-production.sh MANIFEST --dry-run|--execute');
  const m=validate(JSON.parse(await fs.readFile(manifestPath,'utf8')));
- if(!process.env.GH_TOKEN||!process.env.MAKE_API_TOKEN)throw Error('GH_TOKEN and MAKE_API_TOKEN must be provided by the restricted release operator');
+ if(!process.env.GH_TOKEN||!process.env.MAKE_API_TOKEN||!process.env.ARTWORK_PRODUCTION_STAFF_SECRET)
+  throw Error('GH_TOKEN, MAKE_API_TOKEN and ARTWORK_PRODUCTION_STAFF_SECRET are required by the restricted release operator');
  async function request(provider,target,options={}){
   const url=provider==='github'?`https://api.github.com/${target}`:provider==='make'?`https://eu1.make.com/api/v2/${target}`:target;
   const headers=provider==='github'?{Authorization:`Bearer ${process.env.GH_TOKEN}`,Accept:'application/vnd.github+json'}:
-   provider==='make'?{Authorization:`Token ${process.env.MAKE_API_TOKEN}`}:{Accept:'text/html'};
+   provider==='make'?{Authorization:`Token ${process.env.MAKE_API_TOKEN}`}:
+   provider==='gateway'?{Authorization:`Bearer ${process.env.ARTWORK_PRODUCTION_STAFF_SECRET}`,Accept:'application/json'}:{Accept:'text/html'};
   const response=await fetch(url,{method:options.method||'GET',headers:{...headers,...(options.body?{'Content-Type':'application/json'}:{})},body:options.body?JSON.stringify(options.body):undefined,signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw Error(`${provider} returned HTTP ${response.status} during rollback`);
   return provider==='page'?Buffer.from(await response.arrayBuffer()):response.json();

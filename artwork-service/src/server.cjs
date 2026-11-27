@@ -9,6 +9,7 @@ const {prune}=require('./retention.cjs');
 const {installTestDelivery}=require('./test-delivery.cjs');
 const {installDropboxAuth,loadCredential}=require('./dropbox-auth.cjs');
 const {protectPreview,installTestOrders,testPreviewMode,browserSessionHash,sealDraftToken}=require('./test-orders.cjs');
+const {installProductionOrders}=require('./production-orders.cjs');
 const {testUploadSummary,testRootUploadSummary}=require('./test-upload-diagnostic.cjs');
 function error(status,message){const e=new Error(message);e.status=status;return e;}
 function secureEqual(a,b){if(typeof a!=='string'||typeof b!=='string')return false;const left=Buffer.from(a),right=Buffer.from(b);return left.length===right.length&&crypto.timingSafeEqual(left,right);}
@@ -25,7 +26,7 @@ function makeApp(config,options={}){
  app.use((req,res,next)=>{
   res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});
   const origin=req.get('Origin');
-  if(origin){if(!config.origins.includes(origin))return next(error(403,'Origin is not allowed'));res.set({'Access-Control-Allow-Origin':origin,Vary:'Origin','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, PUT, OPTIONS'});}
+  if(origin){if(!config.origins.includes(origin))return next(error(403,'Origin is not allowed'));res.set({'Access-Control-Allow-Origin':origin,Vary:'Origin','Access-Control-Allow-Headers':'Authorization, Content-Type, X-Order-Key','Access-Control-Allow-Methods':'GET, POST, PUT, OPTIONS'});}
   if(req.method==='OPTIONS')return res.sendStatus(204);next();
  });
  // Only the isolated preview uses the access gate; Make and worker calls use
@@ -34,6 +35,7 @@ function makeApp(config,options={}){
  installDropboxAuth(app,config,{authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');},fetchImpl:options.dropboxFetch,now:options.now});
  installTestDelivery(app,store,config,{...options.testDelivery,authenticate(req){if(!config.setupSecret||!secureEqual(req.get('Authorization'),'Bearer '+config.setupSecret))throw error(401,'Unauthorised');}});
  const testIntake=installTestOrders(app,store,config,options.testOrders);
+ const productionIntake=installProductionOrders(app,store,config,options.productionOrders);
  app.get('/health',(_,res)=>res.json({service:'crosstalk-artwork',deliveryMode:config.mode,configured:['synthetic','dropbox'].includes(config.mode)}));
  app.get('/v1/client-config',(_,res)=>res.json({returnOrigins:config.origins}));
  function browserOrigin(req){
@@ -200,8 +202,8 @@ function makeApp(config,options={}){
  app.get('/designer-production.html',(_,res)=>res.sendStatus(404));
  app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',setHeaders:res=>{res.set('Cache-Control',res.locals.privatePreview?'private, no-store':'public, max-age=300');res.set('X-Robots-Tag','noindex, nofollow, noarchive');}}));
  app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:status<500?err.message:'Artwork service could not complete this request'});});
- return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await testIntake.close();await worker.close();store.close();}};
+ return {app,store,worker,async close(){clearInterval(cleanupTimer);await pruning;await testIntake.close();await productionIntake.close();await worker.close();store.close();}};
 }
-function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,testRecipient:process.env.ARTWORK_TEST_RECIPIENT,testWebhookUrl:process.env.ARTWORK_TEST_WEBHOOK_URL,testMakeApiKey:process.env.ARTWORK_TEST_MAKE_API_KEY,testAccessCode:process.env.ARTWORK_TEST_ACCESS_CODE,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,staffSecret:process.env.ARTWORK_STAFF_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
+function environment(){return {setupSecret:process.env.ARTWORK_DROPBOX_SETUP_SECRET,dropboxSetup:process.env.ARTWORK_DROPBOX_SETUP==='enabled',publicOrigin:process.env.ARTWORK_PUBLIC_ORIGIN,testLabel:process.env.ARTWORK_TEST_LABEL,testRecipient:process.env.ARTWORK_TEST_RECIPIENT,testWebhookUrl:process.env.ARTWORK_TEST_WEBHOOK_URL,testMakeApiKey:process.env.ARTWORK_TEST_MAKE_API_KEY,testAccessCode:process.env.ARTWORK_TEST_ACCESS_CODE,productionIntakeEnabled:process.env.ARTWORK_PRODUCTION_INTAKE==='enabled',productionWebhookUrl:process.env.ARTWORK_PRODUCTION_WEBHOOK_URL,productionMakeApiKey:process.env.ARTWORK_PRODUCTION_MAKE_API_KEY,dataDir:process.env.ARTWORK_DATA_DIR||path.join(__dirname,'../data'),bindSecret:process.env.ARTWORK_BIND_SECRET,staffSecret:process.env.ARTWORK_STAFF_SECRET,origins:(process.env.ARTWORK_ORIGINS||'http://127.0.0.1:4310').split(',').map(x=>x.trim()),mode:process.env.ARTWORK_DELIVERY_MODE||'disabled',dropboxRoot:process.env.ARTWORK_DROPBOX_ROOT||'/Crosstalk Customs/Orders',testDestination:process.env.ARTWORK_TEST_DESTINATION,refreshToken:process.env.DROPBOX_REFRESH_TOKEN,clientId:process.env.DROPBOX_CLIENT_ID,clientSecret:process.env.DROPBOX_CLIENT_SECRET};}
 if(require.main===module){const service=makeApp(environment());const server=service.app.listen(Number(process.env.PORT||4310),process.env.HOST||'127.0.0.1',()=>console.log('Artwork service listening'));for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close();service.close().then(()=>process.exit(0));});}
 module.exports={makeApp,environment};
