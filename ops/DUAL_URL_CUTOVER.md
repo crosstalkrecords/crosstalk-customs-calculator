@@ -2,6 +2,8 @@
 
 **Production HOLD.** Josh accepts roughly five minutes for a Common Ground iframe change. This is the selected *design* for the live route switch; neither its publish timing nor the actual editor steps have been rehearsed. Do not use this card as permission to switch traffic.
 
+**Make capacity HOLD (27 November 2026).** The organization dashboard and subscription screen show 0 / 125,000 yearly credits left and say scenarios are paused until the 5 May 2027 reset. The existing Customer Intake still shows its toggle as Active, but its last observed execution was at 2:08 pm Sydney time, before the credit warning; an Active toggle does not prove a new submission can run. The live hook queue showed 0 waiting items when inspected. Restore capacity through an approved purchase, verify the live intake and invoice routes with controlled evidence, and keep the new cutover blocked until they work. The active JOSH TEST status sweep runs about once a minute and should be paused with explicit approval before buying more credits; the JOSH TEST async draft intake also shows Active despite its name. Do not infer from the test sweep's 1,602 credits that it caused all 125,000 annual credits to be spent.
+
 ## Keep both forms published and distinct
 
 | Role | Pages file / URL | Rule |
