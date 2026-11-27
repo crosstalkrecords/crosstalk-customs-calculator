@@ -39,18 +39,29 @@ async function rollback(m,{request,report=()=>{},execute=false}){
  const bytes=Buffer.from((old.content||'').replace(/\s/g,''),'base64');
  if(gitBlob(bytes)!==m.oldFormBlobSha||old.sha!==m.oldFormBlobSha)
   throw Error('The saved old form failed its immutable blob check');
- const ledger=await request('gateway',m.productionGatewayUrl+'/internal/production-ledger');
- if(!ledger||typeof ledger.paused!=='boolean'||!Array.isArray(ledger.items)||ledger.items.some(item=>
-   typeof item.submissionId!=='string'||!['queued','dispatching','processing','unknown','manual_review','complete'].includes(item.state)))
-  throw Error('The production order ledger is unavailable or malformed');
- let inFlightOrderIds=ledger.items.filter(item=>item.state!=='complete').map(item=>item.submissionId);
+ const validLedger=ledger=>ledger&&typeof ledger.paused==='boolean'&&Array.isArray(ledger.items)&&!ledger.items.some(item=>
+   typeof item.submissionId!=='string'||!['queued','dispatching','processing','unknown','manual_review','complete'].includes(item.state));
+ let ledger,paused=false;
+ try{ledger=await request('gateway',m.productionGatewayUrl+'/internal/production-ledger');}catch(_){/* Emergency restore must work when the candidate gateway is down. */}
+ if(!validLedger(ledger)){
+  if(!execute)throw Error('The production order ledger is unavailable or malformed');
+  ledger=null;
+  report('WARNING: Candidate ledger unavailable; accepted orders and delivery state are unknown. Reconcile Make, Airtable and the gateway before any replay');
+ }
+ let inFlightOrderIds=ledger?ledger.items.filter(item=>item.state!=='complete').map(item=>item.submissionId):null;
  if(execute){
-  const stopped=await request('gateway',m.productionGatewayUrl+'/internal/production-pause',{method:'POST',body:{paused:true}});
-  if(stopped?.paused!==true)throw Error('The production gateway did not confirm the intake pause');
-  const afterPause=await request('gateway',m.productionGatewayUrl+'/internal/production-ledger');
-  if(afterPause?.paused!==true||!Array.isArray(afterPause.items))throw Error('The paused production ledger is unavailable');
-  inFlightOrderIds=afterPause.items.filter(item=>item.state!=='complete').map(item=>item.submissionId);
-  report('New candidate intake paused; already accepted orders remain queued for delivery or reconciliation');
+  try{
+   const stopped=await request('gateway',m.productionGatewayUrl+'/internal/production-pause',{method:'POST',body:{paused:true}});
+   if(stopped?.paused!==true)throw Error('Pause was not confirmed');
+   paused=true;
+   const afterPause=await request('gateway',m.productionGatewayUrl+'/internal/production-ledger');
+   if(!validLedger(afterPause)||afterPause.paused!==true)throw Error('Paused ledger was not confirmed');
+   inFlightOrderIds=afterPause.items.filter(item=>item.state!=='complete').map(item=>item.submissionId);
+   report('New candidate intake paused; already accepted orders remain queued for delivery or reconciliation');
+  }catch(_){
+   inFlightOrderIds=null;
+   report('WARNING: Candidate intake pause or ledger was not confirmed. Restore the old form now; reconcile all candidate orders, including submissions during Pages propagation');
+  }
  }
  if(currentBlob===m.oldFormBlobSha){
   report('Form already restored; verifying served bytes and in-flight orders');
@@ -69,8 +80,9 @@ async function rollback(m,{request,report=()=>{},execute=false}){
   if(digest(served)!==digest(bytes))throw Error('Pages has not yet served the restored form; keep monitoring CDN propagation');
   report('Old form bytes verified at the public Pages URL');
  }
- report(`${inFlightOrderIds.length} new-route order(s) require outcome reconciliation; do not delete or retry blindly`);
- return {restored:execute||currentBlob===m.oldFormBlobSha,inFlightOrderIds};
+ report(inFlightOrderIds===null?'New-route order count is unknown; do not delete or retry blindly':
+  `${inFlightOrderIds.length} new-route order(s) require outcome reconciliation; do not delete or retry blindly`);
+ return {restored:execute||currentBlob===m.oldFormBlobSha,inFlightOrderIds,paused};
 }
 async function main(){
  const [manifestPath,flag]=process.argv.slice(2);
