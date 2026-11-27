@@ -39,7 +39,7 @@ test('release form sends one ordinary order to gateway, survives refresh and sho
   assert.equal(requests.filter(r=>r.url.includes('/v1/production-orders')).length,1);
   assert.equal(requests.some(r=>r.url.includes('hook.eu1.make.com')),false);
   const id=sent[0]['Submission ID'],link='https://www.dropbox.com/request/abc123';
-  const callback=await fetch(base+'/internal/production-outcome',{method:'POST',headers:{Authorization:'Bearer '+config.bindSecret,'Content-Type':'application/json'},body:JSON.stringify({submissionId:id,requestFingerprint:sent[0]['Request Fingerprint'],airtableRecordId:'rec12345678901234',folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:link,state:'complete'})});
+  const callback=await fetch(base+'/internal/production-outcome',{method:'POST',headers:{Authorization:'Bearer '+config.bindSecret,'Content-Type':'application/json'},body:JSON.stringify({submissionId:id,requestFingerprint:sent[0]['Request Fingerprint'],airtableRecordId:'rec12345678901234',jobNumber:'JOB9',folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:link,state:'complete'})});
   assert.equal(callback.status,200);
   await page.locator('#success h2').filter({hasText:'Order received'}).waitFor({timeout:9000});
   assert.equal(await page.locator('#upload').getAttribute('href'),link);
