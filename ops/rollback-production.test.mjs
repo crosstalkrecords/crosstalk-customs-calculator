@@ -134,5 +134,6 @@ test('four cutover checkpoints restore the old form and preserve artwork reconci
   assert.deepEqual(result.inFlightOrderIds,c.expected,c.label);
   assert.equal(f.writes.filter(x=>x.content).length,c.writes,c.label);
   assert(reports.some(x=>x.includes('Old form bytes verified')),c.label);
+  assert(reports.some(x=>x.includes('does NOT change the Common Ground iframe')),c.label);
  }
 });
