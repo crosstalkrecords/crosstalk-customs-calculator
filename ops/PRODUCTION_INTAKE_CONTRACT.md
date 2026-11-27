@@ -13,7 +13,7 @@ The current `main` form and active Make Customer Intake `4762364` stay unchanged
 
 ## Rollback and recovery
 
-The candidate service keeps a staff-only ledger of all submissions without customer details. `POST /internal/production-pause` stops *new* acceptance but drains orders accepted before the pause. The guarded rollback rehearsal checks original Make unchanged, pauses candidate intake, reads the current ledger, restores the immutable old form blob with a forward GitHub commit, and verifies the publicly served bytes. Accepted rows, sent mail, uploaded files and invoices remain for reconciliation. The rollback script is not operational until the gateway has a verified Railway URL, the full release manifest is captured, and all four isolated cutover checkpoints pass.
+The candidate service keeps a staff-only ledger of all submissions without customer details. `POST /internal/production-pause` stops *new* acceptance but drains orders accepted before the pause. The guarded rollback checks original Make unchanged, tries to pause and read the candidate ledger, restores the immutable old form blob with a forward GitHub commit, and verifies the publicly served bytes. A pre-release dry run refuses an unavailable ledger. Emergency execution still restores the old form if the candidate gateway or pause is unavailable; it reports the in-flight order count as **unknown** and requires staff to reconcile Make, Airtable and the gateway, including orders accepted during Pages propagation. Accepted rows, sent mail, uploaded files and invoices remain for reconciliation. The script is not operational until the gateway has a verified Railway URL, the full release manifest is captured, and all four isolated cutover checkpoints pass.
 
 ## Release gates remaining
 
