@@ -45,6 +45,10 @@ test('release form sends one ordinary order to gateway, survives refresh and sho
   assert.equal(await page.locator('#upload').getAttribute('href'),link);
   await page.reload();await page.locator('#success h2').filter({hasText:'Order received'}).waitFor();
   assert.equal(sent.length,1);assert.equal(await page.locator('#upload').getAttribute('href'),link);
+  await page.getByRole('button',{name:'Start another order'}).click();
+  await page.locator('#wrap').waitFor({state:'visible'});
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('crosstalk-production-submission-v1')),null);
+  assert.equal(sent.length,1,'starting a new order does not resubmit the first');
   // The released form is actually hosted on GitHub Pages, separate from the
   // service. Exercise a browser CORS preflight from a second allowed origin.
   const otherPage=await browser.newPage();await otherPage.goto(other);
