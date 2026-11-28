@@ -53,6 +53,33 @@ test('ambiguous Make response is held for reconciliation and never automatically
   await new Promise(r=>setTimeout(r,120));assert.equal(calls,1);
  }finally{await f.close();}
 });
+test('trusted completion arriving before Make acknowledgement remains complete',async()=>{
+ let captured,ack;const pending=new Promise(resolve=>{ack=resolve});
+ const f=await setup(async(_url,options)=>{captured=JSON.parse(options.body);await pending;return {ok:true,text:async()=> 'Accepted'};});
+ try{
+  assert.equal((await f.request('/v1/production-orders',{method:'POST',body:{submissionId:id,clientKey:key,fields}})).status,202);
+  await until(()=>captured);
+  const outcome={submissionId:id,requestFingerprint:captured['Request Fingerprint'],airtableRecordId:'rec12345678901234',
+   jobNumber:'JOB9',folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123',state:'complete'};
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',body:outcome,bind:true})).status,200);
+  ack();
+  await until(async()=>{const r=await f.request('/v1/production-orders/'+id,{orderKey:key});return r.data.state==='complete'&&r.data.uploadLink===outcome.uploadLink;});
+  assert.equal((await f.request('/internal/production-ledger',{staff:true})).data.items[0].state,'complete');
+ }finally{ack();await f.close();}
+});
+test('trusted completion after an ambiguous Make response resolves the same order',async()=>{
+ let captured,calls=0;const f=await setup(async(_url,options)=>{calls++;captured=JSON.parse(options.body);throw Error('Simulated lost acknowledgement');});
+ try{
+  assert.equal((await f.request('/v1/production-orders',{method:'POST',body:{submissionId:id,clientKey:key,fields}})).status,202);
+  await until(async()=>{const r=await f.request('/v1/production-orders/'+id,{orderKey:key});return r.data.state==='unknown';});
+  const outcome={submissionId:id,requestFingerprint:captured['Request Fingerprint'],airtableRecordId:'rec12345678901234',
+   jobNumber:'JOB9',folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123',state:'complete'};
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',body:outcome,bind:true})).status,200);
+  const r=await f.request('/v1/production-orders/'+id,{orderKey:key});
+  assert.equal(r.status,200);assert.equal(r.data.state,'complete');assert.equal(r.data.uploadLink,outcome.uploadLink);
+  assert.equal(calls,1);
+ }finally{await f.close();}
+});
 test('one artwork capability binds only to the exact returned order folder',async()=>{
  const sent=[];const f=await setup(async(_url,options)=>{sent.push(JSON.parse(options.body));return {ok:true,text:async()=> 'Accepted'};});
  try{
