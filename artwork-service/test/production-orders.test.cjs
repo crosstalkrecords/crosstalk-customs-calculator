@@ -107,6 +107,7 @@ test('trusted review can report an intake failure before Airtable or Dropbox exi
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,requestFingerprint:'0'.repeat(64)}})).status,409);
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,folder:'/Crosstalk Customs/Orders/JOB9/Uploads'}})).status,422);
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,airtableRecordId:'rec12345678901234',reviewStage:'dropbox_unavailable'}})).status,200);
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:review})).status,200);
   assert.equal((await f.request('/internal/production-ledger',{staff:true})).data.items[0].airtableRecordId,'rec12345678901234');
   assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,airtableRecordId:'rec99999999999999'}})).status,409);
   const outcome={...review,state:'complete',reviewStage:undefined,airtableRecordId:'rec12345678901234',jobNumber:'JOB9',

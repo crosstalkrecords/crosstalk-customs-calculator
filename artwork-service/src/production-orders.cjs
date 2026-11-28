@@ -135,8 +135,8 @@ function installProductionOrders(app,store,config,{fetchImpl=fetch,interval=1000
   }
   const row=store.db.prepare('SELECT * FROM production_submissions WHERE id=?').get(id);
   if(!row||row.request_hash!==v.requestFingerprint||!['dispatching','processing','unknown','manual_review','complete'].includes(row.state)||
-   (row.airtable_id&&row.airtable_id!==v.airtableRecordId)||
-   (row.folder&&row.folder!==v.folder)||row.state==='complete'&&(v.state!=='complete'||row.upload_link!==v.uploadLink))
+   (row.airtable_id&&v.airtableRecordId!==undefined&&row.airtable_id!==v.airtableRecordId)||
+   (row.folder&&v.folder!==undefined&&row.folder!==v.folder)||row.state==='complete'&&(v.state!=='complete'||row.upload_link!==v.uploadLink))
    return res.status(409).json({error:'Outcome conflicts with the accepted order'});
   if(v.state==='complete'&&row.reference){
    const [,jobId,token]=REFERENCE.exec(row.reference),job=store.authorize(jobId,token);
