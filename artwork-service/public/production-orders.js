@@ -6,7 +6,7 @@
  const origin=new URL(document.currentScript.src).origin,keyName='crosstalk-production-submission-v1';
  const button=form.querySelector('button[type="submit"]');
  const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');success.append(status);
- const newOrder=document.createElement('button');newOrder.type='button';newOrder.className='btn';newOrder.textContent='Start another order';newOrder.hidden=true;success.append(newOrder);
+ const newOrder=document.createElement('button');newOrder.type='button';newOrder.className='btn';newOrder.textContent='Start another order';newOrder.style.display='none';success.append(newOrder);
  newOrder.onclick=()=>{sessionStorage.removeItem(keyName);location.reload();};
  const heading=success.querySelector('h2'),copy=success.querySelector('p');
  let record,timer;
@@ -18,7 +18,7 @@
   wrap.style.display='none';success.style.display='block';heading.textContent='Order received';
   copy.textContent='Your order has been received. Use the upload link below to supply your audio and any finished artwork.';
   status.textContent='Order reference: '+record.id;
-  newOrder.hidden=false;
+  newOrder.style.display='inline-block';
   const upload=document.getElementById('upload'),uploadWrap=document.getElementById('uploadWrap');
   if(result.uploadLink&&upload&&uploadWrap){upload.href=result.uploadLink;uploadWrap.classList.remove('hidden');}
   dispatchEvent(new Event('crosstalk-order-success'));
