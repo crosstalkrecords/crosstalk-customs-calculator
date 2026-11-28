@@ -45,4 +45,16 @@ function validate(project, assetIds){
   return project;
 }
 function digest(value){return crypto.createHash('sha256').update(value).digest('hex');}
-module.exports={SURFACES,LIMITS,FONT_CATALOG,validate,digest};
+// Summarise the sealed project, not a browser-supplied completion flag. A
+// surface is supplied when it has at least one layer or an explicit background.
+function artworkCoverage(project){
+ const has=id=>!!(project?.surfaces?.[id]?.length||project?.backgrounds?.[id]);
+ const ids=Object.keys(SURFACES).filter(has);
+ const pair=(a,b,first,second)=>has(a)&&has(b)?'Both':has(a)?first+' only':has(b)?second+' only':'None';
+ return {
+  cover:pair('front','back','Front','Back'),
+  labels:pair('labelA','labelB','A','B'),
+  surfaces:ids.length?ids.map(id=>({front:'Front cover',back:'Back cover',labelA:'Label A',labelB:'Label B'})[id]).join(', '):'None'
+ };
+}
+module.exports={SURFACES,LIMITS,FONT_CATALOG,validate,digest,artworkCoverage};
