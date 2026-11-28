@@ -26,6 +26,8 @@ test('production gateway deduplicates an ordinary order, requires trusted outcom
   assert.equal((await f.request('/v1/production-orders',{method:'POST',body})).status,202);
   assert.equal((await f.request('/v1/production-orders',{method:'POST',body})).status,202);
   await until(()=>sent.length===1);
+  assert.equal(sent[0]['Artwork Cover'],'None');assert.equal(sent[0]['Artwork Labels'],'None');
+  assert.equal(sent[0]['Artwork Surfaces'],'None');
   assert.equal((await f.request('/v1/production-orders',{method:'POST',body:{...body,fields:{...fields,Quantity:'2'}}})).status,409);
   assert.equal((await f.request('/v1/production-orders/'+id,{orderKey:'wrong'})).status,422);
   const ledger=await f.request('/internal/production-ledger',{staff:true});assert.equal(ledger.data.items.length,1);
@@ -55,12 +57,16 @@ test('one artwork capability binds only to the exact returned order folder',asyn
  const sent=[];const f=await setup(async(_url,options)=>{sent.push(JSON.parse(options.body));return {ok:true,text:async()=> 'Accepted'};});
  try{
   const draft=f.service.store.create(),reference=draft.id+'.'+draft.token;
-  f.service.store.db.prepare("UPDATE jobs SET state='ready' WHERE id=?").run(draft.id);
+  f.service.store.db.prepare("UPDATE jobs SET state='ready',project=? WHERE id=?")
+   .run(JSON.stringify({surfaces:{front:[{type:'text'}],back:[],labelA:[],labelB:[]},backgrounds:{labelA:{type:'solid',color:'#000000'}}}),draft.id);
   const body={submissionId:id,clientKey:key,artworkReference:reference,fields:{...fields,Packaging:'Printed Jacket + Labels'}};
   assert.equal((await f.request('/v1/production-orders',{method:'POST',body})).status,202);
   assert.equal((await f.request('/v1/production-orders',{method:'POST',body:{...body,submissionId:crypto.randomUUID(),clientKey:crypto.randomBytes(32).toString('base64url')}})).status,409);
   await until(()=>sent.length===1);
   assert.equal(sent[0]['Artwork Attached'],'Yes');
+  assert.equal(sent[0]['Artwork Cover'],'Front only');
+  assert.equal(sent[0]['Artwork Labels'],'A only');
+  assert.equal(sent[0]['Artwork Surfaces'],'Front cover, Label A');
   assert.equal(JSON.stringify(sent[0]).includes(draft.token),false);
   const outcome={submissionId:id,requestFingerprint:sent[0]['Request Fingerprint'],airtableRecordId:'rec12345678901234',
    jobNumber:'JOB9',folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123',state:'complete'};
