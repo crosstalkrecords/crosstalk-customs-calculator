@@ -34,6 +34,7 @@ test('release form sends one ordinary order to gateway, survives refresh and sho
   await page.locator('input[name="Custom Field 1"]').fill('0400000000');await page.locator('#terms').check();
   await page.locator('button[type="submit"]').click();
   await page.locator('#success').waitFor({state:'visible'});
+  assert.equal(await page.getByRole('button',{name:'Start another order'}).isVisible(),false,'an unconfirmed order cannot be replaced');
   for(let n=0;n<100&&!sent.length;n++)await wait(25);
   assert.equal(sent.length,1);assert.equal(sent[0]['Artwork Attached'],'No');
   assert.equal(requests.filter(r=>r.url.includes('/v1/production-orders')).length,1);
