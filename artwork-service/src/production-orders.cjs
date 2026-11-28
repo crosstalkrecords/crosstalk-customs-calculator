@@ -119,11 +119,20 @@ function installProductionOrders(app,store,config,{fetchImpl=fetch,interval=1000
  app.post('/internal/production-outcome',express.json({limit:'4kb'}),(req,res)=>{
   if(!available(config)||!trusted(req))return res.status(401).json({error:'Unauthorised'});
   const v=req.body||{},id=v.submissionId;
-  if(!UUID.test(id||'')||!RECORD.test(v.airtableRecordId||'')||!/^[a-f0-9]{64}$/.test(v.requestFingerprint||'')||
-   !['complete','manual_review'].includes(v.state)||typeof v.folder!=='string'||
-   (v.state==='complete'&&(!uploadRequestLink(v.uploadLink)||v.reviewStage!==undefined||!/^JOB[1-9][0-9]{0,8}$/.test(v.jobNumber||'')))||
-   (v.state==='manual_review'&&(!/^[a-z_]{3,50}$/.test(v.reviewStage||'')||v.uploadLink!==undefined)))return res.status(422).json({error:'Invalid outcome'});
-  let binding;try{binding=validateBinding({orderId:v.airtableRecordId,folder:v.folder,...(v.jobNumber?{jobNumber:v.jobNumber}:{})},config.dropboxRoot);}catch(_){return res.status(422).json({error:'Invalid returned folder'});}
+  const complete=v.state==='complete',review=v.state==='manual_review';
+  if(!UUID.test(id||'')||!/^[a-f0-9]{64}$/.test(v.requestFingerprint||'')||(!complete&&!review)||
+   (v.airtableRecordId!==undefined&&!RECORD.test(v.airtableRecordId))||
+   (complete&&(!v.airtableRecordId||!uploadRequestLink(v.uploadLink)||v.reviewStage!==undefined||
+    !/^JOB[1-9][0-9]{0,8}$/.test(v.jobNumber||'')||typeof v.folder!=='string'))||
+   (review&&(!/^[a-z_]{3,50}$/.test(v.reviewStage||'')||v.uploadLink!==undefined||
+    (v.folder!==undefined&&(typeof v.folder!=='string'||!v.airtableRecordId))||
+    (v.jobNumber!==undefined&&!/^JOB[1-9][0-9]{0,8}$/.test(v.jobNumber)))))
+   return res.status(422).json({error:'Invalid outcome'});
+  let binding;
+  if(v.folder!==undefined){
+   try{binding=validateBinding({orderId:v.airtableRecordId,folder:v.folder,...(v.jobNumber?{jobNumber:v.jobNumber}:{})},config.dropboxRoot);}
+   catch(_){return res.status(422).json({error:'Invalid returned folder'});}
+  }
   const row=store.db.prepare('SELECT * FROM production_submissions WHERE id=?').get(id);
   if(!row||row.request_hash!==v.requestFingerprint||!['dispatching','processing','unknown','manual_review','complete'].includes(row.state)||
    (row.airtable_id&&row.airtable_id!==v.airtableRecordId)||
@@ -141,7 +150,7 @@ function installProductionOrders(app,store,config,{fetchImpl=fetch,interval=1000
   }
   if(row.state==='complete')return res.json({state:'complete',submissionId:id});
   store.db.prepare('UPDATE production_submissions SET state=?,updated=?,airtable_id=?,folder=?,upload_link=?,review_stage=? WHERE id=?')
-   .run(v.state,Date.now(),v.airtableRecordId,v.folder,v.uploadLink||null,v.reviewStage||null,id);
+   .run(v.state,Date.now(),v.airtableRecordId||row.airtable_id||null,v.folder||row.folder||null,v.uploadLink||null,v.reviewStage||null,id);
   res.json({state:v.state,submissionId:id});
  });
  app.post('/internal/production-pause',express.json({limit:'1kb'}),(req,res)=>{

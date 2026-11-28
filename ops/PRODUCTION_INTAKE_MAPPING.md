@@ -1,5 +1,9 @@
 # Inactive production intake mapping — review draft
 
+## Gateway review callback correction — branch only
+
+The candidate gateway previously rejected a `manual_review` outcome unless Make supplied both an Airtable record ID and an Uploads folder. A failure before those side effects could only age into the gateway's `unknown` state. The branch now accepts an authenticated, fingerprint-matched review outcome with a reason and no downstream IDs; it can also pin a known Airtable ID before a folder exists. A later `complete` callback still requires the real Airtable ID, Job Number, validated Uploads path and Dropbox file-request URL. A review cannot demote a completed order or change a pinned Airtable ID. This is covered by an isolated focused test. **The deployed Railway service remains pinned to the older commit**, and the Make candidate still has no callback or failure route. This correction is not operational until a separately reviewed deployment and end-to-end rehearsal.
+
 **28 November 2026. Not runnable.** The separate Make scenario `8839226` remains inactive and has only protected webhook `4191375` followed by HTTP 503. This document is the proposed module and field crosswalk, not a blueprint to activate or a copy of the existing live intake. Do not replace the 503 until all numbered gates below have passed. The existing Customer Intake `4762364`, hook `2620320`, Dropbox order root and invoicing scenario remain unchanged.
 
 ## Input and acknowledgment

@@ -94,3 +94,24 @@ test('a queued Make acknowledgment without final callback becomes uncertain, not
   assert.equal(calls,1);
  }finally{await f.close();}
 });
+test('trusted review can report an intake failure before Airtable or Dropbox exists',async()=>{
+ const sent=[];const f=await setup(async(_url,options)=>{sent.push(JSON.parse(options.body));return {ok:true,text:async()=> 'Accepted'};});
+ try{
+  assert.equal((await f.request('/v1/production-orders',{method:'POST',body:{submissionId:id,clientKey:key,fields}})).status,202);
+  await until(()=>sent.length===1);
+  const review={submissionId:id,requestFingerprint:sent[0]['Request Fingerprint'],state:'manual_review',reviewStage:'airtable_unavailable'};
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',body:review})).status,401);
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:review})).status,200);
+  assert.equal((await f.request('/v1/production-orders/'+id,{orderKey:key})).data.state,'manual_review');
+  assert.equal((await f.request('/internal/production-ledger',{staff:true})).data.items[0].reviewStage,'airtable_unavailable');
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,requestFingerprint:'0'.repeat(64)}})).status,409);
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,folder:'/Crosstalk Customs/Orders/JOB9/Uploads'}})).status,422);
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,airtableRecordId:'rec12345678901234',reviewStage:'dropbox_unavailable'}})).status,200);
+  assert.equal((await f.request('/internal/production-ledger',{staff:true})).data.items[0].airtableRecordId,'rec12345678901234');
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:{...review,airtableRecordId:'rec99999999999999'}})).status,409);
+  const outcome={...review,state:'complete',reviewStage:undefined,airtableRecordId:'rec12345678901234',jobNumber:'JOB9',
+   folder:'/Crosstalk Customs/Orders/JOB9/Uploads',uploadLink:'https://www.dropbox.com/request/abc123'};
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:outcome})).status,200);
+  assert.equal((await f.request('/internal/production-outcome',{method:'POST',bind:true,body:review})).status,409);
+ }finally{await f.close();}
+});
