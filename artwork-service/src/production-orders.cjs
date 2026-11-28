@@ -2,6 +2,7 @@
 const crypto=require('node:crypto');
 const express=require('express');
 const {validateBinding}=require('./delivery.cjs');
+const {artworkCoverage}=require('./project.cjs');
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECORD=/^rec[A-Za-z0-9]{14}$/;
@@ -97,16 +98,18 @@ function installProductionOrders(app,store,config,{fetchImpl=fetch,interval=1000
    if(!safeEqual(existing.client_hash,clientHash)||existing.request_hash!==requestHash)return res.status(409).json({error:'Submission ID already belongs to a different order'});
    return res.status(existing.state==='complete'?200:['unknown','manual_review'].includes(existing.state)?409:202).json(publicState(existing));
   }
+  let coverage=artworkCoverage(null);
   if(reference){
    const [,jobId,token]=REFERENCE.exec(reference),job=store.authorize(jobId,token);
-   if(!job||job.state!=='ready'||job.binding)return res.status(422).json({error:'Artwork is not ready or is already used'});
+   if(!job||job.state!=='ready'||job.binding||!job.project)return res.status(422).json({error:'Artwork is not ready or is already used'});
    if(store.db.prepare('SELECT id FROM production_submissions WHERE reference=?').get(reference))return res.status(409).json({error:'Artwork already belongs to another submission'});
+   try{coverage=artworkCoverage(JSON.parse(job.project));}catch(_){return res.status(422).json({error:'Artwork project is unavailable'});}
   }
   const capacity=store.db.prepare("SELECT count(*) AS recent,sum(CASE WHEN state!='complete' THEN 1 ELSE 0 END) AS pending FROM production_submissions WHERE created>=?").get(Date.now()-86400000);
   if(capacity.recent>=200||capacity.pending>=100)return res.status(429).json({error:'Order intake is busy; please contact Crosstalk'});
   const now=Date.now();
   store.db.prepare("INSERT INTO production_submissions(id,client_hash,request_hash,created,updated,state,payload,reference) VALUES(?,?,?,?,?,'queued',?,?)")
-   .run(id,clientHash,requestHash,now,now,JSON.stringify(fields),reference||null);
+   .run(id,clientHash,requestHash,now,now,JSON.stringify({...fields,'Artwork Cover':coverage.cover,'Artwork Labels':coverage.labels,'Artwork Surfaces':coverage.surfaces}),reference||null);
   res.status(202).json({submissionId:id,state:'queued'});
  });
  app.get('/v1/production-orders/:id',(req,res)=>{
