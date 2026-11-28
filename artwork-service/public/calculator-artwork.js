@@ -40,7 +40,7 @@
   if(!printed){if(!status.textContent.startsWith('Choose Printed Jacket'))status.textContent='Choose a printed packaging option above to use the designer. Standard packaging does not include printed artwork.';}
   else if(input.value)status.textContent=attachedCopy;
   else if(status.textContent.startsWith('Choose '))status.textContent='No designer artwork attached. You can also supply finished artwork after ordering.';
-  review.textContent=printed?(input.value?'Cover and label artwork attached.':testPreview?'Artwork: no designer artwork attached; you may supply files after ordering.':'Artwork: upload finished files after ordering, or return to Make It Yours to use the designer.'):'Standard packaging: no printed artwork included.';
+  review.textContent=printed?(input.value?'Designer artwork attached. Review each cover and label surface before submitting.':testPreview?'Artwork: no designer artwork attached; you may supply files after ordering.':'Artwork: upload finished files after ordering, or return to Make It Yours to use the designer.'):'Standard packaging: no printed artwork included.';
   review.classList.toggle('hidden',!printed);
  }
  // The calculator changes packaging in its click handlers. Read the final
